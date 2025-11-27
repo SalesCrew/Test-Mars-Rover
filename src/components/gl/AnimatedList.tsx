@@ -70,6 +70,20 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
     setBottomGradientOpacity(scrollHeight <= clientHeight ? 0 : Math.min(bottomDistance / 50, 1));
   };
 
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+    
+    // Prevent scroll propagation if we're at boundaries
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+    
+    if ((isAtTop && e.touches[0].clientY > e.touches[0].clientY) || 
+        (isAtBottom && e.touches[0].clientY < e.touches[0].clientY)) {
+      e.stopPropagation();
+    }
+  };
+
   useEffect(() => {
     if (!enableArrowNavigation) return;
 
@@ -124,7 +138,12 @@ const AnimatedList: React.FC<AnimatedListProps> = ({
 
   return (
     <div className={`scroll-list-container ${className}`}>
-      <div ref={listRef} className={`scroll-list ${!displayScrollbar ? 'no-scrollbar' : ''}`} onScroll={handleScroll}>
+      <div 
+        ref={listRef} 
+        className={`scroll-list ${!displayScrollbar ? 'no-scrollbar' : ''}`} 
+        onScroll={handleScroll}
+        onTouchMove={handleTouchMove}
+      >
         {items.map((item, index) => (
           <AnimatedItem
             key={index}
