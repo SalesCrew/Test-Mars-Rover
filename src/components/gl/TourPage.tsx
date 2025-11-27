@@ -58,72 +58,35 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
     return `${hours}h ${mins}min`;
   };
 
-  // Handle wheel scroll - one card at a time with position-based logic
-  const handleWheelScroll = (e: React.WheelEvent<HTMLDivElement>) => {
-    // Always prevent default to stop page scroll
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (isScrollingRef.current) return;
-    
-    // Determine scroll direction
-    if (e.deltaY > 15) {
-      // Scroll DOWN: shift positions -1 (next card becomes pos 0)
-      // But last card locks at position 0
-      if (scrollIndex < totalPendingMarkets - 1) {
-        setScrollIndex(prev => prev + 1);
-        isScrollingRef.current = true;
-      }
-    } else if (e.deltaY < -15) {
-      // Scroll UP: shift positions +1 (previous card becomes pos 0)
-      if (scrollIndex > 0) {
-        setScrollIndex(prev => prev - 1);
-        isScrollingRef.current = true;
-      }
-    } else {
-      return;
-    }
-    
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    scrollTimeoutRef.current = setTimeout(() => {
-      isScrollingRef.current = false;
-    }, 350);
-  };
+  // Use native event listeners with { passive: false } to properly prevent scroll
+  useEffect(() => {
+    const container = stackedContainerRef.current;
+    if (!container) return;
 
-  // Handle touch for mobile/iPad - one card at a time
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartRef.current = e.touches[0].clientY;
-  };
-  
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Always prevent default to stop page scroll when touching this container
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    
-    if (isScrollingRef.current) return;
-    
-    const touchEnd = e.changedTouches[0].clientY;
-    const diff = touchStartRef.current - touchEnd;
-    
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) {
-        // Swipe up - scroll down
-        if (scrollIndex < totalPendingMarkets - 1) {
-          setScrollIndex(prev => prev + 1);
-          isScrollingRef.current = true;
-        }
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (isScrollingRef.current) return;
+      
+      if (e.deltaY > 15) {
+        setScrollIndex(prev => {
+          if (prev < totalPendingMarkets - 1) {
+            isScrollingRef.current = true;
+            return prev + 1;
+          }
+          return prev;
+        });
+      } else if (e.deltaY < -15) {
+        setScrollIndex(prev => {
+          if (prev > 0) {
+            isScrollingRef.current = true;
+            return prev - 1;
+          }
+          return prev;
+        });
       } else {
-        // Swipe down - scroll up
-        if (scrollIndex > 0) {
-          setScrollIndex(prev => prev - 1);
-          isScrollingRef.current = true;
-        }
+        return;
       }
       
       if (scrollTimeoutRef.current) {
@@ -132,8 +95,67 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
       scrollTimeoutRef.current = setTimeout(() => {
         isScrollingRef.current = false;
       }, 350);
-    }
-  };
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      // This is the key - prevent default with passive: false stops page scroll
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.stopPropagation();
+      
+      if (isScrollingRef.current) return;
+      
+      const touchEnd = e.changedTouches[0].clientY;
+      const diff = touchStartRef.current - touchEnd;
+      
+      if (Math.abs(diff) > 40) {
+        if (diff > 0) {
+          setScrollIndex(prev => {
+            if (prev < totalPendingMarkets - 1) {
+              isScrollingRef.current = true;
+              return prev + 1;
+            }
+            return prev;
+          });
+        } else {
+          setScrollIndex(prev => {
+            if (prev > 0) {
+              isScrollingRef.current = true;
+              return prev - 1;
+            }
+            return prev;
+          });
+        }
+        
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        scrollTimeoutRef.current = setTimeout(() => {
+          isScrollingRef.current = false;
+        }, 350);
+      }
+    };
+
+    // Add listeners with { passive: false } to allow preventDefault
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [totalPendingMarkets]);
 
   // Calculate position for each card based on scrollIndex
   const getCardPosition = (cardIndex: number): number => {
@@ -423,10 +445,6 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
                 <div 
                   ref={stackedContainerRef}
                   className={styles.stackedMarketsContainer}
-                  onWheel={handleWheelScroll}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
                 >
                   {pendingMarkets.map((marketId, index) => {
                     const market = route.markets.find(m => m.id === marketId);
