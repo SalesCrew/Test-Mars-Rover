@@ -8,6 +8,7 @@ import StarBorder from './StarBorder';
 import SpotlightCard from './SpotlightCard';
 import { AnimatedListWrapper } from './AnimatedListWrapper';
 import { DevPanel } from './DevPanel';
+import { TourCompletionModal } from './TourCompletionModal';
 import styles from './TourPage.module.css';
 
 interface TourPageProps {
@@ -16,10 +17,11 @@ interface TourPageProps {
   onBack: () => void;
 }
 
-export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
+export const TourPage: React.FC<TourPageProps> = ({ route, user, onBack }) => {
   const [startTime] = useState<Date>(new Date());
   const [completedMarketIds, setCompletedMarketIds] = useState<string[]>([]);
   const [endTime, setEndTime] = useState<Date | null>(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const marketsListRef = useRef<HTMLDivElement>(null);
   const activeMarketRef = useRef<HTMLDivElement>(null);
   const stackedContainerRef = useRef<HTMLDivElement>(null);
@@ -273,6 +275,15 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
     }
   };
 
+  const handleEndTour = () => {
+    setShowCompletionModal(true);
+  };
+
+  const handleCloseCompletionModal = () => {
+    setShowCompletionModal(false);
+    onBack();
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -487,7 +498,7 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
                 </div>
                 
                 {/* End Tour Button */}
-                <button className={styles.endTourButton}>
+                <button className={styles.endTourButton} onClick={handleEndTour}>
                   Tour frühzeitig beenden
                 </button>
               </>
@@ -500,6 +511,17 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user }) => {
       <DevPanel 
         onCompleteNextMarket={handleCompleteNextMarket} 
         onToggle={(toggle) => { devPanelToggleRef.current = toggle; }}
+      />
+
+      {/* Tour Completion Modal */}
+      <TourCompletionModal
+        isOpen={showCompletionModal}
+        onClose={handleCloseCompletionModal}
+        completedMarkets={completedMarketIds}
+        marketNames={route.markets.map(m => ({ id: m.id, name: m.name }))}
+        startTime={startTime}
+        endTime={endTime || new Date()}
+        userName={user.firstName}
       />
     </div>
   );
