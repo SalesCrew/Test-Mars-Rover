@@ -25,11 +25,6 @@ export const MarketFrequencyAlerts: React.FC<MarketFrequencyAlertsProps> = ({
     <div className={styles.container}>
       <div className={styles.header}>
         <h2 className={styles.title}>Vorschläge für heute</h2>
-        {onViewAll && (
-          <button className={styles.viewAllButton} onClick={onViewAll}>
-            Alle anzeigen
-          </button>
-        )}
       </div>
 
       <AnimatedList
