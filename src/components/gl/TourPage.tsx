@@ -519,10 +519,12 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user, onBack }) => {
         isOpen={showCompletionModal}
         onClose={handleCloseCompletionModal}
         completedMarkets={completedMarketIds}
+        pendingMarkets={pendingMarkets}
         marketNames={route.markets.map(m => ({ id: m.id, name: m.name }))}
         startTime={startTime}
         endTime={endTime || new Date()}
         userName={user.firstName}
+        isEarlyEnd={!isTourCompleted}
       />
     </div>
   );

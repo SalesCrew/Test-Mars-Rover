@@ -232,6 +232,22 @@
   white-space: nowrap;
 }
 
+/* Pending Market Item (for early end) */
+.pendingMarket {
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  opacity: 0.7;
+}
+
+.pendingMarket .marketNumber {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--color-text-secondary);
+}
+
+.pendingMarket .marketName {
+  color: var(--color-text-secondary);
+}
+
 /* Close Button */
 .closeButton {
   width: calc(100% - var(--space-4xl));
@@ -304,4 +320,5 @@
     height: 56px;
   }
 }
+
 

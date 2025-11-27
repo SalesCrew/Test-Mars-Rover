@@ -7,20 +7,24 @@ interface TourCompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
   completedMarkets: string[];
+  pendingMarkets?: string[];
   marketNames: { id: string; name: string }[];
   startTime: Date;
   endTime: Date;
   userName: string;
+  isEarlyEnd?: boolean;
 }
 
 export const TourCompletionModal: React.FC<TourCompletionModalProps> = ({
   isOpen,
   onClose,
   completedMarkets,
+  pendingMarkets = [],
   marketNames,
   startTime,
   endTime,
   userName,
+  isEarlyEnd = false,
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -56,8 +60,14 @@ export const TourCompletionModal: React.FC<TourCompletionModalProps> = ({
 
         {/* Title */}
         <div className={styles.titleSection}>
-          <h2 className={styles.title}>Hervorragende Arbeit, {userName}!</h2>
-          <p className={styles.subtitle}>Deine Tour wurde erfolgreich abgeschlossen</p>
+          <h2 className={styles.title}>
+            {isEarlyEnd ? `Gute Arbeit, ${userName}!` : `Hervorragende Arbeit, ${userName}!`}
+          </h2>
+          <p className={styles.subtitle}>
+            {isEarlyEnd 
+              ? 'Tour frühzeitig beendet – Du hast heute Großartiges geleistet' 
+              : 'Deine Tour wurde erfolgreich abgeschlossen'}
+          </p>
         </div>
 
         {/* Stats Grid */}
@@ -117,6 +127,28 @@ export const TourCompletionModal: React.FC<TourCompletionModalProps> = ({
             </AnimatedListWrapper>
           </div>
         </div>
+
+        {/* Pending Markets (for early end) */}
+        {isEarlyEnd && pendingMarkets.length > 0 && (
+          <div className={styles.marketsSection}>
+            <h3 className={styles.sectionTitle}>Nicht besucht</h3>
+            <div className={styles.marketsList}>
+              <AnimatedListWrapper delay={60}>
+                {pendingMarkets.map((marketId, index) => {
+                  const market = marketNames.find(m => m.id === marketId);
+                  if (!market) return null;
+                  
+                  return (
+                    <div key={marketId} className={`${styles.marketItem} ${styles.pendingMarket}`}>
+                      <div className={styles.marketNumber}>{index + 1}</div>
+                      <div className={styles.marketName}>{market.name}</div>
+                    </div>
+                  );
+                }).filter((item): item is React.ReactElement => item !== null)}
+              </AnimatedListWrapper>
+            </div>
+          </div>
+        )}
 
         {/* Close Button */}
         <button className={styles.closeButton} onClick={onClose}>
