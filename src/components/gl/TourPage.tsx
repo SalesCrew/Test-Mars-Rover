@@ -448,7 +448,7 @@ export const TourPage: React.FC<TourPageProps> = ({ route, user, onBack }) => {
                   </div>
                 </div>
                 
-                <button className={styles.endTourButtonComplete}>
+                <button className={styles.endTourButtonComplete} onClick={handleEndTour}>
                   Tour beenden
                 </button>
               </div>
