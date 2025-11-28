@@ -325,6 +325,16 @@
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   animation: slideIn 0.3s ease;
+  max-height: 280px;
+  overflow-y: auto;
+  
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.selectedProducts::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes slideIn {
