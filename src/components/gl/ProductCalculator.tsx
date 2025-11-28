@@ -3,6 +3,7 @@ import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, S
 import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../types/product-types';
 import { allProducts } from '../../data/productsData';
 import { allMarkets } from '../../data/marketsData';
+import { RingLoader } from 'react-spinners';
 import styles from './ProductCalculator.module.css';
 
 interface ProductCalculatorProps {
@@ -617,9 +618,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
             <div className={styles.resultsSection}>
               {isCalculating ? (
                 <div className={styles.calculatingState}>
-                  <div className={styles.calculatingIcon}>
-                    <ArrowsClockwise size={48} weight="bold" className={styles.spinning} />
-                  </div>
+                  <RingLoader color="#3B82F6" size={80} />
                   <h3 className={styles.calculatingTitle}>Berechne Ersatzoptionen...</h3>
                   <p className={styles.calculatingText}>
                     Finde die perfekte Kombination für Sie

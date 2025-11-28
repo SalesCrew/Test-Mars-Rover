@@ -508,24 +508,6 @@
   text-align: center;
 }
 
-.calculatingIcon {
-  margin-bottom: var(--space-xl);
-  color: var(--color-teal-mid);
-}
-
-.spinning {
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .calculatingTitle {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
