@@ -906,7 +906,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                 Abbrechen
               </button>
               <button
-                className={`${styles.button} ${styles.buttonPrimary}`}
+                className={`${styles.button} ${styles.buttonSuccess}`}
                 onClick={() => {
                   // Log the exchange (in real app would send to backend)
                   console.log('Exchange confirmed:', {
@@ -914,7 +914,14 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                     removed: removedProducts,
                     replacement: selectedSuggestion,
                   });
-                  onClose();
+                  // Reset everything to start fresh
+                  setShowConfirmation(false);
+                  setShowCalculation(false);
+                  setRemovedProducts([]);
+                  setAvailableProducts([]);
+                  setSuggestions([]);
+                  setSelectedSuggestion(null);
+                  setSelectedMarketId(null);
                 }}
                 disabled={!selectedMarketId}
               >
