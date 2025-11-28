@@ -378,8 +378,10 @@
 
 /* Stacked Markets Section */
 .stackedMarketsSection {
-  width: 100%;
+  width: calc(100% + var(--space-lg) * 2);
   margin-top: var(--space-lg);
+  margin-left: calc(-1 * var(--space-lg));
+  padding: 0 var(--space-lg);
 }
 
 .sectionTitle {
@@ -397,7 +399,7 @@
   min-height: 320px;
   max-height: 360px;
   overflow: hidden;
-  padding: 0 var(--space-lg) var(--space-xl);
+  padding-bottom: var(--space-xl);
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
