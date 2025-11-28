@@ -125,7 +125,6 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [sortedMarketIds, setSortedMarketIds] = useState<string[]>([]);
   const [routeModified, setRouteModified] = useState(false);
-  const [calculatedRoute, setCalculatedRoute] = useState<TourRoute | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -278,7 +277,6 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
             if (route) {
               route.optimizedOrder = [...sortedMarketIds];
             }
-            setCalculatedRoute(route);
             setTourStep('completed');
             
             // Show completed state for 1 second, then go to result
@@ -307,7 +305,6 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
     // Simulate API call delay with transport mode
     setTimeout(() => {
       const route = calculateTourRoute();
-      setCalculatedRoute(route);
       setTourStep('completed');
       
       // Show completed state for 1 second, then go to result
