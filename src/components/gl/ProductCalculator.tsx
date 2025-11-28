@@ -557,11 +557,11 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                     {suggestions.map((suggestion, index) => (
                       <div key={suggestion.id} className={styles.suggestionCard}>
                         <div className={styles.suggestionHeader}>
-                          <div className={styles.suggestionRank}>#{index + 1}</div>
+                          <div className={styles.suggestionRank}>{index + 1}</div>
+                          <div className={styles.matchScore}>
+                            {Math.round(suggestion.matchScore)}% Match
+                          </div>
                           <div className={styles.suggestionMeta}>
-                            <div className={styles.matchScore}>
-                              {Math.round(suggestion.matchScore)}% Match
-                            </div>
                             {suggestion.categoryMatch && (
                               <div className={styles.badge}>Gleiche Kategorie</div>
                             )}
