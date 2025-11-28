@@ -16,6 +16,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const [suggestions, setSuggestions] = useState<ReplacementSuggestion[]>([]);
   const [showCalculation, setShowCalculation] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isCalculationCompleted, setIsCalculationCompleted] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<ReplacementSuggestion | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
@@ -189,6 +190,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     if (removedProducts.length === 0) return;
     
     setIsCalculating(true);
+    setIsCalculationCompleted(false);
     setShowCalculation(true);
 
     // Simulate calculation delay
@@ -216,6 +218,12 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
 
       setSuggestions(newSuggestions);
       setIsCalculating(false);
+      setIsCalculationCompleted(true);
+      
+      // Show completed state for 1 second, then show results
+      setTimeout(() => {
+        setIsCalculationCompleted(false);
+      }, 1000);
     }, 1500);
   };
 
@@ -615,6 +623,19 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                   <h3 className={styles.calculatingTitle}>Berechne Ersatzoptionen...</h3>
                   <p className={styles.calculatingText}>
                     Finde die perfekte Kombination für Sie
+                  </p>
+                </div>
+              ) : isCalculationCompleted ? (
+                <div className={styles.calculatingState}>
+                  <div className={styles.completedAnimation}>
+                    <div className={styles.completedPulse}></div>
+                    <div className={styles.completedCircle}>
+                      <Check size={40} weight="bold" />
+                    </div>
+                  </div>
+                  <h3 className={styles.calculatingTitle}>Berechnung abgeschlossen!</h3>
+                  <p className={styles.calculatingText}>
+                    Ihre Ersatzoptionen sind bereit
                   </p>
                 </div>
               ) : (

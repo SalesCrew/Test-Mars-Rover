@@ -105,7 +105,7 @@ interface MarketSelectionModalProps {
 }
 
 type Mode = 'single' | 'tour';
-type TourStep = 'selection' | 'summary' | 'optimizing' | 'result';
+type TourStep = 'selection' | 'summary' | 'optimizing' | 'completed' | 'result';
 
 export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
   isOpen,
@@ -125,6 +125,7 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
   const [showTransportModal, setShowTransportModal] = useState(false);
   const [sortedMarketIds, setSortedMarketIds] = useState<string[]>([]);
   const [routeModified, setRouteModified] = useState(false);
+  const [calculatedRoute, setCalculatedRoute] = useState<TourRoute | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -277,9 +278,15 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
             if (route) {
               route.optimizedOrder = [...sortedMarketIds];
             }
-            setOptimizedRoute(route);
-            setTourStep('result');
-            setRouteModified(false);
+            setCalculatedRoute(route);
+            setTourStep('completed');
+            
+            // Show completed state for 1 second, then go to result
+            setTimeout(() => {
+              setOptimizedRoute(route);
+              setTourStep('result');
+              setRouteModified(false);
+            }, 1000);
           }, 2000);
         } else {
           // Start tour with current route
@@ -300,8 +307,14 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
     // Simulate API call delay with transport mode
     setTimeout(() => {
       const route = calculateTourRoute();
-      setOptimizedRoute(route);
-      setTourStep('result');
+      setCalculatedRoute(route);
+      setTourStep('completed');
+      
+      // Show completed state for 1 second, then go to result
+      setTimeout(() => {
+        setOptimizedRoute(route);
+        setTourStep('result');
+      }, 1000);
     }, 2000);
   };
 
@@ -658,6 +671,22 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
               <h3 className={styles.optimizingTitle}>Perfekte Route wird berechnet</h3>
               <p className={styles.optimizingText}>
                 Berechnung der perfekten Route...
+              </p>
+            </div>
+          )}
+
+          {/* Tour Completed Step */}
+          {mode === 'tour' && tourStep === 'completed' && (
+            <div className={styles.optimizingContainer}>
+              <div className={styles.completedAnimation}>
+                <div className={styles.completedPulse}></div>
+                <div className={styles.completedCircle}>
+                  <Check size={40} weight="bold" />
+                </div>
+              </div>
+              <h3 className={styles.optimizingTitle}>Route berechnet!</h3>
+              <p className={styles.optimizingText}>
+                Ihre optimale Route ist bereit
               </p>
             </div>
           )}
