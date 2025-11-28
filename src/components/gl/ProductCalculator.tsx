@@ -426,11 +426,12 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             {products.map(product => (
                               <button
                                 key={product.id}
-                                className={styles.dropdownItem}
-                                onClick={() => {
+                                className={`${styles.dropdownItem} ${
+                                  removedProducts.some(p => p.product.id === product.id) ? styles.selected : ''
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleAddRemovedProduct(product);
-                                  setIsRemovedDropdownOpen(false);
-                                  setRemovedSearchQuery('');
                                 }}
                               >
                                 <div className={styles.productInfo}>
@@ -544,11 +545,12 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             {products.map(product => (
                               <button
                                 key={product.id}
-                                className={styles.dropdownItem}
-                                onClick={() => {
+                                className={`${styles.dropdownItem} ${
+                                  availableProducts.some(p => p.product.id === product.id) ? styles.selected : ''
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleAddAvailableProduct(product);
-                                  setIsAvailableDropdownOpen(false);
-                                  setAvailableSearchQuery('');
                                 }}
                               >
                                 <div className={styles.productInfo}>

@@ -290,6 +290,14 @@
   background: rgba(59, 130, 246, 0.05);
 }
 
+.dropdownItem.selected {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.dropdownItem.selected:hover {
+  background: rgba(16, 185, 129, 0.15);
+}
+
 .productInfo {
   flex: 1;
   min-width: 0;
