@@ -136,6 +136,22 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     }
   };
 
+  const handleManualQuantityChange = (
+    productId: string,
+    value: string,
+    type: 'removed' | 'available'
+  ) => {
+    const numValue = parseInt(value, 10);
+    if (!isNaN(numValue) && numValue > 0) {
+      const list = type === 'removed' ? removedProducts : availableProducts;
+      const setList = type === 'removed' ? setRemovedProducts : setAvailableProducts;
+      
+      setList(list.map(p => 
+        p.product.id === productId ? { ...p, quantity: numValue } : p
+      ));
+    }
+  };
+
   const calculateReplacements = () => {
     if (removedProducts.length === 0) return;
     
@@ -332,7 +348,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                   Welche Produkte wurden aus dem Regal entfernt?
                 </p>
 
-                <div className={styles.dropdownContainer} ref={removedDropdownRef}>
+                <div className={`${styles.dropdownContainer} ${isRemovedDropdownOpen ? styles.dropdownOpen : ''}`} ref={removedDropdownRef}>
                   <button
                     className={`${styles.dropdownButton} ${isRemovedDropdownOpen ? styles.open : ''}`}
                     onClick={() => setIsRemovedDropdownOpen(!isRemovedDropdownOpen)}
@@ -408,7 +424,13 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                           >
                             <Minus size={16} weight="bold" />
                           </button>
-                          <span className={styles.quantity}>{p.quantity}</span>
+                          <input
+                            type="number"
+                            className={styles.quantityInput}
+                            value={p.quantity}
+                            onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'removed')}
+                            min="1"
+                          />
                           <button
                             className={styles.quantityButton}
                             onClick={() => handleUpdateQuantity(p.product.id, 1, 'removed')}
@@ -444,7 +466,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                   Welche Produkte haben Sie als Ersatz dabei?
                 </p>
 
-                <div className={styles.dropdownContainer} ref={availableDropdownRef}>
+                <div className={`${styles.dropdownContainer} ${isAvailableDropdownOpen ? styles.dropdownOpen : ''}`} ref={availableDropdownRef}>
                   <button
                     className={`${styles.dropdownButton} ${isAvailableDropdownOpen ? styles.open : ''}`}
                     onClick={() => setIsAvailableDropdownOpen(!isAvailableDropdownOpen)}
@@ -520,7 +542,13 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                           >
                             <Minus size={16} weight="bold" />
                           </button>
-                          <span className={styles.quantity}>{p.quantity}</span>
+                          <input
+                            type="number"
+                            className={styles.quantityInput}
+                            value={p.quantity}
+                            onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'available')}
+                            min="1"
+                          />
                           <button
                             className={styles.quantityButton}
                             onClick={() => handleUpdateQuantity(p.product.id, 1, 'available')}
