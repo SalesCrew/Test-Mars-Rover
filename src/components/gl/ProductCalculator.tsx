@@ -294,11 +294,26 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         <div className={styles.header}>
           <div className={styles.headerContent}>
             <div className={styles.iconWrapper}>
-              <Package size={24} weight="duotone" />
+              {showCalculation && !isCalculating ? (
+                <Sparkle size={24} weight="duotone" />
+              ) : (
+                <Package size={24} weight="duotone" />
+              )}
             </div>
             <div>
-              <h2 className={styles.title}>Produktrechner</h2>
-              <p className={styles.subtitle}>Ersatzprodukte berechnen</p>
+              {showCalculation && !isCalculating ? (
+                <>
+                  <h2 className={styles.title}>Ersatzvorschläge</h2>
+                  <p className={styles.subtitle}>
+                    Basierend auf {formatPrice(getTotalRemovedValue())} Warenwert
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className={styles.title}>Produktrechner</h2>
+                  <p className={styles.subtitle}>Ersatzprodukte berechnen</p>
+                </>
+              )}
             </div>
           </div>
           <button className={styles.closeButton} onClick={onClose} aria-label="Schließen">
@@ -543,16 +558,6 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                 </div>
               ) : (
                 <>
-                  <div className={styles.resultsHeader}>
-                    <Sparkle size={24} weight="duotone" />
-                    <div>
-                      <h3 className={styles.resultsTitle}>Ersatzvorschläge</h3>
-                      <p className={styles.resultsSubtitle}>
-                        Basierend auf {formatPrice(getTotalRemovedValue())} Warenwert
-                      </p>
-                    </div>
-                  </div>
-
                   <div className={styles.suggestions}>
                     {suggestions.map((suggestion, index) => (
                       <div key={suggestion.id} className={styles.suggestionCard}>
