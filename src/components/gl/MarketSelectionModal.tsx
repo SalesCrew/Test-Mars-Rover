@@ -293,6 +293,16 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
   const handleTransportSelect = (mode: 'car' | 'train') => {
     setTransportMode(mode);
     setShowTransportModal(false);
+    
+    // Automatically start route calculation
+    setTourStep('optimizing');
+    
+    // Simulate API call delay with transport mode
+    setTimeout(() => {
+      const route = calculateTourRoute();
+      setOptimizedRoute(route);
+      setTourStep('result');
+    }, 2000);
   };
 
   const formatTime = (minutes: number): string => {
