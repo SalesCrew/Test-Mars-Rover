@@ -236,9 +236,15 @@
 }
 
 .marketCountComplete {
+  padding: var(--space-xs) var(--space-md);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   color: #10B981;
   font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  cursor: not-allowed;
 }
 
 .marketsList {
