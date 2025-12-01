@@ -425,7 +425,7 @@
 }
 
 .quantityInput {
-  min-width: 24px;
+  min-width: 40px;
   width: 40px;
   text-align: center;
   font-size: var(--font-size-sm);
@@ -437,6 +437,11 @@
   outline: none;
   cursor: pointer;
   padding: 0;
+}
+
+.quantityInput::placeholder {
+  color: transparent;
+  opacity: 0;
 }
 
 .quantityInput::-webkit-inner-spin-button,
@@ -507,6 +512,8 @@
   gap: var(--space-xl);
   overflow-y: auto;
   max-height: calc(90vh - 250px);
+  padding: 4px 0;
+  margin: -4px 0;
   
   /* Hide scrollbar */
   scrollbar-width: none;
@@ -974,6 +981,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  max-height: 180px;
+  overflow-y: auto;
+  
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.exchangeProducts::-webkit-scrollbar {
+  display: none;
 }
 
 .exchangeProductItem {

@@ -1,0 +1,280 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95));
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 80px rgba(16, 185, 129, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modalAnimated {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.iconContainer {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3xl) var(--space-3xl) var(--space-lg);
+  animation: iconPulse 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+}
+
+@keyframes iconPulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.successIcon {
+  color: #10B981;
+  filter: drop-shadow(0 8px 24px rgba(16, 185, 129, 0.25));
+}
+
+.titleSection {
+  text-align: center;
+  padding: 0 var(--space-2xl) var(--space-xl);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-sm) 0;
+  line-height: var(--line-height-tight);
+}
+
+.subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: var(--line-height-normal);
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  padding: 0 var(--space-2xl) var(--space-xl);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-md);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.04));
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #10B981, #059669);
+}
+
+.statIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #10B981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.statContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.statValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+}
+
+/* Market Section */
+.marketSection {
+  padding: 0 var(--space-2xl) var(--space-lg);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 var(--space-md) 0;
+}
+
+.marketCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg);
+  background: white;
+  border: 1px solid rgba(16, 185, 129, 0.12);
+  border-radius: var(--radius-md);
+  min-height: 60px;
+}
+
+.marketName {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.marketBadge {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Message Section */
+.messageSection {
+  padding: 0 var(--space-2xl) var(--space-xl);
+  text-align: center;
+}
+
+.message {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+/* Close Button */
+.closeButton {
+  width: calc(100% - var(--space-4xl));
+  margin: 0 var(--space-2xl) var(--space-2xl);
+  padding: var(--space-md) var(--space-xl);
+  background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.closeButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #34D399 0%, #10B981 50%, #059669 100%);
+}
+
+.closeButton:active {
+  transform: translateY(0);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid #10B981;
+  outline-offset: 2px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+
+  .title {
+    font-size: var(--font-size-xl);
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+    padding: 0 var(--space-xl) var(--space-lg);
+  }
+
+  .statCard {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-md);
+  }
+
+  .statContent {
+    align-items: flex-start;
+  }
+
+  .statLabel {
+    text-align: left;
+  }
+
+  .iconContainer {
+    padding: var(--space-2xl) var(--space-xl) var(--space-md);
+  }
+
+  .successIcon {
+    width: 56px;
+    height: 56px;
+  }
+}
+

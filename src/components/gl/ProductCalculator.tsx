@@ -4,14 +4,16 @@ import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../
 import { allProducts } from '../../data/productsData';
 import { allMarkets } from '../../data/marketsData';
 import { RingLoader } from 'react-spinners';
+import { ExchangeSuccessModal } from './ExchangeSuccessModal';
 import styles from './ProductCalculator.module.css';
 
 interface ProductCalculatorProps {
   isOpen: boolean;
   onClose: () => void;
+  userName?: string;
 }
 
-export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, onClose }) => {
+export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, onClose, userName = 'Thomas' }) => {
   const [removedProducts, setRemovedProducts] = useState<ProductWithQuantity[]>([]);
   const [availableProducts, setAvailableProducts] = useState<ProductWithQuantity[]>([]);
   const [suggestions, setSuggestions] = useState<ReplacementSuggestion[]>([]);
@@ -20,6 +22,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const [isCalculationCompleted, setIsCalculationCompleted] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<ReplacementSuggestion | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
   const [marketSearchQuery, setMarketSearchQuery] = useState('');
@@ -130,8 +133,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       // If already selected, remove it (uncheck)
       setRemovedProducts(removedProducts.filter(p => p.product.id !== product.id));
     } else {
-      // If not selected, add it with quantity 1
-      setRemovedProducts([...removedProducts, { product, quantity: 1 }]);
+      // If not selected, add it with empty quantity
+      setRemovedProducts([...removedProducts, { product, quantity: 0 }]);
     }
   };
 
@@ -141,8 +144,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       // If already selected, remove it (uncheck)
       setAvailableProducts(availableProducts.filter(p => p.product.id !== product.id));
     } else {
-      // If not selected, add it with quantity 1
-      setAvailableProducts([...availableProducts, { product, quantity: 1 }]);
+      // If not selected, add it with empty quantity
+      setAvailableProducts([...availableProducts, { product, quantity: 0 }]);
     }
   };
 
@@ -156,7 +159,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     
     setList(list.map(p => {
       if (p.product.id === productId) {
-        const newQuantity = Math.max(1, p.quantity + delta);
+        const currentQuantity = p.quantity || 0;
+        const newQuantity = Math.max(0, currentQuantity + delta);
         return { ...p, quantity: newQuantity };
       }
       return p;
@@ -176,14 +180,21 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     value: string,
     type: 'removed' | 'available'
   ) => {
-    const numValue = parseInt(value, 10);
-    if (!isNaN(numValue) && numValue > 0) {
-      const list = type === 'removed' ? removedProducts : availableProducts;
-      const setList = type === 'removed' ? setRemovedProducts : setAvailableProducts;
-      
+    const list = type === 'removed' ? removedProducts : availableProducts;
+    const setList = type === 'removed' ? setRemovedProducts : setAvailableProducts;
+    
+    if (value === '') {
+      // Allow empty value
       setList(list.map(p => 
-        p.product.id === productId ? { ...p, quantity: numValue } : p
+        p.product.id === productId ? { ...p, quantity: 0 } : p
       ));
+    } else {
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue) && numValue >= 0) {
+        setList(list.map(p => 
+          p.product.id === productId ? { ...p, quantity: numValue } : p
+        ));
+      }
     }
   };
 
@@ -232,7 +243,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     products: ProductWithQuantity[],
     targetValue: number
   ): ReplacementSuggestion[] => {
-    const suggestions: ReplacementSuggestion[] = [];
+    const singleProductSuggestions: ReplacementSuggestion[] = [];
+    const multiProductSuggestions: ReplacementSuggestion[] = [];
     const removedCategory = removedProducts[0]?.product.category;
     const removedBrand = removedProducts[0]?.product.brand;
 
@@ -242,8 +254,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       const totalValue = p.product.price * quantity;
       const valueDiff = Math.abs(totalValue - targetValue);
       
-      if (valueDiff <= targetValue * 0.15) { // Within 15%
-        suggestions.push({
+      if (valueDiff <= targetValue * 0.2) { // Within 20%
+        singleProductSuggestions.push({
           id: `single-${p.product.id}`,
           products: [{ product: p.product, quantity }],
           totalValue,
@@ -262,18 +274,18 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         const p2 = products[j];
         
         // Try different quantity combinations
-        for (let q1 = 1; q1 <= 5; q1++) {
-          for (let q2 = 1; q2 <= 5; q2++) {
+        for (let q1 = 1; q1 <= 8; q1++) {
+          for (let q2 = 1; q2 <= 8; q2++) {
             const totalValue = p1.product.price * q1 + p2.product.price * q2;
             const valueDiff = Math.abs(totalValue - targetValue);
             
-            if (valueDiff <= targetValue * 0.1) { // Within 10%
+            if (valueDiff <= targetValue * 0.2) { // Within 20%
               const avgScore = (
                 calculateMatchScore(p1.product, removedCategory, removedBrand, 0, targetValue) +
                 calculateMatchScore(p2.product, removedCategory, removedBrand, 0, targetValue)
               ) / 2;
               
-              suggestions.push({
+              multiProductSuggestions.push({
                 id: `combo-${p1.product.id}-${p2.product.id}-${q1}-${q2}`,
                 products: [
                   { product: p1.product, quantity: q1 },
@@ -281,7 +293,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                 ],
                 totalValue,
                 valueDifference: valueDiff,
-                matchScore: avgScore - (valueDiff / targetValue) * 20,
+                matchScore: avgScore - (valueDiff / targetValue) * 15,
                 categoryMatch: p1.product.category === removedCategory || p2.product.category === removedCategory,
                 brandMatch: p1.product.brand === removedBrand || p2.product.brand === removedBrand,
               });
@@ -291,10 +303,30 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       }
     }
 
-    // Sort by match score and return top suggestions
-    return suggestions
+    // Sort each category by match score
+    singleProductSuggestions.sort((a, b) => b.matchScore - a.matchScore);
+    multiProductSuggestions.sort((a, b) => b.matchScore - a.matchScore);
+
+    // Ensure fair mix: take top 2-3 from each category
+    const mixedSuggestions: ReplacementSuggestion[] = [];
+    const maxResults = 5;
+    
+    // Take 2 best single products
+    mixedSuggestions.push(...singleProductSuggestions.slice(0, 2));
+    
+    // Take 3 best multi-product combinations
+    mixedSuggestions.push(...multiProductSuggestions.slice(0, 3));
+    
+    // If we don't have enough multi-product suggestions, fill with more single products
+    if (mixedSuggestions.length < maxResults) {
+      const needed = maxResults - mixedSuggestions.length;
+      mixedSuggestions.push(...singleProductSuggestions.slice(2, 2 + needed));
+    }
+    
+    // Sort by match score for final ranking
+    return mixedSuggestions
       .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 10);
+      .slice(0, maxResults);
   };
 
   const calculateMatchScore = (
@@ -466,24 +498,25 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             onClick={() => handleUpdateQuantity(p.product.id, -1, 'removed')}
                           >
                             <Minus size={16} weight="bold" />
-                          </button>
-                          <input
-                            type="number"
-                            className={styles.quantityInput}
-                            value={p.quantity}
-                            onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'removed')}
-                            min="1"
-                          />
-                          <button
-                            className={styles.quantityButton}
-                            onClick={() => handleUpdateQuantity(p.product.id, 1, 'removed')}
-                          >
-                            <Plus size={16} weight="bold" />
-                          </button>
-                        </div>
-                        <div className={styles.productCardPrice}>
-                          {formatPrice(p.product.price * p.quantity)}
-                        </div>
+                        </button>
+                        <input
+                          type="number"
+                          className={styles.quantityInput}
+                          value={p.quantity || ''}
+                          onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'removed')}
+                          min="0"
+                          placeholder=" "
+                        />
+                        <button
+                          className={styles.quantityButton}
+                          onClick={() => handleUpdateQuantity(p.product.id, 1, 'removed')}
+                        >
+                          <Plus size={16} weight="bold" />
+                        </button>
+                      </div>
+                      <div className={styles.productCardPrice}>
+                        {p.quantity ? formatPrice(p.product.price * p.quantity) : formatPrice(0)}
+                      </div>
                         <button
                           className={styles.removeButton}
                           onClick={() => handleRemoveProduct(p.product.id, 'removed')}
@@ -585,24 +618,25 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             onClick={() => handleUpdateQuantity(p.product.id, -1, 'available')}
                           >
                             <Minus size={16} weight="bold" />
-                          </button>
-                          <input
-                            type="number"
-                            className={styles.quantityInput}
-                            value={p.quantity}
-                            onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'available')}
-                            min="1"
-                          />
-                          <button
-                            className={styles.quantityButton}
-                            onClick={() => handleUpdateQuantity(p.product.id, 1, 'available')}
-                          >
-                            <Plus size={16} weight="bold" />
-                          </button>
-                        </div>
-                        <div className={styles.productCardPrice}>
-                          {formatPrice(p.product.price * p.quantity)}
-                        </div>
+                        </button>
+                        <input
+                          type="number"
+                          className={styles.quantityInput}
+                          value={p.quantity || ''}
+                          onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'available')}
+                          min="0"
+                          placeholder=" "
+                        />
+                        <button
+                          className={styles.quantityButton}
+                          onClick={() => handleUpdateQuantity(p.product.id, 1, 'available')}
+                        >
+                          <Plus size={16} weight="bold" />
+                        </button>
+                      </div>
+                      <div className={styles.productCardPrice}>
+                        {p.quantity ? formatPrice(p.product.price * p.quantity) : '∞'}
+                      </div>
                         <button
                           className={styles.removeButton}
                           onClick={() => handleRemoveProduct(p.product.id, 'available')}
@@ -688,7 +722,11 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                               {formatPrice(suggestion.totalValue)}
                             </span>
                           </div>
-                          {suggestion.valueDifference > 0.01 && (
+                          {suggestion.valueDifference <= 0.01 ? (
+                            <div className={styles.valueDifference}>
+                              Perfekter Match
+                            </div>
+                          ) : (
                             <div className={styles.valueDifference}>
                               {suggestion.valueDifference > 0 ? '+' : ''}
                               {formatPrice(suggestion.valueDifference)} Differenz
@@ -915,14 +953,9 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                     removed: removedProducts,
                     replacement: selectedSuggestion,
                   });
-                  // Reset everything to start fresh
+                  // Close confirmation modal and show success modal
                   setShowConfirmation(false);
-                  setShowCalculation(false);
-                  setRemovedProducts([]);
-                  setAvailableProducts([]);
-                  setSuggestions([]);
-                  setSelectedSuggestion(null);
-                  setSelectedMarketId(null);
+                  setShowSuccessModal(true);
                 }}
                 disabled={!selectedMarketId}
               >
@@ -933,6 +966,27 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
           </div>
         </div>
       )}
+
+      {/* Exchange Success Modal */}
+      <ExchangeSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          // Reset everything and close
+          setShowSuccessModal(false);
+          setShowCalculation(false);
+          setRemovedProducts([]);
+          setAvailableProducts([]);
+          setSuggestions([]);
+          setSelectedSuggestion(null);
+          setSelectedMarketId(null);
+          onClose(); // Close the main ProductCalculator modal
+        }}
+        marketName={selectedMarketId ? (allMarkets.find(m => m.id === selectedMarketId)?.name || '') : ''}
+        removedProductsCount={removedProducts.length}
+        replacementProductsCount={selectedSuggestion?.products.length || 0}
+        totalValue={selectedSuggestion?.totalValue || 0}
+        userName={userName}
+      />
     </div>
   );
 };

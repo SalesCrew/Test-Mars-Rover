@@ -162,6 +162,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       <ProductCalculator
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
+        userName={data.user.firstName}
       />
     </div>
   );
