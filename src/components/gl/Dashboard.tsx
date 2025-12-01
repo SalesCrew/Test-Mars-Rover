@@ -8,6 +8,7 @@ import { MarketDetailModal } from './MarketDetailModal';
 import { ProductCalculator } from './ProductCalculator';
 import { TourPage } from './TourPage';
 import { Header } from './Header';
+import { ChatBubble } from './ChatBubble';
 import Aurora from './Aurora';
 import type { GLDashboard, NavigationTab } from '../../types/gl-types';
 import type { TourRoute, Market } from '../../types/market-types';
@@ -164,6 +165,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         onClose={() => setIsCalculatorOpen(false)}
         userName={data.user.firstName}
       />
+
+      {/* Chat Bubble */}
+      <ChatBubble />
     </div>
   );
 };
