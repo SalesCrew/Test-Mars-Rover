@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChatWindow } from './ChatWindow';
+import roverIcon from '../../assets/rover-icon.png';
 import styles from './ChatBubble.module.css';
 
 export const ChatBubble: React.FC = () => {
@@ -26,7 +27,7 @@ export const ChatBubble: React.FC = () => {
         <div className={styles.pulse}></div>
         <div className={styles.pulse} style={{ animationDelay: '1s' }}></div>
         <img 
-          src="/docs/6b424554-6aa3-4c67-a7d9-5b797ef17f24-removebg-preview.png" 
+          src={roverIcon}
           alt="Chat"
           className={`${styles.chatIcon} ${isSpinning ? styles.spinning : ''}`}
         />

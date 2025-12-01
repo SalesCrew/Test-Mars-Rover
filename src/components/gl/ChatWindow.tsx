@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, PaperPlaneRight } from '@phosphor-icons/react';
+import roverIcon from '../../assets/rover-icon.png';
 import styles from './ChatWindow.module.css';
 
 interface ChatWindowProps {
@@ -84,7 +85,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
         <div className={styles.headerLeft}>
           <div className={styles.avatarContainer}>
             <img 
-              src="/docs/6b424554-6aa3-4c67-a7d9-5b797ef17f24-removebg-preview.png" 
+              src={roverIcon}
               alt="Mars Rover"
               className={styles.avatar}
             />
@@ -111,7 +112,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
           >
             {message.sender === 'rover' && (
               <img 
-                src="/docs/6b424554-6aa3-4c67-a7d9-5b797ef17f24-removebg-preview.png" 
+                src={roverIcon}
                 alt="Rover"
                 className={styles.messageAvatar}
               />
