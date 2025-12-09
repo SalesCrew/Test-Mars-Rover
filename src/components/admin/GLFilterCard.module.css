@@ -1,0 +1,576 @@
+.glFilterCard {
+  position: relative;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(232, 232, 232, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 0 20px 0 20px;
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+}
+
+/* Radial gradient overlay */
+.gradientOverlay {
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.08), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Left Sidebar - Stats Column */
+.statsColumn {
+  position: relative;
+  z-index: 1;
+  width: 50px;
+  min-width: 50px;
+  border-right: 1px solid rgba(226, 232, 240, 0.6);
+  padding-right: 16px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.statBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.statNumber {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.statNumberActive {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.statNumberInactive {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.statLabel {
+  font-size: 7px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  color: rgba(107, 114, 128, 0.7);
+}
+
+.statSeparator {
+  display: none;
+}
+
+/* Right Section - GL Buttons Grid */
+.glButtonsGrid {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
+  align-content: center;
+  overflow: visible;
+  padding: 8px 16px;
+  margin: 0 -16px;
+}
+
+/* Hide the separate divider element */
+.rightDivider {
+  display: none;
+}
+
+/* Market Preview - styled like TourPage market items */
+.marketPreview {
+  position: absolute;
+  top: calc(50% + 4px);
+  left: 16px;
+  width: calc((100% - 56px) / 4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 8px;
+  min-height: 36px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeInPreview 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+}
+
+.marketPreviewMatch {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(5, 150, 105, 0.02));
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.marketPreviewMatch .marketName,
+.marketPreviewMatch .marketAddress {
+  opacity: 0.5;
+}
+
+.marketInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.marketName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marketAddress {
+  font-size: 9px;
+  color: #9CA3AF;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.checkmarkContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.1);
+  flex-shrink: 0;
+}
+
+.checkmark {
+  color: #10B981;
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes fadeInPreview {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.glButton {
+  position: relative;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.83, 0, 0.17, 1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.glButton:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #6B7280;
+}
+
+.glButtonActive {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transform: none;
+  color: #6B7280;
+  font-weight: 600;
+  overflow: visible;
+}
+
+.glButtonActive::after {
+  content: '';
+  position: absolute;
+  right: -22px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 170px;
+  width: 1px;
+  background: rgba(226, 232, 240, 0.6);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeInDivider 0.3s ease-in-out 0.2s forwards;
+}
+
+@keyframes fadeInDivider {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.glButtonActive:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #6B7280;
+}
+
+/* Slide out animations */
+.slideOutTop {
+  animation: slideOutToTop 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.slideOutBottom {
+  animation: slideOutToBottom 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Slide in animations */
+.slideInTop {
+  opacity: 0;
+  transform: translateY(-60px);
+  animation: slideInFromTop 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.slideInBottom {
+  opacity: 0;
+  transform: translateY(60px);
+  animation: slideInFromBottom 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideOutToTop {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px);
+  }
+}
+
+@keyframes slideOutToBottom {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+}
+
+@keyframes slideInFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  0% {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide to corner animations - from each grid position */
+/* Using calc() with percentages for responsive positioning */
+/* Row 0 (top row) */
+.slideToCornerR0C0 {
+  animation: slideToCornerFromR0C0 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideToCornerR0C1 {
+  animation: slideToCornerFromR0C1 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideToCornerR0C2 {
+  animation: slideToCornerFromR0C2 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideToCornerR0C3 {
+  animation: slideToCornerFromR0C3 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Row 1 (bottom row) */
+.slideToCornerR1C0 {
+  animation: slideToCornerFromR1C0 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideToCornerR1C1 {
+  animation: slideToCornerFromR1C1 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideToCornerR1C2 {
+  animation: slideToCornerFromR1C2 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideToCornerR1C3 {
+  animation: slideToCornerFromR1C3 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Slide from corner back to original position */
+.slideFromCornerR0C0 {
+  transform: translate(0, 0);
+  animation: slideFromCornerToR0C0 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR0C1 {
+  transform: translate(calc(-100% - 8px), 0);
+  animation: slideFromCornerToR0C1 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR0C2 {
+  transform: translate(calc(-200% - 16px), 0);
+  animation: slideFromCornerToR0C2 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR0C3 {
+  transform: translate(calc(-300% - 24px), 0);
+  animation: slideFromCornerToR0C3 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR1C0 {
+  transform: translate(0, calc(-100% - 8px));
+  animation: slideFromCornerToR1C0 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR1C1 {
+  transform: translate(calc(-100% - 8px), calc(-100% - 8px));
+  animation: slideFromCornerToR1C1 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR1C2 {
+  transform: translate(calc(-200% - 16px), calc(-100% - 8px));
+  animation: slideFromCornerToR1C2 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.slideFromCornerR1C3 {
+  transform: translate(calc(-300% - 24px), calc(-100% - 8px));
+  animation: slideFromCornerToR1C3 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Keyframes for sliding TO corner - using calc() for responsive offsets */
+@keyframes slideToCornerFromR0C0 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideToCornerFromR0C1 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(calc(-100% - 8px), 0); }
+}
+@keyframes slideToCornerFromR0C2 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(calc(-200% - 16px), 0); }
+}
+@keyframes slideToCornerFromR0C3 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(calc(-300% - 24px), 0); }
+}
+@keyframes slideToCornerFromR1C0 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(0, calc(-100% - 8px)); }
+}
+@keyframes slideToCornerFromR1C1 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(calc(-100% - 8px), calc(-100% - 8px)); }
+}
+@keyframes slideToCornerFromR1C2 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(calc(-200% - 16px), calc(-100% - 8px)); }
+}
+@keyframes slideToCornerFromR1C3 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(calc(-300% - 24px), calc(-100% - 8px)); }
+}
+
+/* Keyframes for sliding FROM corner back to original position */
+@keyframes slideFromCornerToR0C0 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR0C1 {
+  0% { transform: translate(calc(-100% - 8px), 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR0C2 {
+  0% { transform: translate(calc(-200% - 16px), 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR0C3 {
+  0% { transform: translate(calc(-300% - 24px), 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR1C0 {
+  0% { transform: translate(0, calc(-100% - 8px)); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR1C1 {
+  0% { transform: translate(calc(-100% - 8px), calc(-100% - 8px)); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR1C2 {
+  0% { transform: translate(calc(-200% - 16px), calc(-100% - 8px)); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes slideFromCornerToR1C3 {
+  0% { transform: translate(calc(-300% - 24px), calc(-100% - 8px)); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Right Action Buttons Section */
+.actionButtonsSection {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: -12px;
+  height: 100%;
+  animation: fadeInButtons 0.3s ease-out forwards;
+}
+
+@keyframes fadeInButtons {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.actionDivider {
+  width: 1px;
+  height: 100%;
+  background: rgba(226, 232, 240, 0.6);
+  margin-right: 12px;
+  align-self: stretch;
+}
+
+.actionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-right: 0;
+  height: auto;
+  transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.actionButtonsExpanded {
+  gap: 0;
+}
+
+.actionButtonAdd {
+  width: 48px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-top-right-radius: 12px;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  color: #10B981;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.actionButtonAdd:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.actionButtonRemove {
+  width: 48px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-bottom-right-radius: 12px;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: #EF4444;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.actionButtonRemove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.actionButtonAddExpanded {
+  height: 96px;
+  border-bottom-right-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.actionButtonAddHidden {
+  height: 0;
+  padding: 0;
+  opacity: 0;
+  overflow: hidden;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.actionButtonRemoveExpanded {
+  height: 96px;
+  border-top-right-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.actionButtonRemoveHidden {
+  height: 0;
+  padding: 0;
+  opacity: 0;
+  overflow: hidden;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

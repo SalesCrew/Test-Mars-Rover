@@ -1,6 +1,6 @@
 .marketItem {
   display: grid;
-  grid-template-columns: 180px 80px 1fr 160px 60px 120px 100px;
+  grid-template-columns: 180px 80px 280px 1fr 160px 60px 120px 100px;
   gap: 16px;
   padding: 16px 20px;
   background: linear-gradient(135deg, rgba(249, 250, 251, 0.5), rgba(255, 255, 255, 0.3));
@@ -60,24 +60,67 @@
   white-space: nowrap;
 }
 
+/* BILLA Family - Yellow/Amber Gradients */
 .billaPlus {
-  background: linear-gradient(135deg, #FED304 0%, #E8C003 100%);
+  background: linear-gradient(135deg, #FED304 0%, #EAB308 100%);
 }
 
+.billaPlusPrivat {
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+}
+
+.billaPrivat {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+/* SPAR Family - Red Gradients + Green for Gourmet */
 .spar {
   background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
 }
 
-.billa {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+.eurospar {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
 }
 
+.interspar {
+  background: linear-gradient(135deg, #B91C1C 0%, #991B1B 100%);
+}
+
+.sparGourmet {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+/* Other Chains */
 .hofer {
   background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
 }
 
 .merkur {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.adeg {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+}
+
+.futterhaus {
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+}
+
+.hagebau {
+  background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+}
+
+.zoofachhandel {
+  background: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);
+}
+
+.default {
+  background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+}
+
+.billa {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
 
 /* Address Cell */
@@ -98,6 +141,12 @@
   font-weight: 500;
   color: #9CA3AF;
   letter-spacing: 0.3px;
+}
+
+.gebietsleiterCell {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4B5563;
 }
 
 .subgroupCell {

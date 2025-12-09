@@ -6,7 +6,9 @@ export interface Market {
   address: string;
   city: string;
   postalCode: string;
-  chain: 'Billa' | 'Spar' | 'Hofer' | 'Merkur' | 'Billa Plus' | 'Spar Gourmet';
+  chain: 'Adeg' | 'Billa+' | 'BILLA+' | 'BILLA Plus' | 'BILLA+ Privat' | 'BILLA Plus Privat' | 
+         'BILLA Privat' | 'Eurospar' | 'Futterhaus' | 'Hagebau' | 'Interspar' | 'Spar' | 
+         'Spar Gourmet' | 'Zoofachhandel' | 'Hofer' | 'Merkur' | string;
   frequency: number; // visits per year
   currentVisits: number;
   lastVisitDate?: string; // ISO date
