@@ -6,9 +6,10 @@ interface HeaderProps {
   firstName: string;
   avatar: string;
   onDevPanelToggle?: () => void;
+  onNotificationClick?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ firstName, avatar, onDevPanelToggle }) => {
+export const Header: React.FC<HeaderProps> = ({ firstName, avatar, onDevPanelToggle, onNotificationClick }) => {
   return (
     <header className={styles.header}>
       <div className={styles.headerContent}>
@@ -25,7 +26,11 @@ export const Header: React.FC<HeaderProps> = ({ firstName, avatar, onDevPanelTog
         </div>
         
         <div className={styles.headerActions}>
-          <button className={styles.notificationButton} aria-label="Benachrichtigungen">
+          <button 
+            className={styles.notificationButton} 
+            aria-label="Benachrichtigungen"
+            onClick={onNotificationClick}
+          >
             <Bell size={20} weight="regular" />
           </button>
           

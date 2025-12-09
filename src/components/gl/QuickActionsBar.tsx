@@ -46,7 +46,7 @@ export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
     },
     {
       id: 'vorbestellung',
-      label: 'Vorbestellung',
+      label: 'Vorbesteller',
       icon: <CalendarCheck size={32} weight="regular" />,
       onClick: onVorbestellung,
     },

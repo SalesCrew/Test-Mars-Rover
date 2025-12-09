@@ -51,8 +51,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
       ),
     },
     {
-      id: 'markets',
-      label: 'Märkte',
+      id: 'statistics',
+      label: 'Statistiken',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 17L9 11L13 15L21 7" strokeLinecap="round" strokeLinejoin="round"/>

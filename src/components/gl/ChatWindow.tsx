@@ -28,6 +28,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatWindowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,6 +39,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
       }, 300);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (chatWindowRef.current && !chatWindowRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      // Add event listener with a slight delay to prevent immediate closing
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     // Scroll to bottom when new messages arrive
@@ -79,7 +99,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className={`${styles.chatWindow} ${isAnimating ? styles.chatWindowAnimated : ''}`}>
+    <div ref={chatWindowRef} className={`${styles.chatWindow} ${isAnimating ? styles.chatWindowAnimated : ''}`}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>

@@ -9,6 +9,7 @@ export interface Product {
   packageSize: string; // e.g., '400g', '1.5kg', '200ml'
   brand: string; // e.g., 'Whiskas', 'Pedigree', 'Mars', 'Snickers'
   sku: string; // Stock Keeping Unit
+  orderNumber?: number; // 5-digit order number
 }
 
 export interface ProductCalculation {

@@ -1,0 +1,288 @@
+.heroCard {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.90), rgba(255, 255, 255, 0.65));
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-stroke);
+  animation: slideIn 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chain-specific gradient overlays */
+.chainOverlay {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.15;
+}
+
+.billaOverlay {
+  background: radial-gradient(circle at top right, rgba(239, 68, 68, 0.6), transparent 70%);
+}
+
+.sparOverlay {
+  background: radial-gradient(circle at top right, rgba(34, 197, 94, 0.6), transparent 70%);
+}
+
+/* Top Section */
+.topSection {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xl) var(--space-2xl) var(--space-md);
+  gap: var(--space-xs);
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.06));
+  flex-shrink: 0;
+}
+
+.chainLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 2px;
+}
+
+.percentageContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-xs) 0;
+}
+
+.percentage {
+  font-size: 56px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.percentageSuccess {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.goalLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  margin-top: 2px;
+}
+
+/* Progress Bar Section */
+.progressContainer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-md) var(--space-2xl) var(--space-lg);
+  flex-shrink: 0;
+}
+
+.progressBar {
+  width: 85%;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+}
+
+.progressFillComplete {
+  background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Stats Grid */
+.statsGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  padding: 0 var(--space-xl) var(--space-xl);
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.06));
+  flex: 1;
+  align-content: start;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-xs);
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  min-height: 90px;
+  overflow: visible;
+}
+
+.statIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.statIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.statIconBlue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+.statIconGreen {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.statIconOrange {
+  background: rgba(255, 152, 0, 0.1);
+  color: #FF9800;
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+  margin: 1px 0;
+}
+
+.statLabel {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.statSubLabel {
+  font-size: 8px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  font-weight: var(--font-weight-regular);
+  line-height: 1.2;
+  opacity: 0.75;
+  max-width: 100%;
+  padding: 0 2px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .heroCard {
+    min-height: 340px;
+  }
+
+  .topSection {
+    padding: var(--space-xl) var(--space-lg) var(--space-sm);
+    gap: 4px;
+  }
+
+  .chainLabel {
+    font-size: 10px;
+    letter-spacing: 0.8px;
+  }
+
+  .percentageContainer {
+    margin: 4px 0;
+  }
+
+  .percentage {
+    font-size: 44px;
+  }
+
+  .goalLabel {
+    font-size: 10px;
+  }
+
+  .progressContainer {
+    padding: var(--space-sm) var(--space-lg) var(--space-md);
+  }
+
+  .progressBar {
+    height: 10px;
+  }
+
+  .statsGrid {
+    padding: 0 var(--space-sm) var(--space-sm);
+    gap: 6px;
+  }
+
+  .statCard {
+    padding: var(--space-md) 4px;
+    gap: 5px;
+    min-height: 130px;
+    overflow: visible;
+  }
+
+  .statIcon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .statIcon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .statValue {
+    font-size: 24px;
+    margin: 1px 0;
+  }
+
+  .statLabel {
+    font-size: 10px;
+  }
+
+  .statSubLabel {
+    font-size: 8px;
+  }
+}
+

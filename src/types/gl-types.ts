@@ -49,6 +49,28 @@ export interface GLDashboard {
   };
 }
 
-export type NavigationTab = 'dashboard' | 'markets' | 'sell-ins' | 'profile';
+export type NavigationTab = 'dashboard' | 'statistics' | 'sell-ins' | 'profile';
 
+export interface WelleData {
+  id: string;
+  name: string; // e.g., "KW 48-49" or "Q4 2024"
+  startDate: Date;
+  endDate: Date;
+  billaPlus: ChainStats;
+  spar: ChainStats;
+}
+
+export interface ChainStats {
+  totalMarkets: number; // Total markets for this chain
+  withVorbesteller: number; // Markets with Display or Kartonware
+  displayCount: number; // Markets with Display
+  kartonwareCount: number; // Markets with Kartonware
+  goalPercentage: number; // 80 for Billa+, 60 for Spar
+}
+
+export interface TimeframeOption {
+  id: 'current' | '3months' | 'year' | 'custom';
+  label: string;
+  type: 'welle' | 'average';
+}
 

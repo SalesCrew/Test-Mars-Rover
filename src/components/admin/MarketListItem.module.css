@@ -1,0 +1,187 @@
+.marketItem {
+  display: grid;
+  grid-template-columns: 180px 80px 1fr 160px 60px 120px 100px;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.5), rgba(255, 255, 255, 0.3));
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  align-items: center;
+  cursor: pointer;
+}
+
+.marketItem:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(249, 250, 251, 0.6));
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.marketItem:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.01));
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.marketItem:active {
+  transform: translateY(-2px) scale(0.99);
+}
+
+/* ID Cell */
+.idCell {
+  font-size: 11px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.5px;
+}
+
+/* Chain Cell */
+.chainCell {
+  display: flex;
+  align-items: center;
+}
+
+.chainBadge {
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.billaPlus {
+  background: linear-gradient(135deg, #FED304 0%, #E8C003 100%);
+}
+
+.spar {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+.billa {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.hofer {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+
+.merkur {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+/* Address Cell */
+.addressCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addressStreet {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.addressCity {
+  font-size: 12px;
+  font-weight: 500;
+  color: #9CA3AF;
+  letter-spacing: 0.3px;
+}
+
+.subgroupCell {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.lastVisit {
+  font-size: 13px;
+  color: rgba(156, 163, 175, 0.3);
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+/* Frequency Cell */
+.frequencyCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progressRing {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.progressText {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progressValue {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+/* Status Cell */
+.statusCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  flex-shrink: 0;
+}
+
+.statusDotActive {
+  background: #10B981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.statusActive {
+  color: #059669;
+}
+
+.statusInactive {
+  color: #6B7280;
+}
+

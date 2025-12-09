@@ -1,0 +1,87 @@
+.pageContainer {
+  width: 100%;
+  padding: 32px;
+  background: linear-gradient(to bottom, #FAFBFC 0%, #F8F9FA 100%);
+  min-height: 100vh;
+}
+
+/* Import Placeholder */
+.importPlaceholder {
+  height: 120px;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.02);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholderText {
+  font-size: 14px;
+  color: rgba(156, 163, 175, 0.6);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* List Container */
+.listContainer {
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  box-shadow: 
+    0 2px 12px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.03);
+  padding: 24px;
+}
+
+/* List Header */
+.listHeader {
+  display: grid;
+  grid-template-columns: 180px 80px 1fr 160px 60px 120px 100px;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+  margin-bottom: 16px;
+}
+
+.headerCell {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* Markets List */
+.marketsList {
+  position: relative;
+}
+
+.marketsList :global(.scroll-list) {
+  max-height: 1200px !important;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 0;
+  gap: 16px;
+}
+
+.emptyState svg {
+  color: #CBD5E1;
+}
+
+.emptyState span {
+  font-size: 16px;
+  color: #9CA3AF;
+  font-weight: 500;
+}
+

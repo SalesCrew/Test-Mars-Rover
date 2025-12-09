@@ -25,3 +25,19 @@ export interface TourRoute {
   optimizedOrder: string[]; // market IDs in optimal order
 }
 
+export interface AdminMarket extends Market {
+  internalId: string; // e.g., "MKT-001"
+  isActive: boolean;
+  subgroup?: string; // e.g., "3F - Adeg", "AB - Spar Wörgl"
+  gebietsleiter?: string; // Gebietsleiter
+  channel?: string;
+  banner?: string;
+  branch?: string; // Filiale
+  visitDay?: string; // Besuchstag
+  visitDuration?: string; // Besuchdauer
+  customerType?: string; // Kundentyp
+  phone?: string; // Telefonnummer
+  email?: string; // E-Mail Adresse
+  maingroup?: string; // Maingroup (was haingroup)
+}
+

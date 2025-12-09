@@ -12,6 +12,7 @@ export const allProducts: Product[] = [
     packageSize: '51g',
     brand: 'Mars',
     sku: 'MARS-CLR-51',
+    orderNumber: 10245,
   },
   {
     id: 'snickers-001',
@@ -23,6 +24,7 @@ export const allProducts: Product[] = [
     packageSize: '50g',
     brand: 'Snickers',
     sku: 'SNIK-ORG-50',
+    orderNumber: 10246,
   },
   {
     id: 'twix-001',
@@ -34,6 +36,7 @@ export const allProducts: Product[] = [
     packageSize: '50g',
     brand: 'Twix',
     sku: 'TWIX-ORG-50',
+    orderNumber: 10247,
   },
   {
     id: 'bounty-001',
@@ -45,6 +48,7 @@ export const allProducts: Product[] = [
     packageSize: '57g',
     brand: 'Bounty',
     sku: 'BNTY-ORG-57',
+    orderNumber: 10248,
   },
   {
     id: 'milkyway-001',
@@ -56,6 +60,7 @@ export const allProducts: Product[] = [
     packageSize: '43g',
     brand: 'Milky Way',
     sku: 'MLKW-ORG-43',
+    orderNumber: 10249,
   },
   {
     id: 'mars-pack-001',
@@ -67,6 +72,7 @@ export const allProducts: Product[] = [
     packageSize: '400g',
     brand: 'Mars',
     sku: 'MARS-MNI-400',
+    orderNumber: 10250,
   },
   {
     id: 'snickers-pack-001',
@@ -78,6 +84,7 @@ export const allProducts: Product[] = [
     packageSize: '350g',
     brand: 'Snickers',
     sku: 'SNIK-FUN-350',
+    orderNumber: 10251,
   },
   {
     id: 'maltesers-001',
@@ -89,6 +96,7 @@ export const allProducts: Product[] = [
     packageSize: '100g',
     brand: 'Maltesers',
     sku: 'MALT-ORG-100',
+    orderNumber: 10252,
   },
   {
     id: 'skittles-001',
@@ -100,6 +108,7 @@ export const allProducts: Product[] = [
     packageSize: '55g',
     brand: 'Skittles',
     sku: 'SKIT-FRT-55',
+    orderNumber: 10253,
   },
   {
     id: 'mms-001',
@@ -111,6 +120,7 @@ export const allProducts: Product[] = [
     packageSize: '90g',
     brand: "M&M's",
     sku: 'MMS-PNT-90',
+    orderNumber: 10254,
   },
   {
     id: 'mms-002',
@@ -122,6 +132,7 @@ export const allProducts: Product[] = [
     packageSize: '90g',
     brand: "M&M's",
     sku: 'MMS-CHC-90',
+    orderNumber: 10255,
   },
 
   // Mars Pets Products
@@ -135,6 +146,7 @@ export const allProducts: Product[] = [
     packageSize: '100g',
     brand: 'Whiskas',
     sku: 'WHSK-TUN-100',
+    orderNumber: 20101,
   },
   {
     id: 'whiskas-002',
@@ -146,6 +158,7 @@ export const allProducts: Product[] = [
     packageSize: '100g',
     brand: 'Whiskas',
     sku: 'WHSK-CHK-100',
+    orderNumber: 20102,
   },
   {
     id: 'whiskas-003',
@@ -157,6 +170,7 @@ export const allProducts: Product[] = [
     packageSize: '12x100g',
     brand: 'Whiskas',
     sku: 'WHSK-MLT-1200',
+    orderNumber: 20103,
   },
   {
     id: 'pedigree-001',
@@ -168,6 +182,7 @@ export const allProducts: Product[] = [
     packageSize: '400g',
     brand: 'Pedigree',
     sku: 'PEDG-BEF-400',
+    orderNumber: 20201,
   },
   {
     id: 'pedigree-002',
@@ -179,6 +194,7 @@ export const allProducts: Product[] = [
     packageSize: '400g',
     brand: 'Pedigree',
     sku: 'PEDG-CHK-400',
+    orderNumber: 20202,
   },
   {
     id: 'pedigree-003',
@@ -190,6 +206,7 @@ export const allProducts: Product[] = [
     packageSize: '180g',
     brand: 'Pedigree',
     sku: 'PEDG-DEN-180',
+    orderNumber: 20203,
   },
   {
     id: 'dreamies-001',
@@ -201,6 +218,7 @@ export const allProducts: Product[] = [
     packageSize: '60g',
     brand: 'Dreamies',
     sku: 'DREM-ORG-60',
+    orderNumber: 20301,
   },
   {
     id: 'sheba-001',
@@ -212,6 +230,7 @@ export const allProducts: Product[] = [
     packageSize: '50g',
     brand: 'Sheba',
     sku: 'SHEB-FRF-50',
+    orderNumber: 20401,
   },
   {
     id: 'cesar-001',
@@ -223,6 +242,7 @@ export const allProducts: Product[] = [
     packageSize: '150g',
     brand: 'Cesar',
     sku: 'CESA-ORG-150',
+    orderNumber: 20501,
   },
   {
     id: 'perfect-fit-001',
@@ -234,6 +254,7 @@ export const allProducts: Product[] = [
     packageSize: '1.4kg',
     brand: 'Perfect Fit',
     sku: 'PRFT-ORG-1400',
+    orderNumber: 20601,
   },
 ];
 

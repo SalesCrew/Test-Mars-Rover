@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BonusHeroCard } from './BonusHeroCard';
 import { QuickActionsBar } from './QuickActionsBar';
 import { MarketFrequencyAlerts } from './MarketFrequencyAlerts';
@@ -6,9 +6,14 @@ import { BottomNav } from './BottomNav';
 import { MarketSelectionModal } from './MarketSelectionModal';
 import { MarketDetailModal } from './MarketDetailModal';
 import { ProductCalculator } from './ProductCalculator';
+import { VorverkaufModal } from './VorverkaufModal';
 import { TourPage } from './TourPage';
 import { Header } from './Header';
 import { ChatBubble } from './ChatBubble';
+import { PreorderNotification } from './PreorderNotification';
+import { VorbestellerModal } from './VorbestellerModal';
+import { StatisticsContent } from './StatisticsContent';
+import { AdminPanel } from '../admin/AdminPanel';
 import Aurora from './Aurora';
 import type { GLDashboard, NavigationTab } from '../../types/gl-types';
 import type { TourRoute, Market } from '../../types/market-types';
@@ -24,9 +29,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isVorverkaufOpen, setIsVorverkaufOpen] = useState(false);
+  const [isVorbestellerOpen, setIsVorbestellerOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [activeTour, setActiveTour] = useState<TourRoute | null>(null);
+  const [notificationTrigger, setNotificationTrigger] = useState(0);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const { isMobile } = useResponsive();
+
+  // Keyboard shortcut for Admin Panel (Ctrl + Alt + A)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.altKey && (event.key === 'a' || event.key === 'A')) {
+        event.preventDefault();
+        console.log('Admin panel toggle');
+        setIsAdminPanelOpen(prev => {
+          console.log('Opening admin panel:', !prev);
+          return !prev;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const handleBonusClick = () => {
     console.log('Navigate to bonus details');
@@ -48,13 +76,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   };
 
   const handleVorverkauf = () => {
-    console.log('Open Vorverkauf form');
-    // TODO: Implement Vorverkauf entry
+    setIsVorverkaufOpen(true);
   };
 
   const handleVorbestellung = () => {
     console.log('Open Vorbestellung form');
-    // TODO: Implement Vorbestellung entry
+    setIsVorbestellerOpen(true);
   };
 
   const handleCalculator = () => {
@@ -85,6 +112,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     // TODO: Implement routing
   };
 
+  const handleNotificationClick = () => {
+    setNotificationTrigger(prev => prev + 1);
+  };
+
   // If there's an active tour, show the TourPage
   if (activeTour) {
     return <TourPage route={activeTour} user={data.user} onBack={() => setActiveTour(null)} />;
@@ -103,42 +134,59 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       </div>
 
       {/* Header */}
-      <Header firstName={data.user.firstName} avatar={data.user.avatar} />
+      <Header 
+        firstName={data.user.firstName} 
+        avatar={data.user.avatar}
+        onNotificationClick={activeTab === 'dashboard' ? handleNotificationClick : undefined}
+      />
 
       {/* Main Content */}
       <main className={`${styles.main} ${isMobile ? styles.withBottomNav : ''}`}>
         <div className={styles.container}>
-          {/* Bonus Hero Card */}
-          <section className={styles.section}>
-            <BonusHeroCard bonuses={data.bonuses} onClick={handleBonusClick} />
-          </section>
+          {activeTab === 'dashboard' && (
+            <>
+              {/* Bonus Hero Card */}
+              <section className={styles.section}>
+                <BonusHeroCard bonuses={data.bonuses} onClick={handleBonusClick} />
+              </section>
 
-          {/* Quick Actions */}
-          <section className={styles.section}>
-            <QuickActionsBar
-              openVisitsToday={data.quickActions.openVisitsToday}
-              onStartVisit={handleStartVisit}
-              onVorverkauf={handleVorverkauf}
-              onVorbestellung={handleVorbestellung}
-              onCalculator={handleCalculator}
-            />
-          </section>
+              {/* Quick Actions */}
+              <section className={styles.section}>
+                <QuickActionsBar
+                  openVisitsToday={data.quickActions.openVisitsToday}
+                  onStartVisit={handleStartVisit}
+                  onVorverkauf={handleVorverkauf}
+                  onVorbestellung={handleVorbestellung}
+                  onCalculator={handleCalculator}
+                />
+              </section>
 
-          {/* Market Frequency Alerts */}
-          {data.frequencyAlerts.length > 0 && (
-            <section className={styles.section}>
-              <MarketFrequencyAlerts
-                alerts={data.frequencyAlerts}
-                onViewAll={handleViewAllFrequencies}
-                onMarketClick={handleMarketClick}
-              />
-            </section>
+              {/* Market Frequency Alerts */}
+              {data.frequencyAlerts.length > 0 && (
+                <section className={styles.section}>
+                  <MarketFrequencyAlerts
+                    alerts={data.frequencyAlerts}
+                    onViewAll={handleViewAllFrequencies}
+                    onMarketClick={handleMarketClick}
+                  />
+                </section>
+              )}
+            </>
+          )}
+
+          {activeTab === 'statistics' && (
+            <StatisticsContent />
           )}
         </div>
       </main>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation - Always mounted, never remounts */}
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+
+      {/* Preorder Notification - Only on dashboard */}
+      {activeTab === 'dashboard' && (
+        <PreorderNotification trigger={notificationTrigger} />
+      )}
 
       {/* Market Selection Modal */}
       <MarketSelectionModal
@@ -166,8 +214,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         userName={data.user.firstName}
       />
 
+      {/* Vorverkauf Modal */}
+      <VorverkaufModal
+        isOpen={isVorverkaufOpen}
+        onClose={() => setIsVorverkaufOpen(false)}
+      />
+
+      {/* Vorbesteller Modal */}
+      <VorbestellerModal
+        isOpen={isVorbestellerOpen}
+        onClose={() => setIsVorbestellerOpen(false)}
+      />
+
       {/* Chat Bubble */}
-      <ChatBubble />
+      <ChatBubble userName={data.user.firstName} />
+
+      {/* Admin Panel */}
+      <AdminPanel
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+      />
     </div>
   );
 };

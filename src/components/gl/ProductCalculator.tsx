@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, Sparkle, Check, ArrowsLeftRight } from '@phosphor-icons/react';
+import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, Sparkle, Check, ArrowsLeftRight, Storefront } from '@phosphor-icons/react';
 import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../types/product-types';
 import { allProducts } from '../../data/productsData';
 import { allMarkets } from '../../data/marketsData';
@@ -17,10 +17,12 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const [removedProducts, setRemovedProducts] = useState<ProductWithQuantity[]>([]);
   const [availableProducts, setAvailableProducts] = useState<ProductWithQuantity[]>([]);
   const [suggestions, setSuggestions] = useState<ReplacementSuggestion[]>([]);
+  const [showMarketSelection, setShowMarketSelection] = useState(false);
   const [showCalculation, setShowCalculation] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isCalculationCompleted, setIsCalculationCompleted] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState<ReplacementSuggestion | null>(null);
+  const [showMarketConfirmation, setShowMarketConfirmation] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
@@ -180,9 +182,9 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     value: string,
     type: 'removed' | 'available'
   ) => {
-    const list = type === 'removed' ? removedProducts : availableProducts;
-    const setList = type === 'removed' ? setRemovedProducts : setAvailableProducts;
-    
+      const list = type === 'removed' ? removedProducts : availableProducts;
+      const setList = type === 'removed' ? setRemovedProducts : setAvailableProducts;
+      
     if (value === '') {
       // Allow empty value
       setList(list.map(p => 
@@ -191,9 +193,9 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     } else {
       const numValue = parseInt(value, 10);
       if (!isNaN(numValue) && numValue >= 0) {
-        setList(list.map(p => 
-          p.product.id === productId ? { ...p, quantity: numValue } : p
-        ));
+      setList(list.map(p => 
+        p.product.id === productId ? { ...p, quantity: numValue } : p
+      ));
       }
     }
   };
@@ -204,6 +206,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     setIsCalculating(true);
     setIsCalculationCompleted(false);
     setShowCalculation(true);
+    setShowMarketSelection(false); // Hide market selection
 
     // Simulate calculation delay
     setTimeout(() => {
@@ -386,6 +389,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
             <div className={styles.iconWrapper}>
               {showCalculation && !isCalculating ? (
                 <Sparkle size={24} weight="duotone" />
+              ) : showMarketSelection ? (
+                <Storefront size={24} weight="duotone" />
               ) : (
                 <Package size={24} weight="duotone" />
               )}
@@ -397,6 +402,11 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                   <p className={styles.subtitle}>
                     Basierend auf {formatPrice(getTotalRemovedValue())} Warenwert
                   </p>
+                </>
+              ) : showMarketSelection ? (
+                <>
+                  <h2 className={styles.title}>Markt auswählen</h2>
+                  <p className={styles.subtitle}>Zielmarkt festlegen</p>
                 </>
               ) : (
                 <>
@@ -413,7 +423,97 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
 
         {/* Content */}
         <div className={styles.content}>
-          {!showCalculation ? (
+          {showMarketSelection ? (
+            /* Market Selection Step */
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Markt auswählen</h3>
+              <p className={styles.sectionDescription}>
+                Für welchen Markt ist dieser Tausch?
+              </p>
+
+              <div className={`${styles.dropdownContainer} ${isMarketDropdownOpen ? styles.dropdownOpen : ''}`} ref={marketDropdownRef}>
+                <button
+                  className={`${styles.dropdownButton} ${isMarketDropdownOpen ? styles.open : ''}`}
+                  onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
+                >
+                  <span className={selectedMarketId ? styles.dropdownText : styles.dropdownPlaceholder}>
+                    {selectedMarketId 
+                      ? allMarkets.find(m => m.id === selectedMarketId)?.name 
+                      : 'Markt wählen...'}
+                  </span>
+                  <CaretDown size={16} className={styles.dropdownChevron} />
+                </button>
+
+                {isMarketDropdownOpen && (
+                  <div className={styles.dropdownMenu}>
+                    <div className={styles.searchContainer}>
+                      <MagnifyingGlass size={16} className={styles.searchIcon} />
+                      <input
+                        ref={marketSearchInputRef}
+                        type="text"
+                        className={styles.searchInput}
+                        placeholder="Markt suchen..."
+                        value={marketSearchQuery}
+                        onChange={(e) => setMarketSearchQuery(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+
+                    {uncompletedMarkets.length > 0 && (
+                      <div className={styles.dropdownSection}>
+                        <div className={styles.categoryLabel}>Verfügbare Märkte</div>
+                        {uncompletedMarkets.map((market) => (
+                          <button
+                            key={market.id}
+                            className={styles.dropdownItem}
+                            onClick={() => {
+                              setSelectedMarketId(market.id);
+                              setIsMarketDropdownOpen(false);
+                              setMarketSearchQuery('');
+                            }}
+                          >
+                            <div className={styles.productInfo}>
+                              <div className={styles.productName}>{market.name}</div>
+                              <div className={styles.productDetails}>
+                                {market.address}, {market.postalCode} {market.city}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {completedMarkets.length > 0 && (
+                      <div className={styles.dropdownSection}>
+                        <div className={styles.categoryLabel}>Heute bereits besucht</div>
+                        {completedMarkets.map((market) => (
+                          <button
+                            key={market.id}
+                            className={`${styles.dropdownItem} ${styles.completed}`}
+                            onClick={() => {
+                              setSelectedMarketId(market.id);
+                              setIsMarketDropdownOpen(false);
+                              setMarketSearchQuery('');
+                            }}
+                          >
+                            <div className={styles.completedCheck}>
+                              <Check size={14} weight="bold" color="white" />
+                            </div>
+                            <div className={styles.productInfo}>
+                              <div className={styles.productName}>{market.name}</div>
+                              <div className={styles.productDetails}>
+                                {market.address}, {market.postalCode} {market.city}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : !showCalculation && !showMarketSelection ? (
             <>
               {/* Removed Products Section */}
               <div className={styles.section}>
@@ -498,25 +598,25 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             onClick={() => handleUpdateQuantity(p.product.id, -1, 'removed')}
                           >
                             <Minus size={16} weight="bold" />
-                        </button>
-                        <input
-                          type="number"
-                          className={styles.quantityInput}
+                          </button>
+                          <input
+                            type="number"
+                            className={styles.quantityInput}
                           value={p.quantity || ''}
-                          onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'removed')}
+                            onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'removed')}
                           min="0"
                           placeholder=" "
-                        />
-                        <button
-                          className={styles.quantityButton}
-                          onClick={() => handleUpdateQuantity(p.product.id, 1, 'removed')}
-                        >
-                          <Plus size={16} weight="bold" />
-                        </button>
-                      </div>
-                      <div className={styles.productCardPrice}>
+                          />
+                          <button
+                            className={styles.quantityButton}
+                            onClick={() => handleUpdateQuantity(p.product.id, 1, 'removed')}
+                          >
+                            <Plus size={16} weight="bold" />
+                          </button>
+                        </div>
+                        <div className={styles.productCardPrice}>
                         {p.quantity ? formatPrice(p.product.price * p.quantity) : formatPrice(0)}
-                      </div>
+                        </div>
                         <button
                           className={styles.removeButton}
                           onClick={() => handleRemoveProduct(p.product.id, 'removed')}
@@ -618,25 +718,25 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             onClick={() => handleUpdateQuantity(p.product.id, -1, 'available')}
                           >
                             <Minus size={16} weight="bold" />
-                        </button>
-                        <input
-                          type="number"
-                          className={styles.quantityInput}
+                          </button>
+                          <input
+                            type="number"
+                            className={styles.quantityInput}
                           value={p.quantity || ''}
-                          onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'available')}
+                            onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value, 'available')}
                           min="0"
                           placeholder=" "
-                        />
-                        <button
-                          className={styles.quantityButton}
-                          onClick={() => handleUpdateQuantity(p.product.id, 1, 'available')}
-                        >
-                          <Plus size={16} weight="bold" />
-                        </button>
-                      </div>
-                      <div className={styles.productCardPrice}>
+                          />
+                          <button
+                            className={styles.quantityButton}
+                            onClick={() => handleUpdateQuantity(p.product.id, 1, 'available')}
+                          >
+                            <Plus size={16} weight="bold" />
+                          </button>
+                        </div>
+                        <div className={styles.productCardPrice}>
                         {p.quantity ? formatPrice(p.product.price * p.quantity) : '∞'}
-                      </div>
+                        </div>
                         <button
                           className={styles.removeButton}
                           onClick={() => handleRemoveProduct(p.product.id, 'available')}
@@ -750,6 +850,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                 className={`${styles.button} ${styles.buttonSecondary}`}
                 onClick={() => {
                   setShowCalculation(false);
+                  setShowMarketSelection(true); // Go back to market selection
                   setSuggestions([]);
                   setSelectedSuggestion(null);
                 }}
@@ -758,13 +859,13 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
               </button>
               <button
                 className={`${styles.button} ${styles.buttonPrimary}`}
-                onClick={() => setShowConfirmation(true)}
+                onClick={() => setShowMarketConfirmation(true)}
                 disabled={!selectedSuggestion}
               >
                 Fertig
               </button>
             </>
-          ) : !showCalculation && !isCalculating && !isCalculationCompleted ? (
+          ) : !showCalculation && !isCalculating && !isCalculationCompleted && !showMarketSelection ? (
             <>
               <button
                 className={`${styles.button} ${styles.buttonSecondary}`}
@@ -774,8 +875,25 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
               </button>
               <button
                 className={`${styles.button} ${styles.buttonPrimary}`}
-                onClick={calculateReplacements}
+                onClick={() => setShowMarketSelection(true)}
                 disabled={removedProducts.length === 0}
+              >
+                <ArrowsClockwise size={18} weight="bold" />
+                Weiter
+              </button>
+            </>
+          ) : showMarketSelection && !showCalculation ? (
+            <>
+              <button
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={() => setShowMarketSelection(false)}
+              >
+                Zurück
+              </button>
+              <button
+                className={`${styles.button} ${styles.buttonPrimary}`}
+                onClick={calculateReplacements}
+                disabled={!selectedMarketId}
               >
                 <ArrowsClockwise size={18} weight="bold" />
                 Ersatz berechnen
@@ -785,26 +903,34 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirmation && selectedSuggestion && (
-        <div className={styles.confirmationOverlay} onClick={() => setShowConfirmation(false)}>
-          <div className={styles.confirmationModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.confirmationHeader}>
-              <div className={styles.confirmationIconWrapper}>
-                <ArrowsLeftRight size={32} weight="duotone" />
+      {/* Market Confirmation Modal */}
+      {showMarketConfirmation && selectedSuggestion && (
+        <div className={`${styles.confirmationOverlay} ${styles.marketConfirmation}`} onClick={() => setShowMarketConfirmation(false)}>
+          <div className={`${styles.confirmationModal} ${styles.marketConfirmation}`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${styles.confirmationHeader} ${styles.marketConfirmation}`}>
+              <div className={`${styles.confirmationIconWrapper} ${styles.marketConfirmation}`}>
+                <Storefront size={40} weight="duotone" />
               </div>
               <div>
-                <h2 className={styles.confirmationTitle}>Produkttausch bestätigen</h2>
-                <p className={styles.confirmationSubtitle}>
-                  Überprüfen Sie den Austausch
+                <h2 className={`${styles.confirmationTitle} ${styles.marketConfirmation}`}>Markt bestätigen</h2>
+                <p className={`${styles.confirmationSubtitle} ${styles.marketConfirmation}`}>
+                  Ist dies der richtige Markt für diesen Tausch?
                 </p>
               </div>
             </div>
 
             <div className={styles.confirmationContent}>
+              {/* Warning Banner */}
+              <div className={styles.warningBanner}>
+                <div className={styles.warningIcon}>⚠</div>
+                <div className={styles.warningText}>
+                  <strong>Achtung:</strong> Bitte überprüfen Sie den ausgewählten Markt sorgfältig, bevor Sie fortfahren.
+                </div>
+              </div>
+
               {/* Market Selection */}
               <div className={styles.confirmationSection}>
-                <label className={styles.confirmationLabel}>Markt auswählen</label>
+                <label className={`${styles.confirmationLabel} ${styles.marketConfirmation}`}>Ausgewählter Markt</label>
                 <div className={`${styles.dropdownContainer} ${isMarketDropdownOpen ? styles.dropdownOpen : ''}`} ref={marketDropdownRef}>
                   <button
                     className={`${styles.dropdownButton} ${isMarketDropdownOpen ? styles.open : ''}`}
@@ -886,8 +1012,49 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                     </div>
                   )}
                 </div>
+                </div>
               </div>
 
+            <div className={styles.confirmationFooter}>
+              <button
+                className={`${styles.button} ${styles.buttonSecondary}`}
+                onClick={() => setShowMarketConfirmation(false)}
+              >
+                Abbrechen
+              </button>
+              <button
+                className={`${styles.button} ${styles.buttonSuccess}`}
+                onClick={() => {
+                  setShowMarketConfirmation(false);
+                  setShowConfirmation(true);
+                }}
+                disabled={!selectedMarketId}
+              >
+                <Check size={18} weight="bold" />
+                Markt bestätigen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmation && selectedSuggestion && (
+        <div className={styles.confirmationOverlay} onClick={() => setShowConfirmation(false)}>
+          <div className={styles.confirmationModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmationHeader}>
+              <div className={styles.confirmationIconWrapper}>
+                <ArrowsLeftRight size={32} weight="duotone" />
+              </div>
+              <div>
+                <h2 className={styles.confirmationTitle}>Produkttausch bestätigen</h2>
+                <p className={styles.confirmationSubtitle}>
+                  Überprüfen Sie den Austausch
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.confirmationContent}>
               {/* Exchange Summary */}
               <div className={styles.exchangeSummary}>
                 <div className={styles.exchangeBox}>
@@ -957,7 +1124,6 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                   setShowConfirmation(false);
                   setShowSuccessModal(true);
                 }}
-                disabled={!selectedMarketId}
               >
                 <Check size={18} weight="bold" />
                 Tausch bestätigen
