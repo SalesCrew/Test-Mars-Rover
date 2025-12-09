@@ -33,8 +33,8 @@ export const StatisticsPage: React.FC<StatisticsPageProps> = ({
 
       {/* Header */}
       <Header 
-        firstName={firstName} 
-        avatar={avatar}
+        firstName={firstName || ''} 
+        avatar={avatar || ''}
       />
 
       {/* Main Content */}

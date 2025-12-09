@@ -17,8 +17,6 @@ const liveActivities = [
 type TimeFilter = 'welle' | 'all-time' | 'ytd' | 'mtd' | 'custom';
 
 export const AdminDashboard: React.FC = () => {
-  const [billaSearchTerm] = useState('');
-  const [sparSearchTerm] = useState('');
   const [billaTimeFilter, setBillaTimeFilter] = useState<TimeFilter>('welle');
   const [sparTimeFilter, setSparTimeFilter] = useState<TimeFilter>('welle');
   const [progressAnimated, setProgressAnimated] = useState(false);
@@ -33,9 +31,6 @@ export const AdminDashboard: React.FC = () => {
   const currentData = wellenData[0]; // Using current wave data
   const billaData = currentData.billaPlus;
   const sparData = currentData.spar;
-
-  const billaPercentage = Math.round((billaData.withVorbesteller / billaData.totalMarkets) * 1000) / 10;
-  const sparPercentage = Math.round((sparData.withVorbesteller / sparData.totalMarkets) * 1000) / 10;
 
   // Calculate percentages for Displays and Kartonware separately
   const billaDisplayPercentage = Math.round((billaData.displayCount / billaData.totalMarkets) * 1000) / 10;
