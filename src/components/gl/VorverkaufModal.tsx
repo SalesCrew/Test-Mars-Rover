@@ -24,7 +24,7 @@ const reasons: { value: ReasonType; label: string }[] = [
   { value: 'Platzierung', label: 'Platzierung (Display)' },
 ];
 
-export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClose, marketName = 'Markt' }) => {
+export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClose }) => {
   const [selectedProducts, setSelectedProducts] = useState<ProductWithQuantity[]>([]);
   const [selectedReason, setSelectedReason] = useState<ReasonType | null>(null);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);

@@ -32,7 +32,7 @@ export const MarketDetailsModal: React.FC<MarketDetailsModalProps> = ({
     'Julia Wagner'
   ];
 
-  const handleChange = (field: string, value: string | boolean) => {
+  const handleChange = (field: string, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

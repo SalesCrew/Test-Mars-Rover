@@ -7,7 +7,7 @@ import type { NavigationTab } from '../../types/gl-types';
 import styles from './StatisticsPage.module.css';
 
 interface StatisticsPageProps {
-  firstName: string;
+  firstName?: string;
   avatar?: string;
   activeTab: NavigationTab;
   onTabChange: (tab: NavigationTab) => void;
@@ -47,7 +47,7 @@ export const StatisticsPage: React.FC<StatisticsPageProps> = ({
       <BottomNav activeTab={activeTab} onTabChange={onTabChange} />
 
       {/* Chat Bubble */}
-      <ChatBubble userName={firstName} />
+      <ChatBubble />
     </div>
   );
 };

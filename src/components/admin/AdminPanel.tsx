@@ -17,7 +17,7 @@ interface MenuItem {
   icon: React.ReactNode;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
   const [selectedPage, setSelectedPage] = useState<AdminPage>('dashboard');
   const [isExpanded, setIsExpanded] = useState(false);
 

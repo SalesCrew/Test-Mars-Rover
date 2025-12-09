@@ -1,31 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { MagnifyingGlass, CalendarBlank, X, CaretDown, User, Storefront } from '@phosphor-icons/react';
+import { CalendarBlank, X, CaretDown, User, Storefront } from '@phosphor-icons/react';
 import { CustomCalendar } from './CustomCalendar';
 import styles from './AdminCardFilter.module.css';
 
 type TimeFilter = 'welle' | 'all-time' | 'ytd' | 'mtd' | 'custom';
 
 interface AdminCardFilterProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
   timeFilter: TimeFilter;
   onTimeFilterChange: (filter: TimeFilter) => void;
-  chainName: string;
   goalStatus?: React.ReactNode;
-  renderHeaderDropdowns?: (dropdowns: React.ReactNode) => void;
   renderDropdownsOnly?: boolean;
   renderTimeFiltersOnly?: boolean;
 }
 
 export const AdminCardFilter: React.FC<AdminCardFilterProps> = ({
-  searchTerm,
-  onSearchChange,
   timeFilter,
   onTimeFilterChange,
-  chainName,
   goalStatus,
-  renderHeaderDropdowns,
   renderDropdownsOnly = false,
   renderTimeFiltersOnly = false,
 }) => {

@@ -211,7 +211,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       <ProductCalculator
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
-        userName={data.user.firstName}
       />
 
       {/* Vorverkauf Modal */}
@@ -227,7 +226,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       />
 
       {/* Chat Bubble */}
-      <ChatBubble userName={data.user.firstName} />
+      <ChatBubble />
 
       {/* Admin Panel */}
       <AdminPanel

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { X, CalendarBlank, Package, Info, MagnifyingGlass, Check, Plus, Minus, Camera, Image as ImageIcon, CheckCircle, TrendUp, Star } from '@phosphor-icons/react';
+import { X, CalendarBlank, Package, Info, MagnifyingGlass, Check, Plus, Minus, Image as ImageIcon, CheckCircle, TrendUp } from '@phosphor-icons/react';
 import { RingLoader } from 'react-spinners';
 import styles from './VorbestellerModal.module.css';
 import whatsappImage1 from '../../assets/WhatsApp Bild 2025-12-02 um 10.09.48_d79a87f9.jpg';

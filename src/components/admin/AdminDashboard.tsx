@@ -17,12 +17,10 @@ const liveActivities = [
 type TimeFilter = 'welle' | 'all-time' | 'ytd' | 'mtd' | 'custom';
 
 export const AdminDashboard: React.FC = () => {
-  const [billaSearchTerm, setBillaSearchTerm] = useState('');
-  const [sparSearchTerm, setSparSearchTerm] = useState('');
+  const [billaSearchTerm] = useState('');
+  const [sparSearchTerm] = useState('');
   const [billaTimeFilter, setBillaTimeFilter] = useState<TimeFilter>('welle');
   const [sparTimeFilter, setSparTimeFilter] = useState<TimeFilter>('welle');
-  const [billaShowCalendar, setBillaShowCalendar] = useState(false);
-  const [sparShowCalendar, setSparShowCalendar] = useState(false);
   const [progressAnimated, setProgressAnimated] = useState(false);
 
   React.useEffect(() => {
@@ -38,9 +36,6 @@ export const AdminDashboard: React.FC = () => {
 
   const billaPercentage = Math.round((billaData.withVorbesteller / billaData.totalMarkets) * 1000) / 10;
   const sparPercentage = Math.round((sparData.withVorbesteller / sparData.totalMarkets) * 1000) / 10;
-
-  const billaGoalMet = billaPercentage >= billaData.goalPercentage;
-  const sparGoalMet = sparPercentage >= sparData.goalPercentage;
 
   // Calculate percentages for Displays and Kartonware separately
   const billaDisplayPercentage = Math.round((billaData.displayCount / billaData.totalMarkets) * 1000) / 10;
@@ -67,21 +62,15 @@ export const AdminDashboard: React.FC = () => {
               <span className={styles.chainLabel}>Displays</span>
             </div>
             <AdminCardFilter
-              searchTerm={billaSearchTerm}
-              onSearchChange={setBillaSearchTerm}
               timeFilter={billaTimeFilter}
               onTimeFilterChange={setBillaTimeFilter}
-              chainName="Billa+"
               renderDropdownsOnly={true}
             />
           </div>
 
           <AdminCardFilter
-            searchTerm={billaSearchTerm}
-            onSearchChange={setBillaSearchTerm}
             timeFilter={billaTimeFilter}
             onTimeFilterChange={setBillaTimeFilter}
-            chainName="Billa+"
             goalStatus={billaDisplayGoalMet ? (
               <div className={styles.trendGoalMet}>
                 <TrendUp size={16} weight="bold" />
@@ -142,21 +131,15 @@ export const AdminDashboard: React.FC = () => {
               <span className={styles.chainLabel}>Kartonware</span>
             </div>
             <AdminCardFilter
-              searchTerm={billaSearchTerm}
-              onSearchChange={setBillaSearchTerm}
               timeFilter={billaTimeFilter}
               onTimeFilterChange={setBillaTimeFilter}
-              chainName="Billa+"
               renderDropdownsOnly={true}
             />
           </div>
 
           <AdminCardFilter
-            searchTerm={billaSearchTerm}
-            onSearchChange={setBillaSearchTerm}
             timeFilter={billaTimeFilter}
             onTimeFilterChange={setBillaTimeFilter}
-            chainName="Billa+"
             goalStatus={billaKartonwareGoalMet ? (
               <div className={styles.trendGoalMet}>
                 <TrendUp size={16} weight="bold" />
@@ -223,21 +206,15 @@ export const AdminDashboard: React.FC = () => {
               <span className={styles.chainLabel}>Displays</span>
             </div>
             <AdminCardFilter
-              searchTerm={sparSearchTerm}
-              onSearchChange={setSparSearchTerm}
               timeFilter={sparTimeFilter}
               onTimeFilterChange={setSparTimeFilter}
-              chainName="Spar"
               renderDropdownsOnly={true}
             />
           </div>
 
           <AdminCardFilter
-            searchTerm={sparSearchTerm}
-            onSearchChange={setSparSearchTerm}
             timeFilter={sparTimeFilter}
             onTimeFilterChange={setSparTimeFilter}
-            chainName="Spar"
             goalStatus={sparDisplayGoalMet ? (
               <div className={styles.trendGoalMet}>
                 <TrendUp size={16} weight="bold" />
@@ -298,21 +275,15 @@ export const AdminDashboard: React.FC = () => {
               <span className={styles.chainLabel}>Kartonware</span>
             </div>
             <AdminCardFilter
-              searchTerm={sparSearchTerm}
-              onSearchChange={setSparSearchTerm}
               timeFilter={sparTimeFilter}
               onTimeFilterChange={setSparTimeFilter}
-              chainName="Spar"
               renderDropdownsOnly={true}
             />
           </div>
 
           <AdminCardFilter
-            searchTerm={sparSearchTerm}
-            onSearchChange={setSparSearchTerm}
             timeFilter={sparTimeFilter}
             onTimeFilterChange={setSparTimeFilter}
-            chainName="Spar"
             goalStatus={sparKartonwareGoalMet ? (
               <div className={styles.trendGoalMet}>
                 <TrendUp size={16} weight="bold" />
