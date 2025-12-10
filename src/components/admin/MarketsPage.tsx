@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MapPin, FunnelSimple, X, CaretDown, CaretUp } from '@phosphor-icons/react';
+import { MapPin, FunnelSimple, X, CaretDown, CaretUp, WarningCircle } from '@phosphor-icons/react';
 import AnimatedList from '../gl/AnimatedList';
 import { MarketListItem } from './MarketListItem';
 import { MarketDetailsModal } from './MarketDetailsModal';
 import { GLFilterCard } from './GLFilterCard';
 import type { ActionLogEntry } from './GLFilterCard';
 import { adminMarkets } from '../../data/adminMarketsData';
+import { marketService } from '../../services/marketService';
 import type { AdminMarket } from '../../types/market-types';
 import styles from './MarketsPage.module.css';
 
@@ -16,7 +17,9 @@ interface MarketsPageProps {
 }
 
 export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }) => {
-  const [markets, setMarkets] = useState<AdminMarket[]>(adminMarkets);
+  const [markets, setMarkets] = useState<AdminMarket[]>([]);
+  const [isLoadingMarkets, setIsLoadingMarkets] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedMarket, setSelectedMarket] = useState<AdminMarket | null>(null);
   const [hoveredMarket, setHoveredMarket] = useState<AdminMarket | null>(null);
   const [selectedGL, setSelectedGL] = useState<string | null>(null);
@@ -61,15 +64,51 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     status: useRef<HTMLDivElement>(null)
   };
 
+  // Load markets from database on mount
+  useEffect(() => {
+    const loadMarkets = async () => {
+      try {
+        setIsLoadingMarkets(true);
+        setLoadError(null);
+        const fetchedMarkets = await marketService.getAllMarkets();
+        setMarkets(fetchedMarkets);
+      } catch (error) {
+        console.error('Failed to load markets:', error);
+        setLoadError('Fehler beim Laden der Märkte. Verwende lokale Daten.');
+        // Fallback to local data if API fails
+        setMarkets(adminMarkets);
+      } finally {
+        setIsLoadingMarkets(false);
+      }
+    };
+
+    loadMarkets();
+  }, []);
+
   // Handle imported markets
   useEffect(() => {
     if (importedMarkets.length > 0) {
-      setMarkets(prev => {
-        // Create a map of existing market IDs to avoid duplicates
-        const existingIds = new Set(prev.map(m => m.id));
-        const newMarkets = importedMarkets.filter(m => !existingIds.has(m.id));
-        return [...prev, ...newMarkets];
-      });
+      const importNewMarkets = async () => {
+        try {
+          // Import to database
+          await marketService.importMarkets(importedMarkets);
+          
+          // Reload markets from database to get the latest data
+          const updatedMarkets = await marketService.getAllMarkets();
+          setMarkets(updatedMarkets);
+        } catch (error) {
+          console.error('Failed to import markets to database:', error);
+          
+          // Fallback: Add to local state
+          setMarkets(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMarkets = importedMarkets.filter(m => !existingIds.has(m.id));
+            return [...prev, ...newMarkets];
+          });
+        }
+      };
+
+      importNewMarkets();
     }
   }, [importedMarkets]);
 
@@ -190,7 +229,7 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     };
   }, [openFilter]);
 
-  const handleMarketClick = (market: AdminMarket) => {
+  const handleMarketClick = async (market: AdminMarket) => {
     // If in add mode and a GL is selected
     if (activeMode === 'add' && selectedGL) {
       // Check if market already has a GL (swap) or not (assign)
@@ -201,7 +240,7 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
       setShowCheckmark(false);
       
       // Simulate API delay
-      setTimeout(() => {
+      setTimeout(async () => {
         const logEntry: ActionLogEntry = {
           id: `log-${Date.now()}`,
           chain: market.chain,
@@ -222,10 +261,19 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
           return;
         }
 
-        // Update the market's GL
+        const updatedMarket = { ...market, gebietsleiter: selectedGL };
+
+        try {
+          // Update in database
+          await marketService.updateMarket(market.id, updatedMarket);
+        } catch (error) {
+          console.error('Failed to update market GL:', error);
+        }
+
+        // Update the market's GL in local state
         setMarkets(prevMarkets => 
           prevMarkets.map(m => 
-            m.id === market.id ? { ...m, gebietsleiter: selectedGL } : m
+            m.id === market.id ? updatedMarket : m
           )
         );
 
@@ -268,7 +316,7 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
       setIsProcessing(true);
       
       // Simulate API delay
-      setTimeout(() => {
+      setTimeout(async () => {
         const logEntry: ActionLogEntry = {
           id: `log-${Date.now()}`,
           chain: market.chain,
@@ -276,10 +324,19 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
           type: 'remove'
         };
 
-        // Update the market to remove GL
+        const updatedMarket = { ...market, gebietsleiter: undefined };
+
+        try {
+          // Update in database
+          await marketService.updateMarket(market.id, updatedMarket);
+        } catch (error) {
+          console.error('Failed to remove market GL:', error);
+        }
+
+        // Update the market to remove GL in local state
         setMarkets(prevMarkets => 
           prevMarkets.map(m => 
-            m.id === market.id ? { ...m, gebietsleiter: undefined } : m
+            m.id === market.id ? updatedMarket : m
           )
         );
 
@@ -311,10 +368,22 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     setSelectedMarket(null);
   };
 
-  const handleSaveMarket = (updatedMarket: AdminMarket) => {
-    setMarkets(prevMarkets => 
-      prevMarkets.map(m => m.id === updatedMarket.id ? updatedMarket : m)
-    );
+  const handleSaveMarket = async (updatedMarket: AdminMarket) => {
+    try {
+      // Save to database
+      await marketService.updateMarket(updatedMarket.id, updatedMarket);
+      
+      // Update local state
+      setMarkets(prevMarkets => 
+        prevMarkets.map(m => m.id === updatedMarket.id ? updatedMarket : m)
+      );
+    } catch (error) {
+      console.error('Failed to save market:', error);
+      // Still update local state as fallback
+      setMarkets(prevMarkets => 
+        prevMarkets.map(m => m.id === updatedMarket.id ? updatedMarket : m)
+      );
+    }
   };
 
   const toggleFilter = (type: FilterType) => {
@@ -656,7 +725,17 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
         </div>
 
         {/* Markets List */}
-        {combinedMarkets.length === 0 && !selectedGL ? (
+        {isLoadingMarkets ? (
+          <div className={styles.loadingState}>
+            <div className={styles.spinner}></div>
+            <span>Lade Märkte...</span>
+          </div>
+        ) : loadError ? (
+          <div className={styles.errorState}>
+            <WarningCircle size={48} weight="regular" />
+            <span>{loadError}</span>
+          </div>
+        ) : combinedMarkets.length === 0 && !selectedGL ? (
           <div className={styles.emptyState}>
             <MapPin size={48} weight="regular" />
             <span>Keine Märkte vorhanden</span>
