@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { House, MapPin, Users, CalendarCheck, ClipboardText, Package } from '@phosphor-icons/react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
+import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X } from '@phosphor-icons/react';
 import { AdminDashboard } from './AdminDashboard';
 import { MarketsPage } from './MarketsPage';
 import styles from './AdminPanel.module.css';
@@ -20,6 +21,9 @@ interface MenuItem {
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
   const [selectedPage, setSelectedPage] = useState<AdminPage>('dashboard');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +51,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
     } else {
       setSelectedPage(pageId);
       setIsExpanded(false);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    // TODO: Handle file import
+    console.log('File selected:', file.name);
+    setIsImportModalOpen(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
     }
   };
 
@@ -79,6 +114,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
           <h1 className={styles.pageTitle}>
             {menuItems.find(item => item.id === selectedPage)?.label}
           </h1>
+          {selectedPage === 'markets' && (
+            <button 
+              className={styles.importButton}
+              onClick={() => setIsImportModalOpen(true)}
+            >
+              <Upload size={18} weight="bold" />
+              <span>Importieren</span>
+            </button>
+          )}
         </header>
         
         <div className={styles.pageContent}>
@@ -87,6 +131,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
           {/* Other page content will go here */}
         </div>
       </main>
+
+      {/* Import Modal */}
+      {isImportModalOpen && ReactDOM.createPortal(
+        <div className={styles.importModalOverlay} onClick={() => setIsImportModalOpen(false)}>
+          <div className={styles.importModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.importModalHeader}>
+              <h3 className={styles.importModalTitle}>Märkte importieren</h3>
+              <button 
+                className={styles.importModalClose}
+                onClick={() => setIsImportModalOpen(false)}
+              >
+                <X size={20} weight="bold" />
+              </button>
+            </div>
+            <div 
+              className={`${styles.importDropzone} ${isDragging ? styles.importDropzoneDragging : ''}`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={48} weight="regular" className={styles.importIcon} />
+              <h4 className={styles.importTitle}>Datei hierher ziehen</h4>
+              <p className={styles.importSubtitle}>oder klicken zum Auswählen</p>
+              <p className={styles.importFormats}>CSV, Excel (.xlsx, .xls)</p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              style={{ display: 'none' }}
+              onChange={handleFileInputChange}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

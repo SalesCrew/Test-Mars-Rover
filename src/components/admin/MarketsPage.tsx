@@ -4,6 +4,7 @@ import AnimatedList from '../gl/AnimatedList';
 import { MarketListItem } from './MarketListItem';
 import { MarketDetailsModal } from './MarketDetailsModal';
 import { GLFilterCard } from './GLFilterCard';
+import type { ActionLogEntry } from './GLFilterCard';
 import { adminMarkets } from '../../data/adminMarketsData';
 import type { AdminMarket } from '../../types/market-types';
 import styles from './MarketsPage.module.css';
@@ -11,12 +12,18 @@ import styles from './MarketsPage.module.css';
 type FilterType = 'chain' | 'id' | 'adresse' | 'gebietsleiter' | 'subgroup' | 'status';
 
 export const MarketsPage: React.FC = () => {
-  const [, setMarkets] = useState<AdminMarket[]>(adminMarkets);
+  const [markets, setMarkets] = useState<AdminMarket[]>(adminMarkets);
   const [selectedMarket, setSelectedMarket] = useState<AdminMarket | null>(null);
   const [hoveredMarket, setHoveredMarket] = useState<AdminMarket | null>(null);
   const [selectedGL, setSelectedGL] = useState<string | null>(null);
   const [isGLSectionCollapsed, setIsGLSectionCollapsed] = useState(false);
   const [openFilter, setOpenFilter] = useState<FilterType | null>(null);
+  const [actionLogs, setActionLogs] = useState<ActionLogEntry[]>([]);
+  const [activeMode, setActiveMode] = useState<'add' | 'remove' | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const [processingType, setProcessingType] = useState<'assign' | 'swap' | 'remove' | undefined>(undefined);
+  const [showCheckmark, setShowCheckmark] = useState(false);
   const [searchTerms, setSearchTerms] = useState<Record<FilterType, string>>({
     chain: '',
     id: '',
@@ -53,11 +60,11 @@ export const MarketsPage: React.FC = () => {
   // marketIds not needed anymore - using otherMarkets.map directly
 
   // Get unique values for each filter
-  const uniqueChains = [...new Set(adminMarkets.map(m => m.chain))].sort();
-  const uniqueIDs = [...new Set(adminMarkets.map(m => m.internalId))].sort();
-  const uniqueAddresses = [...new Set(adminMarkets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
-  const uniqueGLs = [...new Set(adminMarkets.map(m => m.gebietsleiter).filter(Boolean))].sort() as string[];
-  const uniqueSubgroups = [...new Set(adminMarkets.map(m => m.subgroup).filter(Boolean))].sort();
+  const uniqueChains = [...new Set(markets.map(m => m.chain))].sort();
+  const uniqueIDs = [...new Set(markets.map(m => m.internalId))].sort();
+  const uniqueAddresses = [...new Set(markets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
+  const uniqueGLs = [...new Set(markets.map(m => m.gebietsleiter).filter(Boolean))].sort() as string[];
+  const uniqueSubgroups = [...new Set(markets.map(m => m.subgroup).filter(Boolean))].sort();
   const statusOptions = ['Aktiv', 'Inaktiv'];
 
   // Filter options based on search term
@@ -69,7 +76,7 @@ export const MarketsPage: React.FC = () => {
   // Apply filters to markets - Memoized for performance
   // When GL is selected, we show ALL markets but separate them
   const filteredMarkets = useMemo(() => {
-    return adminMarkets.filter(market => {
+    return markets.filter(market => {
       // DON'T filter by GL here anymore - we'll separate them in the render
 
       // Check chain filter
@@ -144,11 +151,6 @@ export const MarketsPage: React.FC = () => {
     return [...glMarkets, ...otherMarkets];
   }, [selectedGL, isGLSectionCollapsed, filteredMarkets, glMarkets, otherMarkets]);
 
-  // Update markets state when filters change
-  useEffect(() => {
-    setMarkets(combinedMarkets);
-  }, [combinedMarkets]);
-
   // Click outside handler
   useEffect(() => {
     if (!openFilter) return;
@@ -173,7 +175,120 @@ export const MarketsPage: React.FC = () => {
   }, [openFilter]);
 
   const handleMarketClick = (market: AdminMarket) => {
+    // If in add mode and a GL is selected
+    if (activeMode === 'add' && selectedGL) {
+      // Check if market already has a GL (swap) or not (assign)
+      const willSwap = market.gebietsleiter && market.gebietsleiter !== selectedGL;
+      
+      setProcessingType(willSwap ? 'swap' : 'assign');
+      setIsProcessing(true);
+      setShowCheckmark(false);
+      
+      // Simulate API delay
+      setTimeout(() => {
+        const logEntry: ActionLogEntry = {
+          id: `log-${Date.now()}`,
+          chain: market.chain,
+          address: `${market.address}, ${market.postalCode}`,
+          type: 'assign',
+          previousGl: undefined
+        };
+
+        // Check if market already has a GL
+        if (market.gebietsleiter && market.gebietsleiter !== selectedGL) {
+          // Swap action
+          logEntry.type = 'swap';
+          logEntry.previousGl = market.gebietsleiter;
+        } else if (market.gebietsleiter === selectedGL) {
+          // Already assigned to this GL - do nothing
+          setIsProcessing(false);
+          setProcessingType(undefined);
+          return;
+        }
+
+        // Update the market's GL
+        setMarkets(prevMarkets => 
+          prevMarkets.map(m => 
+            m.id === market.id ? { ...m, gebietsleiter: selectedGL } : m
+          )
+        );
+
+        // For assign type, show checkmark before fading
+        if (logEntry.type === 'assign') {
+          setShowCheckmark(true);
+          setTimeout(() => {
+            // Fade out preview
+            setIsFadingOut(true);
+            setTimeout(() => {
+              setActionLogs(prev => [logEntry, ...prev]);
+              setIsProcessing(false);
+              setIsFadingOut(false);
+              setProcessingType(undefined);
+              setShowCheckmark(false);
+            }, 300); // Fade out duration
+          }, 400); // Show checkmark for 400ms
+        } else {
+          // For swap, fade out immediately
+          setIsFadingOut(true);
+          setTimeout(() => {
+            setActionLogs(prev => [logEntry, ...prev]);
+            setIsProcessing(false);
+            setIsFadingOut(false);
+            setProcessingType(undefined);
+          }, 300); // Fade out duration
+        }
+      }, 800);
+      return;
+    }
+
+    // If in remove mode and a GL is selected
+    if (activeMode === 'remove' && selectedGL) {
+      // Can only remove markets assigned to the selected GL
+      if (market.gebietsleiter !== selectedGL) {
+        return; // Can't remove other GL's markets
+      }
+
+      setProcessingType('remove');
+      setIsProcessing(true);
+      
+      // Simulate API delay
+      setTimeout(() => {
+        const logEntry: ActionLogEntry = {
+          id: `log-${Date.now()}`,
+          chain: market.chain,
+          address: `${market.address}, ${market.postalCode}`,
+          type: 'remove'
+        };
+
+        // Update the market to remove GL
+        setMarkets(prevMarkets => 
+          prevMarkets.map(m => 
+            m.id === market.id ? { ...m, gebietsleiter: undefined } : m
+          )
+        );
+
+        // Fade out preview
+        setIsFadingOut(true);
+        setTimeout(() => {
+          setActionLogs(prev => [logEntry, ...prev]);
+          setIsProcessing(false);
+          setIsFadingOut(false);
+          setProcessingType(undefined);
+        }, 300); // Fade out duration
+      }, 800);
+      return;
+    }
+
+    // Default behavior - open modal
     setSelectedMarket(market);
+  };
+
+  const handleModeChange = (mode: 'add' | 'remove' | null) => {
+    setActiveMode(mode);
+    // Clear action logs when mode changes
+    if (mode === null) {
+      setActionLogs([]);
+    }
   };
 
   const handleCloseModal = () => {
@@ -200,13 +315,23 @@ export const MarketsPage: React.FC = () => {
     });
   };
 
+  const handleClearFilter = (type: FilterType) => {
+    setSelectedFilters(prev => ({ ...prev, [type]: [] }));
+  };
+
   const handleSearchChange = (type: FilterType, value: string) => {
     setSearchTerms(prev => ({ ...prev, [type]: value }));
   };
 
   const handleGLSelect = (gl: string) => {
     // Toggle GL selection
-    setSelectedGL(selectedGL === gl ? null : gl);
+    const newGL = selectedGL === gl ? null : gl;
+    setSelectedGL(newGL);
+    // Clear action logs and mode when GL changes
+    if (newGL !== selectedGL) {
+      setActionLogs([]);
+      setActiveMode(null);
+    }
   };
 
   const handleClearAllFilters = () => {
@@ -243,6 +368,13 @@ export const MarketsPage: React.FC = () => {
         selectedGL={selectedGL}
         onGLSelect={handleGLSelect}
         hoveredMarket={hoveredMarket}
+        actionLogs={actionLogs}
+        activeMode={activeMode}
+        onModeChange={handleModeChange}
+        isProcessing={isProcessing}
+        isFadingOut={isFadingOut}
+        processingType={processingType}
+        showCheckmark={showCheckmark}
       />
 
       {/* Markets List Container */}
@@ -268,6 +400,12 @@ export const MarketsPage: React.FC = () => {
                     onChange={(e) => handleSearchChange('chain', e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                   />
+                </div>
+                <div 
+                  className={styles.filterOptionAll}
+                  onClick={() => handleClearFilter('chain')}
+                >
+                  Alle
                 </div>
                 {getFilteredOptions('chain', uniqueChains).map(chain => (
                   <label key={chain} className={styles.filterOption}>
@@ -303,6 +441,12 @@ export const MarketsPage: React.FC = () => {
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
+                <div 
+                  className={styles.filterOptionAll}
+                  onClick={() => handleClearFilter('id')}
+                >
+                  Alle
+                </div>
                 {getFilteredOptions('id', uniqueIDs).map(id => (
                   <label key={id} className={styles.filterOption}>
                     <input
@@ -336,6 +480,12 @@ export const MarketsPage: React.FC = () => {
                     onChange={(e) => handleSearchChange('adresse', e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                   />
+                </div>
+                <div 
+                  className={styles.filterOptionAll}
+                  onClick={() => handleClearFilter('adresse')}
+                >
+                  Alle
                 </div>
                 {getFilteredOptions('adresse', uniqueAddresses).map(address => (
                   <label key={address} className={styles.filterOption}>
@@ -371,6 +521,12 @@ export const MarketsPage: React.FC = () => {
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
+                <div 
+                  className={styles.filterOptionAll}
+                  onClick={() => handleClearFilter('gebietsleiter')}
+                >
+                  Alle
+                </div>
                 {getFilteredOptions('gebietsleiter', uniqueGLs as string[]).map(gl => (
                   <label key={gl} className={styles.filterOption}>
                     <input
@@ -404,6 +560,12 @@ export const MarketsPage: React.FC = () => {
                     onChange={(e) => handleSearchChange('subgroup', e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                   />
+                </div>
+                <div 
+                  className={styles.filterOptionAll}
+                  onClick={() => handleClearFilter('subgroup')}
+                >
+                  Alle
                 </div>
                 {getFilteredOptions('subgroup', uniqueSubgroups as string[]).map(subgroup => (
                   <label key={subgroup} className={styles.filterOption}>
@@ -441,6 +603,12 @@ export const MarketsPage: React.FC = () => {
                     onChange={(e) => handleSearchChange('status', e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                   />
+                </div>
+                <div 
+                  className={styles.filterOptionAll}
+                  onClick={() => handleClearFilter('status')}
+                >
+                  Alle
                 </div>
                 {getFilteredOptions('status', statusOptions).map(status => (
                   <label 

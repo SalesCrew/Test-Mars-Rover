@@ -167,7 +167,11 @@ export const MarketListItem: React.FC<MarketListItemProps> = ({ market, onClick 
       </div>
 
       <div className={styles.gebietsleiterCell}>
-        {market.gebietsleiter || '-'}
+        {market.gebietsleiter ? (
+          market.gebietsleiter
+        ) : (
+          <span className={styles.noGl}>Kein GL zugeteilt</span>
+        )}
       </div>
 
       <div className={styles.subgroupCell}>

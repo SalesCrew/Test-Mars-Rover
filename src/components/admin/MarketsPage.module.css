@@ -187,6 +187,23 @@
   font-weight: 400;
 }
 
+.filterOptionAll {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3B82F6;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.filterOptionAll:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
 .filterOption {
   display: flex;
   align-items: center;

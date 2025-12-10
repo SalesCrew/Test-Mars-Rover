@@ -130,6 +130,75 @@
   border-color: rgba(16, 185, 129, 0.15);
 }
 
+.marketPreviewRemove {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.04), rgba(220, 38, 38, 0.02));
+  border-color: rgba(239, 68, 68, 0.15);
+  animation: pulseRed 1.5s ease-in-out infinite;
+}
+
+.marketPreviewSwap {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(37, 99, 235, 0.02));
+  border-color: rgba(59, 130, 246, 0.15);
+  animation: pulseBlue 1.5s ease-in-out infinite;
+}
+
+.marketPreviewAssign {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(5, 150, 105, 0.02));
+  border-color: rgba(16, 185, 129, 0.15);
+  animation: pulseGreen 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseRed {
+  0%, 100% {
+    box-shadow: 0 1px 6px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 1px 12px rgba(239, 68, 68, 0.4);
+  }
+}
+
+@keyframes pulseBlue {
+  0%, 100% {
+    box-shadow: 0 1px 6px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 1px 12px rgba(59, 130, 246, 0.4);
+  }
+}
+
+@keyframes pulseGreen {
+  0%, 100% {
+    box-shadow: 0 1px 6px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 1px 12px rgba(16, 185, 129, 0.4);
+  }
+}
+
+.marketPreviewRemove .marketName,
+.marketPreviewRemove .marketAddress,
+.marketPreviewSwap .marketName,
+.marketPreviewSwap .marketAddress,
+.marketPreviewAssign .marketName,
+.marketPreviewAssign .marketAddress {
+  opacity: 0.5;
+}
+
+.marketPreviewFadeOut {
+  animation: fadeOutPreview 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+@keyframes fadeOutPreview {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
 .marketPreviewMatch .marketName,
 .marketPreviewMatch .marketAddress {
   opacity: 0.5;
@@ -178,6 +247,69 @@
   color: #10B981;
   width: 16px;
   height: 16px;
+}
+
+.spinnerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.1);
+  flex-shrink: 0;
+}
+
+.spinner {
+  color: #EF4444;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+.spinnerContainerBlue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  flex-shrink: 0;
+}
+
+.spinnerBlue {
+  color: #3B82F6;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+.spinnerContainerGreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.1);
+  flex-shrink: 0;
+}
+
+.spinnerGreen {
+  color: #10B981;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeInPreview {
@@ -573,4 +705,336 @@
   overflow: hidden;
   border: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Action Logs Section - positioned absolutely between the two dividers */
+.actionLogsSection {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  bottom: 12px;
+  /* Centered between the two divider lines */
+  left: 28%;
+  right: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: fadeInButtons 0.3s ease-out forwards;
+}
+
+.actionLogsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.actionLogsList::-webkit-scrollbar {
+  display: none;
+}
+
+.actionLogEntry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 3px 0;
+  background: transparent;
+  border: none;
+  min-height: 20px;
+  flex-shrink: 0;
+  animation: fadeInLog 0.2s ease-out;
+  pointer-events: auto;
+}
+
+@keyframes fadeInLog {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.actionLogAssign,
+.actionLogSwap,
+.actionLogRemove {
+  /* No special styling - just markers for type */
+}
+
+.logMarketInfo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.logChain {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.3;
+  letter-spacing: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logAddress {
+  font-size: 10px;
+  color: #9CA3AF;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 2.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.logIconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logIconAssign {
+  color: #10B981;
+}
+
+.logIconSwap {
+  color: #3B82F6;
+}
+
+.logIconRemove {
+  color: #EF4444;
+}
+
+.logTargetGl {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1F2937;
+  letter-spacing: 2.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logPreviousGl {
+  font-size: 10px;
+  font-weight: 500;
+  color: #6B7280;
+  letter-spacing: 2.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action Logs Modal */
+.logsModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.logsModal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logsModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.logsModalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0;
+}
+
+.logsModalClose {
+  background: transparent;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.logsModalClose:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1F2937;
+}
+
+.logsModalContent {
+  padding: 20px 24px;
+  overflow-y: auto;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.logsModalContent::-webkit-scrollbar {
+  display: none;
+}
+
+.logsEmpty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.logsModalEntry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.logsModalEntry:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.logsModalEntryAssign {
+  border-left: 3px solid #10B981;
+}
+
+.logsModalEntrySwap {
+  border-left: 3px solid #3B82F6;
+}
+
+.logsModalEntryRemove {
+  border-left: 3px solid #EF4444;
+}
+
+.logsModalMarketInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.logsModalChain {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logsModalAddress {
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logsModalAction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.logsModalIconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logsModalTargetGl {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1F2937;
+  white-space: nowrap;
+}
+
+.logsModalPreviousGl {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B7280;
+  white-space: nowrap;
 }

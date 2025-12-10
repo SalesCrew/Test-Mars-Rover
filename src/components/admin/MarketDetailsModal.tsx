@@ -32,7 +32,7 @@ export const MarketDetailsModal: React.FC<MarketDetailsModalProps> = ({
     'Julia Wagner'
   ];
 
-  const handleChange = (field: string, value: string | boolean | number) => {
+  const handleChange = (field: string, value: string | boolean | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -41,7 +41,7 @@ export const MarketDetailsModal: React.FC<MarketDetailsModalProps> = ({
     setIsStatusDropdownOpen(false);
   };
 
-  const handleGlSelect = (gl: string) => {
+  const handleGlSelect = (gl: string | undefined) => {
     handleChange('gebietsleiter', gl);
     setIsGlDropdownOpen(false);
   };
@@ -113,6 +113,12 @@ export const MarketDetailsModal: React.FC<MarketDetailsModalProps> = ({
               
               {isGlDropdownOpen && (
                 <div className={styles.dropdownMenu}>
+                  <div 
+                    className={`${styles.dropdownOption} ${styles.dropdownOptionGrey}`}
+                    onClick={() => handleGlSelect(undefined)}
+                  >
+                    Leer
+                  </div>
                   {gebietsleiterList.map((gl) => (
                     <div 
                       key={gl}

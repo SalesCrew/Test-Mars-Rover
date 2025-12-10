@@ -149,6 +149,15 @@
   color: #4B5563;
 }
 
+.noGl {
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .subgroupCell {
   font-size: 12px;
   font-weight: 600;
