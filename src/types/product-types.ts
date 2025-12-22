@@ -7,6 +7,7 @@ export interface Product {
   weight?: number; // in grams
   volume?: number; // in ml
   packageSize: string; // e.g., '400g', '1.5kg', '200ml'
+  palletSize?: number; // units per pallet
   brand: string; // e.g., 'Whiskas', 'Pedigree', 'Mars', 'Snickers'
   sku: string; // Stock Keeping Unit
   orderNumber?: number; // 5-digit order number

@@ -465,8 +465,15 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     });
   };
 
-  const handleClearFilter = (type: FilterType) => {
-    setSelectedFilters(prev => ({ ...prev, [type]: [] }));
+  const handleSelectAll = (filterType: FilterType, allOptions: string[]) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      [filterType]: allOptions
+    }));
+  };
+
+  const isAllSelected = (filterType: FilterType, allOptions: string[]) => {
+    return selectedFilters[filterType].length === allOptions.length && allOptions.length > 0;
   };
 
   const handleSearchChange = (type: FilterType, value: string) => {
@@ -551,12 +558,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
-                <div 
-                  className={styles.filterOptionAll}
-                  onClick={() => handleClearFilter('chain')}
-                >
-                  Alle
-                </div>
+                <label className={styles.filterOption}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected('chain', uniqueChains)}
+                    onChange={() => {
+                      if (isAllSelected('chain', uniqueChains)) {
+                        setSelectedFilters(prev => ({ ...prev, chain: [] }));
+                      } else {
+                        handleSelectAll('chain', uniqueChains);
+                      }
+                    }}
+                  />
+                  <span><strong>Alle</strong></span>
+                </label>
                 {getFilteredOptions('chain', uniqueChains).map(chain => (
                   <label key={chain} className={styles.filterOption}>
                     <input
@@ -591,12 +606,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
-                <div 
-                  className={styles.filterOptionAll}
-                  onClick={() => handleClearFilter('id')}
-                >
-                  Alle
-                </div>
+                <label className={styles.filterOption}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected('id', uniqueIDs)}
+                    onChange={() => {
+                      if (isAllSelected('id', uniqueIDs)) {
+                        setSelectedFilters(prev => ({ ...prev, id: [] }));
+                      } else {
+                        handleSelectAll('id', uniqueIDs);
+                      }
+                    }}
+                  />
+                  <span><strong>Alle</strong></span>
+                </label>
                 {getFilteredOptions('id', uniqueIDs).map(id => (
                   <label key={id} className={styles.filterOption}>
                     <input
@@ -631,12 +654,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
-                <div 
-                  className={styles.filterOptionAll}
-                  onClick={() => handleClearFilter('adresse')}
-                >
-                  Alle
-                </div>
+                <label className={styles.filterOption}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected('adresse', uniqueAddresses)}
+                    onChange={() => {
+                      if (isAllSelected('adresse', uniqueAddresses)) {
+                        setSelectedFilters(prev => ({ ...prev, adresse: [] }));
+                      } else {
+                        handleSelectAll('adresse', uniqueAddresses);
+                      }
+                    }}
+                  />
+                  <span><strong>Alle</strong></span>
+                </label>
                 {getFilteredOptions('adresse', uniqueAddresses).map(address => (
                   <label key={address} className={styles.filterOption}>
                     <input
@@ -671,12 +702,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
-                <div 
-                  className={styles.filterOptionAll}
-                  onClick={() => handleClearFilter('gebietsleiter')}
-                >
-                  Alle
-                </div>
+                <label className={styles.filterOption}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected('gebietsleiter', uniqueGLs as string[])}
+                    onChange={() => {
+                      if (isAllSelected('gebietsleiter', uniqueGLs as string[])) {
+                        setSelectedFilters(prev => ({ ...prev, gebietsleiter: [] }));
+                      } else {
+                        handleSelectAll('gebietsleiter', uniqueGLs as string[]);
+                      }
+                    }}
+                  />
+                  <span><strong>Alle</strong></span>
+                </label>
                 {getFilteredOptions('gebietsleiter', uniqueGLs as string[]).map(gl => (
                   <label key={gl} className={styles.filterOption}>
                     <input
@@ -711,12 +750,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
-                <div 
-                  className={styles.filterOptionAll}
-                  onClick={() => handleClearFilter('subgroup')}
-                >
-                  Alle
-                </div>
+                <label className={styles.filterOption}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected('subgroup', uniqueSubgroups as string[])}
+                    onChange={() => {
+                      if (isAllSelected('subgroup', uniqueSubgroups as string[])) {
+                        setSelectedFilters(prev => ({ ...prev, subgroup: [] }));
+                      } else {
+                        handleSelectAll('subgroup', uniqueSubgroups as string[]);
+                      }
+                    }}
+                  />
+                  <span><strong>Alle</strong></span>
+                </label>
                 {getFilteredOptions('subgroup', uniqueSubgroups as string[]).map(subgroup => (
                   <label key={subgroup} className={styles.filterOption}>
                     <input
@@ -754,12 +801,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
-                <div 
-                  className={styles.filterOptionAll}
-                  onClick={() => handleClearFilter('status')}
-                >
-                  Alle
-                </div>
+                <label className={styles.filterOption}>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected('status', statusOptions)}
+                    onChange={() => {
+                      if (isAllSelected('status', statusOptions)) {
+                        setSelectedFilters(prev => ({ ...prev, status: [] }));
+                      } else {
+                        handleSelectAll('status', statusOptions);
+                      }
+                    }}
+                  />
+                  <span><strong>Alle</strong></span>
+                </label>
                 {getFilteredOptions('status', statusOptions).map(status => (
                   <label 
                     key={status} 
@@ -855,6 +910,7 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
       {selectedMarket && (
         <MarketDetailsModal
           market={selectedMarket}
+          allMarkets={markets}
           onClose={handleCloseModal}
           onSave={handleSaveMarket}
         />

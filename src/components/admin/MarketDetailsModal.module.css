@@ -120,12 +120,15 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   padding: 32px;
+  overflow: visible;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+  overflow: visible;
 }
 
 .fullWidthRow {
@@ -183,6 +186,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  overflow: visible;
 }
 
 .customDropdown:hover {
@@ -202,18 +206,24 @@
   color: #1F2937;
 }
 
-.dropdownMenu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+.dropdownPlaceholder {
+  color: #9CA3AF;
+  font-weight: 500;
+}
+
+/* Dropdown Menu - Now using Portal with fixed positioning */
+.dropdownMenu,
+.dropdownMenuPortal {
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
-  z-index: 1000;
+  z-index: 99999;
   animation: dropdownSlide 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes dropdownSlide {
@@ -227,12 +237,73 @@
   }
 }
 
+/* Dropdown Search */
+.dropdownSearch {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(248, 250, 252, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  color: #9CA3AF;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1F2937;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: #9CA3AF;
+}
+
+/* Dropdown Options Container */
+.dropdownOptions {
+  overflow-y: auto;
+  max-height: 240px;
+}
+
+.dropdownOptions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdownOptions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdownOptions::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.5);
+  border-radius: 3px;
+}
+
+.dropdownOptions::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
 .dropdownOption {
   padding: 10px 14px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dropdownEmpty {
+  padding: 16px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9CA3AF;
+  text-align: center;
 }
 
 .dropdownOptionActive {

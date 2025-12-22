@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus } from '@phosphor-icons/react';
+import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus } from '@phosphor-icons/react';
 import { AdminDashboard } from './AdminDashboard';
 import { MarketsPage } from './MarketsPage';
 import { GebietsleiterPage } from './GebietsleiterPage';
+import { VorbestellerPage } from './VorbestellerPage';
+import { ProductsPage } from './ProductsPage';
 import { parseMarketFile, validateImportFile } from '../../utils/marketImporter';
 import { actionHistoryService, type ActionHistoryEntry } from '../../services/actionHistoryService';
 import { marketService } from '../../services/marketService';
@@ -29,6 +31,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isHistorieModalOpen, setIsHistorieModalOpen] = useState(false);
   const [isCreateGLModalOpen, setIsCreateGLModalOpen] = useState(false);
+  const [isCreateWelleModalOpen, setIsCreateWelleModalOpen] = useState(false);
+  const [isProductImportModalOpen, setIsProductImportModalOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<ActionHistoryEntry[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -38,6 +42,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
   const [importedMarkets, setImportedMarkets] = useState<AdminMarket[]>([]);
   const [allMarkets, setAllMarkets] = useState<AdminMarket[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const productFileInputRef = useRef<HTMLInputElement>(null);
+  const [isProductDragging, setIsProductDragging] = useState(false);
+  const [isProductProcessing, setIsProductProcessing] = useState(false);
+  const [productImportResult, setProductImportResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
 
   // Fetch all markets for GL detail modal
   useEffect(() => {
@@ -201,6 +209,54 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
     }
   };
 
+  // Product import handlers
+  const handleProductDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsProductDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processProductFile(file);
+    }
+  };
+
+  const handleProductDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsProductDragging(true);
+  };
+
+  const handleProductDragLeave = () => {
+    setIsProductDragging(false);
+  };
+
+  const handleProductFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      processProductFile(file);
+    }
+  };
+
+  const processProductFile = async (_file: File) => {
+    setIsProductProcessing(true);
+    setProductImportResult(null);
+
+    // Simulate processing
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // TODO: Implement actual product import logic
+    setProductImportResult({
+      success: true,
+      message: 'Produkte erfolgreich importiert',
+      count: 0
+    });
+    setIsProductProcessing(false);
+
+    // Reset after 3 seconds
+    setTimeout(() => {
+      setProductImportResult(null);
+      setIsProductImportModalOpen(false);
+    }, 2000);
+  };
+
   return (
     <div className={styles.adminPanel}>
       <aside className={`${styles.sidebar} ${isExpanded ? styles.sidebarExpanded : ''}`}>
@@ -259,13 +315,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
               </button>
             </div>
           )}
+          {selectedPage === 'vorbesteller' && (
+            <div className={styles.headerButtons}>
+              <button 
+                className={styles.createWelleButton}
+                onClick={() => setIsCreateWelleModalOpen(true)}
+              >
+                <CalendarPlus size={18} weight="bold" />
+                <span>Welle erstellen</span>
+              </button>
+            </div>
+          )}
+          {selectedPage === 'produkte' && (
+            <div className={styles.headerButtons}>
+              <button 
+                className={styles.importProductsButton}
+                onClick={() => setIsProductImportModalOpen(true)}
+              >
+                <Upload size={18} weight="bold" />
+                <span>Produkte importieren</span>
+              </button>
+            </div>
+          )}
         </header>
         
         <div className={styles.pageContent}>
           {selectedPage === 'dashboard' && <AdminDashboard />}
           {selectedPage === 'markets' && <MarketsPage importedMarkets={importedMarkets} />}
           {selectedPage === 'gebietsleiter' && <GebietsleiterPage isCreateModalOpen={isCreateGLModalOpen} onCloseCreateModal={() => setIsCreateGLModalOpen(false)} allMarkets={allMarkets} />}
-          {/* Other page content will go here */}
+          {selectedPage === 'vorbesteller' && <VorbestellerPage isCreateWelleModalOpen={isCreateWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateWelleModalOpen(true)} />}
+          {selectedPage === 'produkte' && <ProductsPage />}
         </div>
       </main>
 
@@ -324,6 +403,67 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen }) => {
               accept=".csv,.xlsx,.xls"
               style={{ display: 'none' }}
               onChange={handleFileInputChange}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Product Import Modal */}
+      {isProductImportModalOpen && ReactDOM.createPortal(
+        <div className={styles.importModalOverlay} onClick={() => setIsProductImportModalOpen(false)}>
+          <div className={styles.importModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.importModalHeader}>
+              <h3 className={styles.importModalTitle}>Produkte importieren</h3>
+              <button 
+                className={styles.importModalClose}
+                onClick={() => setIsProductImportModalOpen(false)}
+              >
+                <X size={20} weight="bold" />
+              </button>
+            </div>
+            <div 
+              className={`${styles.importDropzone} ${isProductDragging ? styles.importDropzoneDragging : ''} ${isProductProcessing ? styles.importDropzoneProcessing : ''}`}
+              onDrop={handleProductDrop}
+              onDragOver={handleProductDragOver}
+              onDragLeave={handleProductDragLeave}
+              onClick={() => !isProductProcessing && productFileInputRef.current?.click()}
+            >
+              {isProductProcessing ? (
+                <>
+                  <div className={styles.importSpinner}></div>
+                  <h4 className={styles.importTitle}>Verarbeite Datei...</h4>
+                </>
+              ) : productImportResult ? (
+                <>
+                  {productImportResult.success ? (
+                    <>
+                      <CheckCircle size={48} weight="fill" className={styles.importIconSuccess} />
+                      <h4 className={styles.importTitle}>{productImportResult.message}</h4>
+                    </>
+                  ) : (
+                    <>
+                      <WarningCircle size={48} weight="fill" className={styles.importIconError} />
+                      <h4 className={styles.importTitle}>Fehler</h4>
+                      <p className={styles.importSubtitle}>{productImportResult.message}</p>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Upload size={48} weight="regular" className={styles.importIcon} />
+                  <h4 className={styles.importTitle}>Datei hierher ziehen</h4>
+                  <p className={styles.importSubtitle}>oder klicken zum Auswählen</p>
+                  <p className={styles.importFormats}>CSV, Excel (.xlsx, .xls), JSON</p>
+                </>
+              )}
+            </div>
+            <input
+              ref={productFileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,.json"
+              style={{ display: 'none' }}
+              onChange={handleProductFileInputChange}
             />
           </div>
         </div>,

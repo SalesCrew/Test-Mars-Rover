@@ -1,0 +1,1255 @@
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
+import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled } from '@phosphor-icons/react';
+import styles from './VorbestellerPage.module.css';
+import { CustomDatePicker } from './CustomDatePicker';
+import { WelleDetailModal } from './WelleDetailModal';
+
+interface VorbestellerPageProps {
+  isCreateWelleModalOpen: boolean;
+  onCloseCreateWelleModal: () => void;
+  onOpenCreateWelleModal: () => void;
+}
+
+interface DisplayItem {
+  id: string;
+  name: string;
+  targetNumber: string;
+  picture: File | null;
+}
+
+interface KartonwareItem {
+  id: string;
+  name: string;
+  targetNumber: string;
+  picture: File | null;
+}
+
+interface KWDay {
+  kw: string;
+  days: string[];
+}
+
+interface WelleDisplayItem {
+  id: string;
+  name: string;
+  targetNumber: number;
+  currentNumber: number;
+  picture: string | null;
+}
+
+interface WelleKartonwareItem {
+  id: string;
+  name: string;
+  targetNumber: number;
+  currentNumber: number;
+  picture: string | null;
+}
+
+interface Welle {
+  id: string;
+  name: string;
+  image: string | null;
+  startDate: string;
+  endDate: string;
+  types: ('display' | 'kartonware')[];
+  status: 'upcoming' | 'active' | 'past';
+  displayCount: number;
+  kartonwareCount: number;
+  kwDays: KWDay[];
+  displays?: WelleDisplayItem[];
+  kartonwareItems?: WelleKartonwareItem[];
+  totalGLs?: number;
+  participatingGLs?: number;
+}
+
+export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({ 
+  isCreateWelleModalOpen, 
+  onCloseCreateWelleModal,
+  onOpenCreateWelleModal 
+}) => {
+  // Mock data for waves
+  const [wellenList, setWellenList] = useState<Welle[]>([
+    {
+      id: '1',
+      name: 'KW 50-51 Weihnachten',
+      image: null,
+      startDate: '2025-12-15',
+      endDate: '2025-12-28',
+      types: ['display', 'kartonware'],
+      status: 'active',
+      displayCount: 3,
+      kartonwareCount: 2,
+      kwDays: [
+        { kw: 'KW50', days: ['MO', 'MI', 'FR'] },
+        { kw: 'KW51', days: ['DI', 'DO'] }
+      ],
+      displays: [
+        { id: 'd1', name: 'Premium Display Groß', targetNumber: 120, currentNumber: 98, picture: null },
+        { id: 'd2', name: 'Standard Display', targetNumber: 80, currentNumber: 80, picture: null },
+        { id: 'd3', name: 'Mini Display', targetNumber: 150, currentNumber: 112, picture: null }
+      ],
+      kartonwareItems: [
+        { id: 'k1', name: 'Schokoladen Sortiment', targetNumber: 150, currentNumber: 128, picture: null },
+        { id: 'k2', name: 'Weihnachts Mix Box', targetNumber: 85, currentNumber: 92, picture: null }
+      ],
+      totalGLs: 45,
+      participatingGLs: 38
+    },
+    {
+      id: '2',
+      name: 'KW 02-04 Neujahr',
+      image: null,
+      startDate: '2026-01-05',
+      endDate: '2026-01-25',
+      types: ['display'],
+      status: 'upcoming',
+      displayCount: 4,
+      kartonwareCount: 0,
+      kwDays: [
+        { kw: 'KW02', days: ['MO', 'MI'] },
+        { kw: 'KW03', days: ['DI', 'DO'] },
+        { kw: 'KW04', days: ['FR'] }
+      ],
+      displays: [
+        { id: 'd4', name: 'Neujahrs Display XL', targetNumber: 100, currentNumber: 0, picture: null },
+        { id: 'd5', name: 'Fitness Display', targetNumber: 75, currentNumber: 0, picture: null },
+        { id: 'd6', name: 'Vorsätze Display', targetNumber: 60, currentNumber: 0, picture: null },
+        { id: 'd7', name: 'Detox Display', targetNumber: 90, currentNumber: 0, picture: null }
+      ],
+      totalGLs: 45,
+      participatingGLs: 0
+    },
+    {
+      id: '3',
+      name: 'KW 48-49 Adventszeit',
+      image: null,
+      startDate: '2025-11-24',
+      endDate: '2025-12-07',
+      types: ['kartonware'],
+      status: 'past',
+      displayCount: 0,
+      kartonwareCount: 3,
+      kwDays: [
+        { kw: 'KW48', days: ['MO', 'DI', 'MI'] },
+        { kw: 'KW49', days: ['DO', 'FR'] }
+      ],
+      kartonwareItems: [
+        { id: 'k3', name: 'Adventskalender Premium', targetNumber: 120, currentNumber: 120, picture: null },
+        { id: 'k4', name: 'Glühwein Set', targetNumber: 55, currentNumber: 58, picture: null },
+        { id: 'k5', name: 'Weihnachtsgebäck Mix', targetNumber: 80, currentNumber: 80, picture: null }
+      ],
+      totalGLs: 45,
+      participatingGLs: 42
+    }
+  ]);
+
+  const [selectedWelle, setSelectedWelle] = useState<Welle | null>(null);
+
+  const [editingWelle, setEditingWelle] = useState<Welle | null>(null);
+  const [isPastItemsModalOpen, setIsPastItemsModalOpen] = useState<boolean>(false);
+  const [pastItemType, setPastItemType] = useState<'display' | 'kartonware' | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedTypes, setSelectedTypes] = useState<('display' | 'kartonware')[]>([]);
+  
+  // Wave details
+  const [waveName, setWaveName] = useState('');
+  const [waveImagePreview, setWaveImagePreview] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  
+  // Display items
+  const [displays, setDisplays] = useState<DisplayItem[]>([]);
+  
+  // Kartonware items
+  const [kartonwareItems, setKartonwareItems] = useState<KartonwareItem[]>([]);
+  
+  // KW + Days
+  const [kwDays, setKwDays] = useState<KWDay[]>([]);
+
+  const handleToggleType = (type: 'display' | 'kartonware') => {
+    setSelectedTypes(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1 && selectedTypes.length === 0) return;
+    setCurrentStep(prev => prev + 1);
+  };
+
+  const handleBack = () => {
+    setCurrentStep(prev => prev - 1);
+  };
+
+  const handleWaveImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setWaveImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const addDisplay = () => {
+    setDisplays(prev => [...prev, {
+      id: `display-${Date.now()}`,
+      name: '',
+      targetNumber: '',
+      picture: null,
+    }]);
+  };
+
+  const removeDisplay = (id: string) => {
+    setDisplays(prev => prev.filter(d => d.id !== id));
+  };
+
+  const updateDisplay = (id: string, field: keyof DisplayItem, value: any) => {
+    setDisplays(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d));
+  };
+
+  const addKartonware = () => {
+    setKartonwareItems(prev => [...prev, {
+      id: `kartonware-${Date.now()}`,
+      name: '',
+      targetNumber: '',
+      picture: null,
+    }]);
+  };
+
+  const removeKartonware = (id: string) => {
+    setKartonwareItems(prev => prev.filter(k => k.id !== id));
+  };
+
+  const updateKartonware = (id: string, field: keyof KartonwareItem, value: any) => {
+    setKartonwareItems(prev => prev.map(k => k.id === id ? { ...k, [field]: value } : k));
+  };
+
+  const addKWDay = () => {
+    setKwDays(prev => [...prev, {
+      kw: '',
+      days: [],
+    }]);
+  };
+
+  const removeKWDay = (index: number) => {
+    setKwDays(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateKWDay = (index: number, field: 'kw' | 'days', value: any) => {
+    setKwDays(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+
+  const toggleDay = (kwIndex: number, day: string) => {
+    setKwDays(prev => prev.map((item, i) => {
+      if (i === kwIndex) {
+        const days = item.days.includes(day) 
+          ? item.days.filter(d => d !== day)
+          : [...item.days, day];
+        return { ...item, days };
+      }
+      return item;
+    }));
+  };
+
+  const handleCreateWelle = () => {
+    if (editingWelle) {
+      // Update existing welle
+      const updatedWelle: Welle = {
+        ...editingWelle,
+        name: waveName,
+        image: waveImagePreview,
+        startDate,
+        endDate,
+        types: selectedTypes,
+        displayCount: displays.length,
+        kartonwareCount: kartonwareItems.length,
+        kwDays,
+        displays: displays.map(d => ({
+          id: d.id,
+          name: d.name,
+          targetNumber: parseInt(d.targetNumber) || 0,
+          currentNumber: 0,
+          picture: d.picture ? URL.createObjectURL(d.picture) : null
+        })),
+        kartonwareItems: kartonwareItems.map(k => ({
+          id: k.id,
+          name: k.name,
+          targetNumber: parseInt(k.targetNumber) || 0,
+          currentNumber: 0,
+          picture: k.picture ? URL.createObjectURL(k.picture) : null
+        }))
+      };
+      setWellenList(prev => prev.map(w => w.id === editingWelle.id ? updatedWelle : w));
+    } else {
+      // Create new welle
+      const newWelle: Welle = {
+        id: Date.now().toString(),
+        name: waveName,
+        image: waveImagePreview,
+        startDate,
+        endDate,
+        types: selectedTypes,
+        status: 'upcoming',
+        displayCount: displays.length,
+        kartonwareCount: kartonwareItems.length,
+        kwDays,
+        displays: displays.map(d => ({
+          id: d.id,
+          name: d.name,
+          targetNumber: parseInt(d.targetNumber) || 0,
+          currentNumber: 0,
+          picture: d.picture ? URL.createObjectURL(d.picture) : null
+        })),
+        kartonwareItems: kartonwareItems.map(k => ({
+          id: k.id,
+          name: k.name,
+          targetNumber: parseInt(k.targetNumber) || 0,
+          currentNumber: 0,
+          picture: k.picture ? URL.createObjectURL(k.picture) : null
+        })),
+        totalGLs: 45,
+        participatingGLs: 0
+      };
+      setWellenList(prev => [newWelle, ...prev]);
+    }
+    handleClose();
+  };
+
+  const handleEditWelle = (welle: Welle) => {
+    setEditingWelle(welle);
+    setWaveName(welle.name);
+    setStartDate(welle.startDate);
+    setEndDate(welle.endDate);
+    setSelectedTypes(welle.types);
+    setWaveImagePreview(welle.image);
+    setCurrentStep(2); // Skip type selection when editing
+    
+    // Load displays
+    if (welle.displays) {
+      setDisplays(welle.displays.map(d => ({
+        id: d.id,
+        name: d.name,
+        targetNumber: d.targetNumber.toString(),
+        picture: null
+      })));
+    }
+    
+    // Load kartonware
+    if (welle.kartonwareItems) {
+      setKartonwareItems(welle.kartonwareItems.map(k => ({
+        id: k.id,
+        name: k.name,
+        targetNumber: k.targetNumber.toString(),
+        picture: null
+      })));
+    }
+    
+    // Load KW days
+    setKwDays(welle.kwDays);
+    
+    // Open the modal
+    onOpenCreateWelleModal();
+  };
+
+  // Get all past displays/kartonware from past wellen
+  const getAllPastDisplays = (): WelleDisplayItem[] => {
+    const pastWellen = wellenList.filter(w => w.status === 'past' || w.status === 'active');
+    return pastWellen.flatMap(w => w.displays || []);
+  };
+
+  const getAllPastKartonware = (): WelleKartonwareItem[] => {
+    const pastWellen = wellenList.filter(w => w.status === 'past' || w.status === 'active');
+    return pastWellen.flatMap(w => w.kartonwareItems || []);
+  };
+
+  const handleOpenPastItems = (type: 'display' | 'kartonware') => {
+    setPastItemType(type);
+    setIsPastItemsModalOpen(true);
+  };
+
+  const handleClosePastItems = () => {
+    setIsPastItemsModalOpen(false);
+    setPastItemType(null);
+  };
+
+  const handleSelectPastItem = (item: WelleDisplayItem | WelleKartonwareItem) => {
+    if (pastItemType === 'display') {
+      const newDisplay: DisplayItem = {
+        id: Date.now().toString(),
+        name: item.name,
+        targetNumber: '',
+        picture: null
+      };
+      setDisplays(prev => [...prev, newDisplay]);
+    } else if (pastItemType === 'kartonware') {
+      const newKartonware: KartonwareItem = {
+        id: Date.now().toString(),
+        name: item.name,
+        targetNumber: '',
+        picture: null
+      };
+      setKartonwareItems(prev => [...prev, newKartonware]);
+    }
+    handleClosePastItems();
+  };
+
+  const formatDateRange = (start: string, end: string) => {
+    const startDate = new Date(start + 'T00:00:00');
+    const endDate = new Date(end + 'T00:00:00');
+    const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' };
+    return `${startDate.toLocaleDateString('de-DE', options)} - ${endDate.toLocaleDateString('de-DE', options)}`;
+  };
+
+  const getStatusConfig = (status: Welle['status']) => {
+    switch (status) {
+      case 'active':
+        return {
+          label: 'Aktiv',
+          color: '#10B981',
+          bgColor: 'rgba(16, 185, 129, 0.1)',
+          icon: <TrendUp size={16} weight="bold" />
+        };
+      case 'upcoming':
+        return {
+          label: 'Bevorstehend',
+          color: '#3B82F6',
+          bgColor: 'rgba(59, 130, 246, 0.1)',
+          icon: <Clock size={16} weight="bold" />
+        };
+      case 'past':
+        return {
+          label: 'Abgeschlossen',
+          color: '#6B7280',
+          bgColor: 'rgba(107, 114, 128, 0.1)',
+          icon: <CheckCircleFilled size={16} weight="fill" />
+        };
+    }
+  };
+
+  const handleClose = () => {
+    setCurrentStep(1);
+    setSelectedTypes([]);
+    setWaveName('');
+    setWaveImagePreview(null);
+    setStartDate('');
+    setEndDate('');
+    setDisplays([]);
+    setKartonwareItems([]);
+    setKwDays([]);
+    setEditingWelle(null);
+    setSelectedWelle(null);
+    onCloseCreateWelleModal();
+  };
+
+  const getTotalSteps = () => {
+    let steps = 2; // Type selection + Wave details
+    if (selectedTypes.includes('display')) steps++;
+    if (selectedTypes.includes('kartonware')) steps++;
+    steps++; // KW + Days
+    return steps;
+  };
+
+  const getStepTitle = () => {
+    const prefix = editingWelle ? 'Welle bearbeiten' : 'Neue Welle erstellen';
+    if (currentStep === 1) return prefix;
+    if (currentStep === 2) return editingWelle ? 'Welle bearbeiten - Details' : 'Welle Details';
+    if (currentStep === 3 && selectedTypes[0] === 'display') return editingWelle ? 'Welle bearbeiten - Displays' : 'Displays hinzufügen';
+    if (currentStep === 3 && selectedTypes[0] === 'kartonware') return editingWelle ? 'Welle bearbeiten - Kartonware' : 'Kartonware hinzufügen';
+    if (currentStep === 4 && selectedTypes.length === 2) {
+      return selectedTypes[0] === 'display' ? 
+        (editingWelle ? 'Welle bearbeiten - Kartonware' : 'Kartonware hinzufügen') : 
+        (editingWelle ? 'Welle bearbeiten - Displays' : 'Displays hinzufügen');
+    }
+    return editingWelle ? 'Welle bearbeiten - Verkaufstage' : 'Verkaufstage festlegen';
+  };
+
+  const activeWellen = wellenList.filter(w => w.status === 'active');
+  const upcomingWellen = wellenList.filter(w => w.status === 'upcoming');
+  const pastWellen = wellenList.filter(w => w.status === 'past');
+
+  return (
+    <div className={styles.vorbestellerPage}>
+      {/* Active Wellen */}
+      {activeWellen.length > 0 && (
+        <div className={styles.wellenSection}>
+          <h2 className={styles.sectionTitle}>Aktive Wellen</h2>
+          <div className={styles.wellenGrid}>
+            {activeWellen.map(welle => {
+              const statusConfig = getStatusConfig(welle.status);
+              return (
+                <div 
+                  key={welle.id} 
+                  className={`${styles.welleCard} ${styles.welleCardActive}`}
+                  onClick={() => setSelectedWelle(welle)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className={styles.welleHeader}>
+                    <div className={styles.welleStatus} style={{ 
+                      backgroundColor: statusConfig.bgColor,
+                      color: statusConfig.color 
+                    }}>
+                      {statusConfig.icon}
+                      <span>{statusConfig.label}</span>
+                    </div>
+                    <button 
+                      className={styles.welleEditButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditWelle(welle);
+                      }}
+                    >
+                      <PencilSimple size={18} weight="bold" />
+                    </button>
+                  </div>
+
+                  <div className={styles.welleImage}>
+                    {welle.image && <img src={welle.image} alt={welle.name} />}
+                  </div>
+
+                  <div className={styles.welleContent}>
+                    <h3 className={styles.welleName}>{welle.name}</h3>
+                    
+                    <div className={styles.welleDateRange}>
+                      <Calendar size={16} weight="regular" />
+                      <span>{formatDateRange(welle.startDate, welle.endDate)}</span>
+                    </div>
+
+                    <div className={styles.welleTypes}>
+                      {welle.types.includes('display') && (
+                        <div className={styles.welleType}>
+                          <CheckCircle size={16} weight="fill" />
+                          <span>{welle.displayCount} Display{welle.displayCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                      {welle.types.includes('kartonware') && (
+                        <div className={styles.welleType}>
+                          <Package size={16} weight="fill" />
+                          <span>{welle.kartonwareCount} Kartonware</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.welleKWDays}>
+                      {welle.kwDays.map((kw, idx) => (
+                        <div key={idx} className={styles.kwDayItem}>
+                          <span className={styles.kwLabel}>{kw.kw}:</span>
+                          <span className={styles.kwDaysList}>{kw.days.join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Wellen */}
+      {upcomingWellen.length > 0 && (
+        <div className={styles.wellenSection}>
+          <h2 className={styles.sectionTitle}>Bevorstehende Wellen</h2>
+          <div className={styles.wellenGrid}>
+            {upcomingWellen.map(welle => {
+              const statusConfig = getStatusConfig(welle.status);
+              return (
+                <div 
+                  key={welle.id} 
+                  className={`${styles.welleCard} ${styles.welleCardUpcoming}`}
+                  onClick={() => setSelectedWelle(welle)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className={styles.welleHeader}>
+                    <div className={styles.welleStatus} style={{ 
+                      backgroundColor: statusConfig.bgColor,
+                      color: statusConfig.color 
+                    }}>
+                      {statusConfig.icon}
+                      <span>{statusConfig.label}</span>
+                    </div>
+                    <button 
+                      className={styles.welleEditButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditWelle(welle);
+                      }}
+                    >
+                      <PencilSimple size={18} weight="bold" />
+                    </button>
+                  </div>
+
+                  <div className={styles.welleImage}>
+                    {welle.image && <img src={welle.image} alt={welle.name} />}
+                  </div>
+
+                  <div className={styles.welleContent}>
+                    <h3 className={styles.welleName}>{welle.name}</h3>
+                    
+                    <div className={styles.welleDateRange}>
+                      <Calendar size={16} weight="regular" />
+                      <span>{formatDateRange(welle.startDate, welle.endDate)}</span>
+                    </div>
+
+                    <div className={styles.welleTypes}>
+                      {welle.types.includes('display') && (
+                        <div className={styles.welleType}>
+                          <CheckCircle size={16} weight="fill" />
+                          <span>{welle.displayCount} Display{welle.displayCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                      {welle.types.includes('kartonware') && (
+                        <div className={styles.welleType}>
+                          <Package size={16} weight="fill" />
+                          <span>{welle.kartonwareCount} Kartonware</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.welleKWDays}>
+                      {welle.kwDays.map((kw, idx) => (
+                        <div key={idx} className={styles.kwDayItem}>
+                          <span className={styles.kwLabel}>{kw.kw}:</span>
+                          <span className={styles.kwDaysList}>{kw.days.join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Past Wellen */}
+      {pastWellen.length > 0 && (
+        <div className={styles.wellenSection}>
+          <h2 className={styles.sectionTitle}>Vergangene Wellen</h2>
+          <div className={styles.wellenGrid}>
+            {pastWellen.map(welle => {
+              const statusConfig = getStatusConfig(welle.status);
+              return (
+                <div 
+                  key={welle.id} 
+                  className={`${styles.welleCard} ${styles.welleCardPast}`}
+                  onClick={() => setSelectedWelle(welle)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className={styles.welleHeader}>
+                    <div className={styles.welleStatus} style={{ 
+                      backgroundColor: statusConfig.bgColor,
+                      color: statusConfig.color 
+                    }}>
+                      {statusConfig.icon}
+                      <span>{statusConfig.label}</span>
+                    </div>
+                    <button 
+                      className={styles.welleEditButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditWelle(welle);
+                      }}
+                    >
+                      <PencilSimple size={18} weight="bold" />
+                    </button>
+                  </div>
+
+                  <div className={styles.welleImage}>
+                    {welle.image && <img src={welle.image} alt={welle.name} />}
+                  </div>
+
+                  <div className={styles.welleContent}>
+                    <h3 className={styles.welleName}>{welle.name}</h3>
+                    
+                    <div className={styles.welleDateRange}>
+                      <Calendar size={16} weight="regular" />
+                      <span>{formatDateRange(welle.startDate, welle.endDate)}</span>
+                    </div>
+
+                    <div className={styles.welleTypes}>
+                      {welle.types.includes('display') && (
+                        <div className={styles.welleType}>
+                          <CheckCircle size={16} weight="fill" />
+                          <span>{welle.displayCount} Display{welle.displayCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                      {welle.types.includes('kartonware') && (
+                        <div className={styles.welleType}>
+                          <Package size={16} weight="fill" />
+                          <span>{welle.kartonwareCount} Kartonware</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.welleKWDays}>
+                      {welle.kwDays.map((kw, idx) => (
+                        <div key={idx} className={styles.kwDayItem}>
+                          <span className={styles.kwLabel}>{kw.kw}:</span>
+                          <span className={styles.kwDaysList}>{kw.days.join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Welle Detail Modal */}
+      {selectedWelle && (
+        <WelleDetailModal 
+          welle={selectedWelle} 
+          onClose={() => setSelectedWelle(null)} 
+        />
+      )}
+
+      {/* Create Welle Modal */}
+      {isCreateWelleModalOpen && ReactDOM.createPortal(
+        <div className={styles.modalOverlay} onClick={handleClose}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>{getStepTitle()}</h3>
+              <button 
+                className={styles.modalClose}
+                onClick={handleClose}
+              >
+                <X size={20} weight="bold" />
+              </button>
+            </div>
+
+            <div className={styles.modalContent}>
+              {/* Step Progress Indicator - Hidden on first step */}
+              {currentStep > 1 && (
+                <div className={styles.progressIndicatorWrapper}>
+                  <div className={styles.progressIndicator}>
+                    {Array.from({ length: getTotalSteps() }).map((_, index) => (
+                      <div 
+                        key={index}
+                        className={`${styles.progressDot} ${index + 1 <= currentStep ? styles.progressDotActive : ''}`}
+                      />
+                    ))}
+                  </div>
+                  {/* Add from Past Button */}
+                  {((currentStep === 3 && selectedTypes[0] === 'display') || 
+                    (currentStep === 4 && selectedTypes.includes('display') && selectedTypes[0] === 'kartonware')) && (
+                    <button 
+                      className={styles.addFromPastButton}
+                      onClick={() => handleOpenPastItems('display')}
+                      title="Aus vergangenen Wellen hinzufügen"
+                    >
+                      <Plus size={14} weight="bold" />
+                    </button>
+                  )}
+                  {((currentStep === 3 && selectedTypes[0] === 'kartonware') || 
+                    (currentStep === 4 && selectedTypes.includes('kartonware') && selectedTypes[0] === 'display')) && (
+                    <button 
+                      className={styles.addFromPastButton}
+                      onClick={() => handleOpenPastItems('kartonware')}
+                      title="Aus vergangenen Wellen hinzufügen"
+                    >
+                      <Plus size={14} weight="bold" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Step 1: Type Selection */}
+              {currentStep === 1 && (
+                <div className={styles.stepContent}>
+                  <p className={styles.modalDescription}>
+                    Wähle die Vorbesteller-Typen für diese Welle aus:
+                  </p>
+
+                  <div className={styles.optionsGrid}>
+                    <button
+                      className={`${styles.optionCard} ${selectedTypes.includes('display') ? styles.optionCardActive : ''}`}
+                      onClick={() => handleToggleType('display')}
+                    >
+                      <div className={styles.optionIcon}>
+                        <CheckCircle 
+                          size={48} 
+                          weight={selectedTypes.includes('display') ? 'fill' : 'regular'} 
+                        />
+                      </div>
+                      <h4 className={styles.optionTitle}>Display</h4>
+                      <p className={styles.optionDescription}>
+                        Display-Vorbesteller für diese Welle
+                      </p>
+                      {selectedTypes.includes('display') && (
+                        <div className={styles.optionCheckmark}>
+                          <CheckCircle size={20} weight="fill" />
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      className={`${styles.optionCard} ${selectedTypes.includes('kartonware') ? styles.optionCardActive : ''}`}
+                      onClick={() => handleToggleType('kartonware')}
+                    >
+                      <div className={styles.optionIcon}>
+                        <Package 
+                          size={48} 
+                          weight={selectedTypes.includes('kartonware') ? 'fill' : 'regular'} 
+                        />
+                      </div>
+                      <h4 className={styles.optionTitle}>Kartonware</h4>
+                      <p className={styles.optionDescription}>
+                        Kartonware-Vorbesteller für diese Welle
+                      </p>
+                      {selectedTypes.includes('kartonware') && (
+                        <div className={styles.optionCheckmark}>
+                          <CheckCircle size={20} weight="fill" />
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Wave Details */}
+              {currentStep === 2 && (
+                <div className={styles.stepContent}>
+                  <div className={styles.formSection}>
+                    <label className={styles.label}>Wellen-Name</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      placeholder="z.B. KW 48-49 oder Q4 2024"
+                      value={waveName}
+                      onChange={(e) => setWaveName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className={styles.formSection}>
+                    <label className={styles.label}>Wellen-Bild (optional)</label>
+                    <div className={styles.imageUploadArea}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleWaveImageUpload}
+                        className={styles.imageInput}
+                        id="waveImage"
+                      />
+                      <label htmlFor="waveImage" className={styles.imageLabel}>
+                        {waveImagePreview ? (
+                          <img src={waveImagePreview} alt="Wave preview" className={styles.imagePreview} />
+                        ) : (
+                          <>
+                            <ImageIcon size={32} weight="regular" />
+                            <span>Bild hochladen</span>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <div className={styles.formSection}>
+                      <label className={styles.label}>Start-Datum</label>
+                      <CustomDatePicker
+                        value={startDate}
+                        onChange={setStartDate}
+                        placeholder="Start-Datum auswählen"
+                      />
+                    </div>
+                    <div className={styles.formSection}>
+                      <label className={styles.label}>End-Datum</label>
+                      <CustomDatePicker
+                        value={endDate}
+                        onChange={setEndDate}
+                        placeholder="End-Datum auswählen"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3/4: Display Details */}
+              {((currentStep === 3 && selectedTypes[0] === 'display') || 
+                (currentStep === 4 && selectedTypes.includes('display') && selectedTypes[0] === 'kartonware')) && (
+                <div className={styles.stepContent}>
+                  <div className={styles.itemsList}>
+                    {displays.map((display, index) => (
+                      <div key={display.id} className={styles.itemCard}>
+                        <div className={styles.itemHeader}>
+                          <span className={styles.itemNumber}>Display {index + 1}</span>
+                          {displays.length > 1 && (
+                            <button
+                              className={styles.removeItemButton}
+                              onClick={() => removeDisplay(display.id)}
+                            >
+                              <Trash size={16} weight="bold" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className={styles.formRow}>
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Display-Name</label>
+                            <input
+                              type="text"
+                              className={styles.input}
+                              placeholder="z.B. Standard Display"
+                              value={display.name}
+                              onChange={(e) => updateDisplay(display.id, 'name', e.target.value)}
+                            />
+                          </div>
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Anzahl Ziel</label>
+                            <input
+                              type="number"
+                              className={styles.input}
+                              placeholder="0"
+                              value={display.targetNumber}
+                              onChange={(e) => updateDisplay(display.id, 'targetNumber', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Display-Bild (optional)</label>
+                          <div className={styles.imageUploadArea}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) updateDisplay(display.id, 'picture', file);
+                              }}
+                              className={styles.imageInput}
+                              id={`displayImage-${display.id}`}
+                            />
+                            <label htmlFor={`displayImage-${display.id}`} className={styles.imageLabel}>
+                              {display.picture ? (
+                                <img 
+                                  src={URL.createObjectURL(display.picture)} 
+                                  alt="Display preview" 
+                                  className={styles.imagePreview} 
+                                />
+                              ) : (
+                                <>
+                                  <ImageIcon size={24} weight="regular" />
+                                  <span>Bild hochladen</span>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button className={styles.addItemButton} onClick={addDisplay}>
+                    <Plus size={18} weight="bold" />
+                    <span>Weiteres Display hinzufügen</span>
+                  </button>
+
+                  {displays.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <CheckCircle size={48} weight="regular" />
+                      <p>Füge mindestens ein Display hinzu</p>
+                      <button className={styles.addFirstButton} onClick={addDisplay}>
+                        <Plus size={18} weight="bold" />
+                        <span>Erstes Display hinzufügen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3/4: Kartonware Details */}
+              {((currentStep === 3 && selectedTypes[0] === 'kartonware') || 
+                (currentStep === 4 && selectedTypes.includes('kartonware') && selectedTypes[0] === 'display')) && (
+                <div className={styles.stepContent}>
+                  <div className={styles.itemsList}>
+                    {kartonwareItems.map((item, index) => (
+                      <div key={item.id} className={styles.itemCard}>
+                        <div className={styles.itemHeader}>
+                          <span className={styles.itemNumber}>Kartonware {index + 1}</span>
+                          {kartonwareItems.length > 1 && (
+                            <button
+                              className={styles.removeItemButton}
+                              onClick={() => removeKartonware(item.id)}
+                            >
+                              <Trash size={16} weight="bold" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className={styles.formRow}>
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Kartonware-Name</label>
+                            <input
+                              type="text"
+                              className={styles.input}
+                              placeholder="z.B. Standard Karton"
+                              value={item.name}
+                              onChange={(e) => updateKartonware(item.id, 'name', e.target.value)}
+                            />
+                          </div>
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Anzahl Ziel</label>
+                            <input
+                              type="number"
+                              className={styles.input}
+                              placeholder="0"
+                              value={item.targetNumber}
+                              onChange={(e) => updateKartonware(item.id, 'targetNumber', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Kartonware-Bild (optional)</label>
+                          <div className={styles.imageUploadArea}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) updateKartonware(item.id, 'picture', file);
+                              }}
+                              className={styles.imageInput}
+                              id={`kartonwareImage-${item.id}`}
+                            />
+                            <label htmlFor={`kartonwareImage-${item.id}`} className={styles.imageLabel}>
+                              {item.picture ? (
+                                <img 
+                                  src={URL.createObjectURL(item.picture)} 
+                                  alt="Kartonware preview" 
+                                  className={styles.imagePreview} 
+                                />
+                              ) : (
+                                <>
+                                  <ImageIcon size={24} weight="regular" />
+                                  <span>Bild hochladen</span>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button className={styles.addItemButton} onClick={addKartonware}>
+                    <Plus size={18} weight="bold" />
+                    <span>Weitere Kartonware hinzufügen</span>
+                  </button>
+
+                  {kartonwareItems.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <Package size={48} weight="regular" />
+                      <p>Füge mindestens eine Kartonware hinzu</p>
+                      <button className={styles.addFirstButton} onClick={addKartonware}>
+                        <Plus size={18} weight="bold" />
+                        <span>Erste Kartonware hinzufügen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Final Step: KW + Days */}
+              {currentStep === getTotalSteps() && (
+                <div className={styles.stepContent}>
+                  <p className={styles.modalDescription}>
+                    Lege fest, an welchen Tagen die GLs verkaufen können:
+                  </p>
+
+                  <div className={styles.kwDaysList}>
+                    {kwDays.map((kwDay, index) => (
+                      <div key={index} className={styles.kwDayCard}>
+                        <div className={styles.itemHeader}>
+                          <span className={styles.itemNumber}>Kalenderwoche {index + 1}</span>
+                          {kwDays.length > 1 && (
+                            <button
+                              className={styles.removeItemButton}
+                              onClick={() => removeKWDay(index)}
+                            >
+                              <Trash size={16} weight="bold" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Kalenderwoche</label>
+                          <input
+                            type="text"
+                            className={styles.input}
+                            placeholder="z.B. KW23"
+                            value={kwDay.kw}
+                            onChange={(e) => updateKWDay(index, 'kw', e.target.value)}
+                          />
+                        </div>
+
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Verkaufstage</label>
+                          <div className={styles.daysGrid}>
+                            {['MO', 'DI', 'MI', 'DO', 'FR'].map(day => (
+                              <button
+                                key={day}
+                                className={`${styles.dayButton} ${kwDay.days.includes(day) ? styles.dayButtonActive : ''}`}
+                                onClick={() => toggleDay(index, day)}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button className={styles.addItemButton} onClick={addKWDay}>
+                    <Plus size={18} weight="bold" />
+                    <span>Weitere Kalenderwoche hinzufügen</span>
+                  </button>
+
+                  {kwDays.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <CalendarPlus size={48} weight="regular" />
+                      <p>Füge mindestens eine Kalenderwoche hinzu</p>
+                      <button className={styles.addFirstButton} onClick={addKWDay}>
+                        <Plus size={18} weight="bold" />
+                        <span>Erste Kalenderwoche hinzufügen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.modalFooter}>
+              {currentStep > 1 && (
+                <button 
+                  className={styles.backButton}
+                  onClick={handleBack}
+                >
+                  <ArrowLeft size={18} weight="bold" />
+                  <span>Zurück</span>
+                </button>
+              )}
+              
+              <div className={styles.footerSpacer} />
+
+              <button 
+                className={styles.cancelButton}
+                onClick={handleClose}
+              >
+                Abbrechen
+              </button>
+
+              {currentStep < getTotalSteps() ? (
+                <button 
+                  className={`${styles.nextButton} ${
+                    (currentStep === 1 && selectedTypes.length === 0) ||
+                    (currentStep === 2 && (!waveName || !startDate || !endDate)) ||
+                    (currentStep === 3 && selectedTypes[0] === 'display' && displays.length === 0) ||
+                    (currentStep === 3 && selectedTypes[0] === 'kartonware' && kartonwareItems.length === 0) ||
+                    (currentStep === 4 && selectedTypes[0] === 'display' && kartonwareItems.length === 0) ||
+                    (currentStep === 4 && selectedTypes[0] === 'kartonware' && displays.length === 0)
+                    ? styles.nextButtonDisabled : ''
+                  }`}
+                  onClick={handleNext}
+                  disabled={
+                    (currentStep === 1 && selectedTypes.length === 0) ||
+                    (currentStep === 2 && (!waveName || !startDate || !endDate)) ||
+                    (currentStep === 3 && selectedTypes[0] === 'display' && displays.length === 0) ||
+                    (currentStep === 3 && selectedTypes[0] === 'kartonware' && kartonwareItems.length === 0) ||
+                    (currentStep === 4 && selectedTypes[0] === 'display' && kartonwareItems.length === 0) ||
+                    (currentStep === 4 && selectedTypes[0] === 'kartonware' && displays.length === 0)
+                  }
+                >
+                  <span>Weiter</span>
+                  <ArrowRight size={18} weight="bold" />
+                </button>
+              ) : (
+                <button 
+                  className={`${styles.createButton} ${kwDays.length === 0 ? styles.createButtonDisabled : ''}`}
+                  onClick={handleCreateWelle}
+                  disabled={kwDays.length === 0}
+                >
+                  <CalendarPlus size={18} weight="bold" />
+                  <span>{editingWelle ? 'Welle aktualisieren' : 'Welle erstellen'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Past Items Selection Modal */}
+      {isPastItemsModalOpen && ReactDOM.createPortal(
+        <div className={styles.modalOverlay} onClick={handleClosePastItems}>
+          <div className={styles.pastItemsModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                {pastItemType === 'display' ? 'Display aus vergangenen Wellen' : 'Kartonware aus vergangenen Wellen'}
+              </h3>
+              <button 
+                className={styles.modalClose}
+                onClick={handleClosePastItems}
+              >
+                <X size={20} weight="bold" />
+              </button>
+            </div>
+
+            <div className={styles.pastItemsGrid}>
+              {pastItemType === 'display' && getAllPastDisplays().map((item) => (
+                <button
+                  key={item.id}
+                  className={styles.pastItemCard}
+                  onClick={() => handleSelectPastItem(item)}
+                >
+                  <div className={styles.pastItemImage}>
+                    {item.picture ? (
+                      <img src={item.picture} alt={item.name} />
+                    ) : (
+                      <div className={styles.pastItemImagePlaceholder}>
+                        <CheckCircle size={32} weight="regular" />
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.pastItemName}>{item.name}</div>
+                </button>
+              ))}
+              {pastItemType === 'kartonware' && getAllPastKartonware().map((item) => (
+                <button
+                  key={item.id}
+                  className={styles.pastItemCard}
+                  onClick={() => handleSelectPastItem(item)}
+                >
+                  <div className={styles.pastItemImage}>
+                    {item.picture ? (
+                      <img src={item.picture} alt={item.name} />
+                    ) : (
+                      <div className={styles.pastItemImagePlaceholder}>
+                        <Package size={32} weight="regular" />
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.pastItemName}>{item.name}</div>
+                </button>
+              ))}
+              {((pastItemType === 'display' && getAllPastDisplays().length === 0) ||
+                (pastItemType === 'kartonware' && getAllPastKartonware().length === 0)) && (
+                <div className={styles.emptyPastItems}>
+                  <p>Keine vergangenen {pastItemType === 'display' ? 'Displays' : 'Kartonware'} gefunden</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
