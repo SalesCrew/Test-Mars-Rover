@@ -5,6 +5,7 @@ import marketsRouter from './routes/markets';
 import actionHistoryRouter from './routes/actionHistory';
 import gebietsleiterRouter from './routes/gebietsleiter';
 import productsRouter from './routes/products';
+import wellenRouter from './routes/wellen';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,8 @@ console.log('📌 Registering gebietsleiter routes...');
 app.use('/api/gebietsleiter', gebietsleiterRouter);
 console.log('📌 Registering products routes...');
 app.use('/api/products', productsRouter);
+console.log('📌 Registering wellen routes...');
+app.use('/api/wellen', wellenRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -45,5 +48,6 @@ app.listen(PORT, () => {
   console.log(`📜 Action History API available at http://localhost:${PORT}/api/action-history`);
   console.log(`👥 Gebietsleiter API available at http://localhost:${PORT}/api/gebietsleiter`);
   console.log(`📦 Products API available at http://localhost:${PORT}/api/products`);
+  console.log(`🌊 Wellen API available at http://localhost:${PORT}/api/wellen`);
 });
 

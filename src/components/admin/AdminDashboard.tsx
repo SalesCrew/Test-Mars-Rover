@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { TrendUp, TrendDown, CheckCircle, XCircle, Package, Storefront, Sparkle } from '@phosphor-icons/react';
-import { AdminCardFilter } from './AdminCardFilter';
-import { wellenData } from '../../data/statisticsData';
-import CountUp from '../gl/CountUp';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, Package, Storefront, Sparkle } from '@phosphor-icons/react';
+import { ChainAverageCard } from './ChainAverageCard';
+import { WaveProgressCard } from './WaveProgressCard';
+import { DashboardFilters } from './DashboardFilters';
+import { API_BASE_URL } from '../../config/database';
 import styles from './AdminDashboard.module.css';
 
 // Mock live activity data
@@ -14,324 +15,216 @@ const liveActivities = [
   { id: 5, gl: 'Michael Müller', chain: 'Billa+', market: 'Favoriten', action: '+3 Display', hasFragebogen: true, time: '15 min' },
 ];
 
-type TimeFilter = 'welle' | 'all-time' | 'ytd' | 'mtd' | 'custom';
+interface ChainAverage {
+  chainName: string;
+  chainColor: string;
+  goalType: 'percentage' | 'value';
+  goalPercentage?: number;
+  totalMarkets: number;
+  marketsWithProgress: number;
+  currentPercentage?: number;
+  goalValue?: number;
+  currentValue?: number;
+  totalValue?: number;
+}
+
+interface WaveProgress {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'finished';
+  goalType: 'percentage' | 'value';
+  goalPercentage?: number;
+  goalValue?: number;
+  currentValue?: number;
+  displayCount: number;
+  displayTarget: number;
+  kartonwareCount: number;
+  kartonwareTarget: number;
+  assignedMarkets: number;
+  participatingGLs: number;
+}
 
 export const AdminDashboard: React.FC = () => {
-  const [billaTimeFilter, setBillaTimeFilter] = useState<TimeFilter>('welle');
-  const [sparTimeFilter, setSparTimeFilter] = useState<TimeFilter>('welle');
-  const [progressAnimated, setProgressAnimated] = useState(false);
+  // Data states
+  const [chainAverages, setChainAverages] = useState<ChainAverage[]>([]);
+  const [activeWaves, setActiveWaves] = useState<WaveProgress[]>([]);
+  const [finishedWaves, setFinishedWaves] = useState<WaveProgress[]>([]);
+  const [availableGLs, setAvailableGLs] = useState<Array<{ id: string; name: string }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setProgressAnimated(true);
-    }, 300);
-    return () => clearTimeout(timer);
+  // Filter states
+  const [chainDateRange, setChainDateRange] = useState({ start: '', end: '' });
+  const [chainSelectedGLs, setChainSelectedGLs] = useState<string[]>([]);
+  const [chainSelectedType, setChainSelectedType] = useState<'all' | 'displays' | 'kartonware'>('all');
+  
+  const [waveSelectedGLs, setWaveSelectedGLs] = useState<string[]>([]);
+  const [waveSelectedType, setWaveSelectedType] = useState<'all' | 'displays' | 'kartonware'>('all');
+
+  // Fetch GLs
+  useEffect(() => {
+    const fetchGLs = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/gebietsleiter`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch GLs');
+        }
+        const gls = await response.json();
+        const formattedGLs = gls.map((gl: any) => {
+          // Abbreviate name: "Kilian Sternath" -> "Kilian S."
+          const nameParts = gl.name.trim().split(' ');
+          const firstName = nameParts[0] || '';
+          const lastNameInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1].charAt(0) + '.' : '';
+          const abbreviatedName = lastNameInitial ? `${firstName} ${lastNameInitial}` : firstName;
+          
+          return {
+            id: gl.id,
+            name: abbreviatedName
+          };
+        });
+        setAvailableGLs(formattedGLs);
+      } catch (error) {
+        console.error('Error fetching GLs:', error);
+      }
+    };
+
+    fetchGLs();
   }, []);
 
-  const currentData = wellenData[0]; // Using current wave data
-  const billaData = currentData.billaPlus;
-  const sparData = currentData.spar;
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  // Calculate percentages for Displays and Kartonware separately
-  const billaDisplayPercentage = Math.round((billaData.displayCount / billaData.totalMarkets) * 1000) / 10;
-  const billaKartonwarePercentage = Math.round((billaData.kartonwareCount / billaData.totalMarkets) * 1000) / 10;
-  const sparDisplayPercentage = Math.round((sparData.displayCount / sparData.totalMarkets) * 1000) / 10;
-  const sparKartonwarePercentage = Math.round((sparData.kartonwareCount / sparData.totalMarkets) * 1000) / 10;
+        // Fetch chain averages
+        const chainRes = await fetch(`${API_BASE_URL}/wellen/dashboard/chain-averages`);
+        if (!chainRes.ok) {
+          throw new Error('Failed to fetch chain averages');
+        }
+        const chainData = await chainRes.json();
+        setChainAverages(chainData);
 
-  const billaDisplayGoalMet = billaDisplayPercentage >= (billaData.goalPercentage * 0.5);
-  const billaKartonwareGoalMet = billaKartonwarePercentage >= (billaData.goalPercentage * 0.5);
-  const sparDisplayGoalMet = sparDisplayPercentage >= (sparData.goalPercentage * 0.5);
-  const sparKartonwareGoalMet = sparKartonwarePercentage >= (sparData.goalPercentage * 0.5);
+        // Fetch waves
+        const wavesRes = await fetch(`${API_BASE_URL}/wellen/dashboard/waves`);
+        if (!wavesRes.ok) {
+          throw new Error('Failed to fetch waves');
+        }
+        const wavesData = await wavesRes.json();
+        
+        // Separate active and finished
+        const active = wavesData.filter((w: WaveProgress) => w.status === 'active');
+        const finished = wavesData.filter((w: WaveProgress) => w.status === 'finished');
+        
+        setActiveWaves(active);
+        setFinishedWaves(finished);
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   return (
     <div className={styles.dashboard}>
-      {/* First Row: Billa+ Displays & Kartonware */}
-      <div className={styles.statsRow}>
-        {/* Billa+ Displays Card */}
-        <div className={styles.statCard}>
-          <div className={styles.cardHeader}>
-            <div className={styles.chainInfo}>
-              <span className={styles.chainBadge} style={{ background: 'linear-gradient(135deg, #FED304, #F9C80E)' }}>
-                Billa+
-              </span>
-              <span className={styles.chainLabel}>Displays</span>
-            </div>
-            <AdminCardFilter
-              timeFilter={billaTimeFilter}
-              onTimeFilterChange={setBillaTimeFilter}
-              renderDropdownsOnly={true}
-            />
-          </div>
-
-          <AdminCardFilter
-            timeFilter={billaTimeFilter}
-            onTimeFilterChange={setBillaTimeFilter}
-            goalStatus={billaDisplayGoalMet ? (
-              <div className={styles.trendGoalMet}>
-                <TrendUp size={16} weight="bold" />
-                <span>Ziel erreicht</span>
-              </div>
-            ) : (
-              <div className={styles.trend} style={{ color: '#F59E0B' }}>
-                <TrendDown size={18} weight="bold" />
-                <span>{Math.round((billaData.goalPercentage) - billaDisplayPercentage)}% bis Ziel</span>
-              </div>
-            )}
-            renderTimeFiltersOnly={true}
+      {/* Chain Averages Section */}
+      <div className={styles.averagesSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Ketten-Durchschnitte</h2>
+          <DashboardFilters
+            onDateRangeChange={(start, end) => setChainDateRange({ start, end })}
+            onGLFilterChange={setChainSelectedGLs}
+            onTypeFilterChange={setChainSelectedType}
+            availableGLs={availableGLs}
           />
-
-          <div className={styles.percentageDisplay}>
-            <span className={`${styles.percentage} ${billaDisplayGoalMet ? styles.percentageSuccess : ''}`}>
-              <CountUp from={0} to={billaDisplayPercentage} duration={1.5} delay={0.2} />%
-            </span>
-            <span className={styles.goal}>von {Math.round(billaData.goalPercentage)}%</span>
-          </div>
-
-          <div className={styles.progressTrack}>
-            <div
-              className={`${styles.progressBar} ${billaDisplayGoalMet ? styles.progressSuccess : ''}`}
-              style={{ width: progressAnimated ? `${Math.min(billaDisplayPercentage, 100)}%` : '0%' }}
-            />
-          </div>
-
-          <div className={styles.metrics}>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={billaData.totalMarkets} duration={1.2} delay={0.4} />
-              </span>
-              <span className={styles.metricLabel}>Gesamt Märkte</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={billaData.displayCount} duration={1.2} delay={0.5} />
-              </span>
-              <span className={styles.metricLabel}>Mit Displays</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={Math.max(0, Math.ceil(billaData.totalMarkets * billaData.goalPercentage / 100) - billaData.displayCount)} duration={1.2} delay={0.6} />
-              </span>
-              <span className={styles.metricLabel}>Fehlen noch</span>
-            </div>
-          </div>
         </div>
-
-        {/* Billa+ Kartonware Card */}
-        <div className={styles.statCard}>
-          <div className={styles.cardHeader}>
-            <div className={styles.chainInfo}>
-              <span className={styles.chainBadge} style={{ background: 'linear-gradient(135deg, #FED304, #F9C80E)' }}>
-                Billa+
-              </span>
-              <span className={styles.chainLabel}>Kartonware</span>
-            </div>
-            <AdminCardFilter
-              timeFilter={billaTimeFilter}
-              onTimeFilterChange={setBillaTimeFilter}
-              renderDropdownsOnly={true}
-            />
+        {isLoading ? (
+          <div className={styles.averagesGrid}>
+            <div className={styles.loadingCard}>Lädt...</div>
+            <div className={styles.loadingCard}>Lädt...</div>
+            <div className={styles.loadingCard}>Lädt...</div>
+            <div className={styles.loadingCard}>Lädt...</div>
           </div>
-
-          <AdminCardFilter
-            timeFilter={billaTimeFilter}
-            onTimeFilterChange={setBillaTimeFilter}
-            goalStatus={billaKartonwareGoalMet ? (
-              <div className={styles.trendGoalMet}>
-                <TrendUp size={16} weight="bold" />
-                <span>Ziel erreicht</span>
-              </div>
-            ) : (
-              <div className={styles.trend} style={{ color: '#F59E0B' }}>
-                <TrendDown size={18} weight="bold" />
-                <span>{Math.round((billaData.goalPercentage) - billaKartonwarePercentage)}% bis Ziel</span>
-              </div>
-            )}
-            renderTimeFiltersOnly={true}
-          />
-
-          <div className={styles.percentageDisplay}>
-            <span className={`${styles.percentage} ${billaKartonwareGoalMet ? styles.percentageSuccess : ''}`}>
-              <CountUp from={0} to={billaKartonwarePercentage} duration={1.5} delay={0.2} />%
-            </span>
-            <span className={styles.goal}>von {Math.round(billaData.goalPercentage)}%</span>
+        ) : error ? (
+          <div className={styles.errorMessage}>Fehler: {error}</div>
+        ) : (
+          <div className={styles.averagesGrid}>
+            {chainAverages.map(chain => {
+              // Adjust goal if GL filter is active
+              const glCount = chainSelectedGLs.length > 0 ? chainSelectedGLs.length : availableGLs.length || 1;
+              const adjustedChain = {
+                ...chain,
+                goalPercentage: chain.goalPercentage ? chain.goalPercentage / glCount : undefined,
+                goalValue: chain.goalValue ? chain.goalValue / glCount : undefined,
+              };
+              return <ChainAverageCard key={chain.chainName} data={adjustedChain} />;
+            })}
           </div>
-
-          <div className={styles.progressSection}>
-            <span className={styles.umsatzzielText}>Umsatzziel: €50.000</span>
-            <div className={styles.progressTrack}>
-              <div
-                className={`${styles.progressBar} ${billaKartonwareGoalMet ? styles.progressSuccess : ''}`}
-                style={{ width: progressAnimated ? `${Math.min(billaKartonwarePercentage, 100)}%` : '0%' }}
-              />
-            </div>
-          </div>
-
-          <div className={styles.metrics}>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={billaData.totalMarkets} duration={1.2} delay={0.4} />
-              </span>
-              <span className={styles.metricLabel}>Gesamt Märkte</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={billaData.kartonwareCount} duration={1.2} delay={0.5} />
-              </span>
-              <span className={styles.metricLabel}>Mit Kartonware</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={Math.max(0, Math.ceil(billaData.totalMarkets * billaData.goalPercentage / 100) - billaData.kartonwareCount)} duration={1.2} delay={0.6} />
-              </span>
-              <span className={styles.metricLabel}>Fehlen noch</span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Second Row: Spar Displays & Kartonware */}
-      <div className={styles.statsRow}>
-        {/* Spar Displays Card */}
-        <div className={styles.statCard}>
-          <div className={styles.cardHeader}>
-            <div className={styles.chainInfo}>
-              <span className={styles.chainBadge} style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)' }}>
-                Spar
-              </span>
-              <span className={styles.chainLabel}>Displays</span>
-            </div>
-            <AdminCardFilter
-              timeFilter={sparTimeFilter}
-              onTimeFilterChange={setSparTimeFilter}
-              renderDropdownsOnly={true}
-            />
-          </div>
-
-          <AdminCardFilter
-            timeFilter={sparTimeFilter}
-            onTimeFilterChange={setSparTimeFilter}
-            goalStatus={sparDisplayGoalMet ? (
-              <div className={styles.trendGoalMet}>
-                <TrendUp size={16} weight="bold" />
-                <span>Ziel erreicht</span>
-              </div>
-            ) : (
-              <div className={styles.trend} style={{ color: '#F59E0B' }}>
-                <TrendDown size={18} weight="bold" />
-                <span>{Math.round((sparData.goalPercentage) - sparDisplayPercentage)}% bis Ziel</span>
-              </div>
-            )}
-            renderTimeFiltersOnly={true}
+      {/* Active Waves Section */}
+      <div className={styles.wavesSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Aktive Wellen</h2>
+          <DashboardFilters
+            onGLFilterChange={setWaveSelectedGLs}
+            onTypeFilterChange={setWaveSelectedType}
+            availableGLs={availableGLs}
           />
-
-          <div className={styles.percentageDisplay}>
-            <span className={`${styles.percentage} ${sparDisplayGoalMet ? styles.percentageSuccess : ''}`}>
-              <CountUp from={0} to={sparDisplayPercentage} duration={1.5} delay={0.2} />%
-            </span>
-            <span className={styles.goal}>von {Math.round(sparData.goalPercentage)}%</span>
-          </div>
-
-          <div className={styles.progressTrack}>
-            <div
-              className={`${styles.progressBar} ${sparDisplayGoalMet ? styles.progressSuccess : ''}`}
-              style={{ width: progressAnimated ? `${Math.min(sparDisplayPercentage, 100)}%` : '0%' }}
-            />
-          </div>
-
-          <div className={styles.metrics}>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={sparData.totalMarkets} duration={1.2} delay={0.4} />
-              </span>
-              <span className={styles.metricLabel}>Gesamt Märkte</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={sparData.displayCount} duration={1.2} delay={0.5} />
-              </span>
-              <span className={styles.metricLabel}>Mit Displays</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={Math.max(0, Math.ceil(sparData.totalMarkets * sparData.goalPercentage / 100) - sparData.displayCount)} duration={1.2} delay={0.6} />
-              </span>
-              <span className={styles.metricLabel}>Fehlen noch</span>
-            </div>
-          </div>
         </div>
-
-        {/* Spar Kartonware Card */}
-        <div className={styles.statCard}>
-          <div className={styles.cardHeader}>
-            <div className={styles.chainInfo}>
-              <span className={styles.chainBadge} style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)' }}>
-                Spar
-              </span>
-              <span className={styles.chainLabel}>Kartonware</span>
-            </div>
-            <AdminCardFilter
-              timeFilter={sparTimeFilter}
-              onTimeFilterChange={setSparTimeFilter}
-              renderDropdownsOnly={true}
-            />
+        {isLoading ? (
+          <div className={styles.wavesGrid}>
+            <div className={styles.loadingCard}>Lädt...</div>
+            <div className={styles.loadingCard}>Lädt...</div>
           </div>
-
-          <AdminCardFilter
-            timeFilter={sparTimeFilter}
-            onTimeFilterChange={setSparTimeFilter}
-            goalStatus={sparKartonwareGoalMet ? (
-              <div className={styles.trendGoalMet}>
-                <TrendUp size={16} weight="bold" />
-                <span>Ziel erreicht</span>
-              </div>
-            ) : (
-              <div className={styles.trend} style={{ color: '#F59E0B' }}>
-                <TrendDown size={18} weight="bold" />
-                <span>{Math.round((sparData.goalPercentage) - sparKartonwarePercentage)}% bis Ziel</span>
-              </div>
-            )}
-            renderTimeFiltersOnly={true}
-          />
-
-          <div className={styles.percentageDisplay}>
-            <span className={`${styles.percentage} ${sparKartonwareGoalMet ? styles.percentageSuccess : ''}`}>
-              <CountUp from={0} to={sparKartonwarePercentage} duration={1.5} delay={0.2} />%
-            </span>
-            <span className={styles.goal}>von {Math.round(sparData.goalPercentage)}%</span>
+        ) : error ? (
+          <div className={styles.errorMessage}>Fehler: {error}</div>
+        ) : activeWaves.length === 0 ? (
+          <div className={styles.emptyState}>Keine aktiven Wellen</div>
+        ) : (
+          <div className={styles.wavesGrid}>
+            {activeWaves.map(wave => {
+              // Adjust goal if GL filter is active
+              const glCount = waveSelectedGLs.length > 0 ? waveSelectedGLs.length : availableGLs.length || 1;
+              const adjustedWave = {
+                ...wave,
+                goalPercentage: wave.goalPercentage ? wave.goalPercentage / glCount : undefined,
+                goalValue: wave.goalValue ? wave.goalValue / glCount : undefined,
+              };
+              return <WaveProgressCard key={wave.id} wave={adjustedWave} />;
+            })}
           </div>
-
-          <div className={styles.progressSection}>
-            <span className={styles.umsatzzielText}>Umsatzziel: €50.000</span>
-            <div className={styles.progressTrack}>
-              <div
-                className={`${styles.progressBar} ${sparKartonwareGoalMet ? styles.progressSuccess : ''}`}
-                style={{ width: progressAnimated ? `${Math.min(sparKartonwarePercentage, 100)}%` : '0%' }}
-              />
-            </div>
-          </div>
-
-          <div className={styles.metrics}>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={sparData.totalMarkets} duration={1.2} delay={0.4} />
-              </span>
-              <span className={styles.metricLabel}>Gesamt Märkte</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={sparData.kartonwareCount} duration={1.2} delay={0.5} />
-              </span>
-              <span className={styles.metricLabel}>Mit Kartonware</span>
-            </div>
-            <div className={styles.metric}>
-              <span className={styles.metricValue}>
-                <CountUp from={0} to={Math.max(0, Math.ceil(sparData.totalMarkets * sparData.goalPercentage / 100) - sparData.kartonwareCount)} duration={1.2} delay={0.6} />
-              </span>
-              <span className={styles.metricLabel}>Fehlen noch</span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Finished Waves Section (last 3 days) */}
+      {!isLoading && !error && finishedWaves.length > 0 && (
+        <div className={styles.wavesSection}>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Abgeschlossene Wellen</h2>
+          </div>
+          <div className={styles.wavesGrid}>
+            {finishedWaves.map(wave => {
+              // Adjust goal if GL filter is active
+              const glCount = waveSelectedGLs.length > 0 ? waveSelectedGLs.length : availableGLs.length || 1;
+              const adjustedWave = {
+                ...wave,
+                goalPercentage: wave.goalPercentage ? wave.goalPercentage / glCount : undefined,
+                goalValue: wave.goalValue ? wave.goalValue / glCount : undefined,
+              };
+              return <WaveProgressCard key={wave.id} wave={adjustedWave} isFinished />;
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Bottom Row: Activity Feed & AI Todos */}
       <div className={styles.bottomRow}>

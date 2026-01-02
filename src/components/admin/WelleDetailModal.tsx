@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Calendar, CheckCircle, Package, TrendUp, Clock, CheckCircle as CheckCircleFilled, User } from '@phosphor-icons/react';
+import { X, Calendar, CheckCircle, Package, TrendUp, Clock, CheckCircle as CheckCircleFilled, User, Trash } from '@phosphor-icons/react';
 import styles from './WelleDetailModal.module.css';
+import { wellenService } from '../../services/wellenService';
 
 interface DisplayItem {
   id: string;
@@ -44,9 +45,55 @@ interface Welle {
 interface WelleDetailModalProps {
   welle: Welle;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
-export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClose }) => {
+export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClose, onDelete }) => {
+  const [deleteClickCount, setDeleteClickCount] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (deleteTimerRef.current) {
+        clearTimeout(deleteTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleDeleteClick = async () => {
+    if (isDeleting) return;
+
+    if (deleteClickCount === 0) {
+      // First click
+      setDeleteClickCount(1);
+      
+      // Reset after 2 seconds
+      deleteTimerRef.current = setTimeout(() => {
+        setDeleteClickCount(0);
+      }, 2000);
+    } else if (deleteClickCount === 1) {
+      // Second click within 2 seconds - delete
+      if (deleteTimerRef.current) {
+        clearTimeout(deleteTimerRef.current);
+      }
+      
+      setIsDeleting(true);
+      try {
+        await wellenService.deleteWelle(welle.id);
+        if (onDelete) {
+          onDelete();
+        }
+        onClose();
+      } catch (error) {
+        console.error('Error deleting welle:', error);
+        alert('Fehler beim Löschen der Welle');
+        setIsDeleting(false);
+        setDeleteClickCount(0);
+      }
+    }
+  };
+
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start + 'T00:00:00');
     const endDate = new Date(end + 'T00:00:00');
@@ -96,9 +143,19 @@ export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClo
               {statusConfig.icon}
               <span>{statusConfig.label}</span>
             </div>
-            <button className={styles.closeButton} onClick={onClose}>
-              <X size={24} weight="bold" />
-            </button>
+            <div className={styles.headerButtons}>
+              <button 
+                className={`${styles.deleteButton} ${deleteClickCount === 1 ? styles.deleteButtonActive : ''}`}
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                title={deleteClickCount === 0 ? 'Löschen (2x klicken)' : 'Nochmal klicken zum Bestätigen'}
+              >
+                <Trash size={20} weight="bold" />
+              </button>
+              <button className={styles.closeButton} onClick={onClose}>
+                <X size={24} weight="bold" />
+              </button>
+            </div>
           </div>
 
           {welle.image && (

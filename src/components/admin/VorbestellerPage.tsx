@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled } from '@phosphor-icons/react';
+import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled, Storefront } from '@phosphor-icons/react';
 import styles from './VorbestellerPage.module.css';
 import { CustomDatePicker } from './CustomDatePicker';
 import { WelleDetailModal } from './WelleDetailModal';
+import { WelleMarketSelectorModal } from './WelleMarketSelectorModal';
+import { wellenService } from '../../services/wellenService';
 
 interface VorbestellerPageProps {
   isCreateWelleModalOpen: boolean;
@@ -16,6 +18,7 @@ interface DisplayItem {
   name: string;
   targetNumber: string;
   picture: File | null;
+  itemValue?: string; // Only used when wave goalType is 'value'
 }
 
 interface KartonwareItem {
@@ -23,6 +26,7 @@ interface KartonwareItem {
   name: string;
   targetNumber: string;
   picture: File | null;
+  itemValue?: string; // Only used when wave goalType is 'value'
 }
 
 interface KWDay {
@@ -36,6 +40,7 @@ interface WelleDisplayItem {
   targetNumber: number;
   currentNumber: number;
   picture: string | null;
+  itemValue?: number; // Only used when wave goalType is 'value'
 }
 
 interface WelleKartonwareItem {
@@ -44,6 +49,7 @@ interface WelleKartonwareItem {
   targetNumber: number;
   currentNumber: number;
   picture: string | null;
+  itemValue?: number; // Only used when wave goalType is 'value'
 }
 
 interface Welle {
@@ -61,6 +67,10 @@ interface Welle {
   kartonwareItems?: WelleKartonwareItem[];
   totalGLs?: number;
   participatingGLs?: number;
+  goalType: 'percentage' | 'value'; // Wave-level goal type
+  goalPercentage?: number; // For percentage goals (e.g., 80%)
+  goalValue?: number; // For value goals (e.g., €7500)
+  assignedMarketIds?: string[]; // IDs of assigned markets
 }
 
 export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({ 
@@ -68,81 +78,25 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   onCloseCreateWelleModal,
   onOpenCreateWelleModal 
 }) => {
-  // Mock data for waves
-  const [wellenList, setWellenList] = useState<Welle[]>([
-    {
-      id: '1',
-      name: 'KW 50-51 Weihnachten',
-      image: null,
-      startDate: '2025-12-15',
-      endDate: '2025-12-28',
-      types: ['display', 'kartonware'],
-      status: 'active',
-      displayCount: 3,
-      kartonwareCount: 2,
-      kwDays: [
-        { kw: 'KW50', days: ['MO', 'MI', 'FR'] },
-        { kw: 'KW51', days: ['DI', 'DO'] }
-      ],
-      displays: [
-        { id: 'd1', name: 'Premium Display Groß', targetNumber: 120, currentNumber: 98, picture: null },
-        { id: 'd2', name: 'Standard Display', targetNumber: 80, currentNumber: 80, picture: null },
-        { id: 'd3', name: 'Mini Display', targetNumber: 150, currentNumber: 112, picture: null }
-      ],
-      kartonwareItems: [
-        { id: 'k1', name: 'Schokoladen Sortiment', targetNumber: 150, currentNumber: 128, picture: null },
-        { id: 'k2', name: 'Weihnachts Mix Box', targetNumber: 85, currentNumber: 92, picture: null }
-      ],
-      totalGLs: 45,
-      participatingGLs: 38
-    },
-    {
-      id: '2',
-      name: 'KW 02-04 Neujahr',
-      image: null,
-      startDate: '2026-01-05',
-      endDate: '2026-01-25',
-      types: ['display'],
-      status: 'upcoming',
-      displayCount: 4,
-      kartonwareCount: 0,
-      kwDays: [
-        { kw: 'KW02', days: ['MO', 'MI'] },
-        { kw: 'KW03', days: ['DI', 'DO'] },
-        { kw: 'KW04', days: ['FR'] }
-      ],
-      displays: [
-        { id: 'd4', name: 'Neujahrs Display XL', targetNumber: 100, currentNumber: 0, picture: null },
-        { id: 'd5', name: 'Fitness Display', targetNumber: 75, currentNumber: 0, picture: null },
-        { id: 'd6', name: 'Vorsätze Display', targetNumber: 60, currentNumber: 0, picture: null },
-        { id: 'd7', name: 'Detox Display', targetNumber: 90, currentNumber: 0, picture: null }
-      ],
-      totalGLs: 45,
-      participatingGLs: 0
-    },
-    {
-      id: '3',
-      name: 'KW 48-49 Adventszeit',
-      image: null,
-      startDate: '2025-11-24',
-      endDate: '2025-12-07',
-      types: ['kartonware'],
-      status: 'past',
-      displayCount: 0,
-      kartonwareCount: 3,
-      kwDays: [
-        { kw: 'KW48', days: ['MO', 'DI', 'MI'] },
-        { kw: 'KW49', days: ['DO', 'FR'] }
-      ],
-      kartonwareItems: [
-        { id: 'k3', name: 'Adventskalender Premium', targetNumber: 120, currentNumber: 120, picture: null },
-        { id: 'k4', name: 'Glühwein Set', targetNumber: 55, currentNumber: 58, picture: null },
-        { id: 'k5', name: 'Weihnachtsgebäck Mix', targetNumber: 80, currentNumber: 80, picture: null }
-      ],
-      totalGLs: 45,
-      participatingGLs: 42
-    }
-  ]);
+  // State for wellen list
+  const [wellenList, setWellenList] = useState<Welle[]>([]);
+  const [isLoadingWellen, setIsLoadingWellen] = useState(true);
+
+  // Load wellen from database
+  useEffect(() => {
+    const loadWellen = async () => {
+      try {
+        setIsLoadingWellen(true);
+        const fetchedWellen = await wellenService.getAllWellen();
+        setWellenList(fetchedWellen);
+      } catch (error) {
+        console.error('Error loading wellen:', error);
+      } finally {
+        setIsLoadingWellen(false);
+      }
+    };
+    loadWellen();
+  }, []);
 
   const [selectedWelle, setSelectedWelle] = useState<Welle | null>(null);
 
@@ -157,6 +111,11 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   const [waveImagePreview, setWaveImagePreview] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [goalType, setGoalType] = useState<'percentage' | 'value'>('percentage');
+  const [goalPercentage, setGoalPercentage] = useState('');
+  const [goalValue, setGoalValue] = useState('');
+  const [assignedMarketIds, setAssignedMarketIds] = useState<string[]>([]);
+  const [isMarketSelectorOpen, setIsMarketSelectorOpen] = useState(false);
   
   // Display items
   const [displays, setDisplays] = useState<DisplayItem[]>([]);
@@ -199,6 +158,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
       name: '',
       targetNumber: '',
       picture: null,
+      itemValue: goalType === 'value' ? '' : undefined
     }]);
   };
 
@@ -216,6 +176,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
       name: '',
       targetNumber: '',
       picture: null,
+      itemValue: goalType === 'value' ? '' : undefined
     }]);
   };
 
@@ -254,68 +215,52 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     }));
   };
 
-  const handleCreateWelle = () => {
-    if (editingWelle) {
-      // Update existing welle
-      const updatedWelle: Welle = {
-        ...editingWelle,
+  const handleCreateWelle = async () => {
+    try {
+      const welleData = {
         name: waveName,
         image: waveImagePreview,
         startDate,
         endDate,
-        types: selectedTypes,
-        displayCount: displays.length,
-        kartonwareCount: kartonwareItems.length,
-        kwDays,
+        goalType,
+        goalPercentage: goalType === 'percentage' ? parseFloat(goalPercentage) : null,
+        goalValue: goalType === 'value' ? parseFloat(goalValue) : null,
         displays: displays.map(d => ({
-          id: d.id,
           name: d.name,
           targetNumber: parseInt(d.targetNumber) || 0,
-          currentNumber: 0,
-          picture: d.picture ? URL.createObjectURL(d.picture) : null
+          picture: d.picture ? URL.createObjectURL(d.picture) : null,
+          itemValue: goalType === 'value' && d.itemValue ? parseFloat(d.itemValue) : null
         })),
         kartonwareItems: kartonwareItems.map(k => ({
-          id: k.id,
           name: k.name,
           targetNumber: parseInt(k.targetNumber) || 0,
-          currentNumber: 0,
-          picture: k.picture ? URL.createObjectURL(k.picture) : null
-        }))
-      };
-      setWellenList(prev => prev.map(w => w.id === editingWelle.id ? updatedWelle : w));
-    } else {
-      // Create new welle
-      const newWelle: Welle = {
-        id: Date.now().toString(),
-        name: waveName,
-        image: waveImagePreview,
-        startDate,
-        endDate,
-        types: selectedTypes,
-        status: 'upcoming',
-        displayCount: displays.length,
-        kartonwareCount: kartonwareItems.length,
-        kwDays,
-        displays: displays.map(d => ({
-          id: d.id,
-          name: d.name,
-          targetNumber: parseInt(d.targetNumber) || 0,
-          currentNumber: 0,
-          picture: d.picture ? URL.createObjectURL(d.picture) : null
+          picture: k.picture ? URL.createObjectURL(k.picture) : null,
+          itemValue: goalType === 'value' && k.itemValue ? parseFloat(k.itemValue) : null
         })),
-        kartonwareItems: kartonwareItems.map(k => ({
-          id: k.id,
-          name: k.name,
-          targetNumber: parseInt(k.targetNumber) || 0,
-          currentNumber: 0,
-          picture: k.picture ? URL.createObjectURL(k.picture) : null
+        kwDays: kwDays.map(kw => ({
+          kw: kw.kw,
+          days: kw.days
         })),
-        totalGLs: 45,
-        participatingGLs: 0
+        assignedMarketIds
       };
-      setWellenList(prev => [newWelle, ...prev]);
+
+      if (editingWelle) {
+        // Update existing welle
+        await wellenService.updateWelle(editingWelle.id, welleData);
+      } else {
+        // Create new welle
+        await wellenService.createWelle(welleData);
+      }
+
+      // Reload wellen list
+      const fetchedWellen = await wellenService.getAllWellen();
+      setWellenList(fetchedWellen);
+      
+      handleClose();
+    } catch (error) {
+      console.error('Error saving welle:', error);
+      alert('Fehler beim Speichern der Welle');
     }
-    handleClose();
   };
 
   const handleEditWelle = (welle: Welle) => {
@@ -325,6 +270,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     setEndDate(welle.endDate);
     setSelectedTypes(welle.types);
     setWaveImagePreview(welle.image);
+    setGoalType(welle.goalType);
+    setGoalPercentage(welle.goalPercentage?.toString() || '');
+    setGoalValue(welle.goalValue?.toString() || '');
+    setAssignedMarketIds(welle.assignedMarketIds || []);
     setCurrentStep(2); // Skip type selection when editing
     
     // Load displays
@@ -333,7 +282,8 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         id: d.id,
         name: d.name,
         targetNumber: d.targetNumber.toString(),
-        picture: null
+        picture: null,
+        itemValue: d.itemValue?.toString()
       })));
     }
     
@@ -343,7 +293,8 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         id: k.id,
         name: k.name,
         targetNumber: k.targetNumber.toString(),
-        picture: null
+        picture: null,
+        itemValue: k.itemValue?.toString()
       })));
     }
     
@@ -381,7 +332,8 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         id: Date.now().toString(),
         name: item.name,
         targetNumber: '',
-        picture: null
+        picture: null,
+        itemValue: item.itemValue?.toString()
       };
       setDisplays(prev => [...prev, newDisplay]);
     } else if (pastItemType === 'kartonware') {
@@ -389,7 +341,8 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         id: Date.now().toString(),
         name: item.name,
         targetNumber: '',
-        picture: null
+        picture: null,
+        itemValue: item.itemValue?.toString()
       };
       setKartonwareItems(prev => [...prev, newKartonware]);
     }
@@ -436,6 +389,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     setWaveImagePreview(null);
     setStartDate('');
     setEndDate('');
+    setGoalType('percentage');
+    setGoalPercentage('');
+    setGoalValue('');
+    setAssignedMarketIds([]);
     setDisplays([]);
     setKartonwareItems([]);
     setKwDays([]);
@@ -704,7 +661,15 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
       {selectedWelle && (
         <WelleDetailModal 
           welle={selectedWelle} 
-          onClose={() => setSelectedWelle(null)} 
+          onClose={() => setSelectedWelle(null)}
+          onDelete={async () => {
+            try {
+              const fetchedWellen = await wellenService.getAllWellen();
+              setWellenList(fetchedWellen);
+            } catch (error) {
+              console.error('Error reloading wellen after delete:', error);
+            }
+          }}
         />
       )}
 
@@ -866,6 +831,84 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                       />
                     </div>
                   </div>
+
+                  {/* Goal Type Selection */}
+                  <div className={styles.formSection}>
+                    <label className={styles.label}>Zieltyp für diese Welle</label>
+                    <div className={styles.goalTypeToggle}>
+                      <button
+                        type="button"
+                        className={`${styles.goalTypeButton} ${goalType === 'percentage' ? styles.goalTypeButtonActive : ''}`}
+                        onClick={() => setGoalType('percentage')}
+                      >
+                        Prozent %
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.goalTypeButton} ${goalType === 'value' ? styles.goalTypeButtonActive : ''}`}
+                        onClick={() => setGoalType('value')}
+                      >
+                        Wert €
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Goal Input Based on Type */}
+                  {goalType === 'percentage' ? (
+                    <div className={styles.formSection}>
+                      <label className={styles.label}>Ziel Prozentsatz (%)</label>
+                      <input
+                        type="number"
+                        className={styles.input}
+                        placeholder="z.B. 80"
+                        value={goalPercentage}
+                        onChange={(e) => setGoalPercentage(e.target.value)}
+                        min="0"
+                        max="100"
+                      />
+                      <small className={styles.fieldHint}>
+                        Das Ziel ist, {goalPercentage || 0}% aller Displays/Kartonware zu verkaufen
+                      </small>
+                    </div>
+                  ) : (
+                    <div className={styles.formSection}>
+                      <label className={styles.label}>Zielwert (€)</label>
+                      <input
+                        type="number"
+                        className={styles.input}
+                        placeholder="z.B. 25000"
+                        value={goalValue}
+                        onChange={(e) => setGoalValue(e.target.value)}
+                        min="0"
+                        step="0.01"
+                      />
+                      <small className={styles.fieldHint}>
+                        Der Gesamtwert aller verkauften Displays/Kartonware soll {goalValue ? `€${parseFloat(goalValue).toLocaleString('de-DE')}` : '€0'} erreichen
+                      </small>
+                    </div>
+                  )}
+
+                  {/* Market Assignment */}
+                  <div className={styles.formSection}>
+                    <label className={styles.label}>Märkte zuweisen</label>
+                    <button
+                      type="button"
+                      className={styles.marketAssignButton}
+                      onClick={() => setIsMarketSelectorOpen(true)}
+                    >
+                      <Storefront size={18} weight="bold" />
+                      <span>
+                        {assignedMarketIds.length > 0 
+                          ? `${assignedMarketIds.length} ${assignedMarketIds.length === 1 ? 'Markt' : 'Märkte'} ausgewählt`
+                          : 'Märkte auswählen'}
+                      </span>
+                    </button>
+                    {assignedMarketIds.length > 0 && (
+                      <small className={styles.fieldHint}>
+                        {assignedMarketIds.length} {assignedMarketIds.length === 1 ? 'Markt' : 'Märkte'} dieser Welle zugewiesen
+                      </small>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -910,6 +953,28 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                             />
                           </div>
                         </div>
+
+                        {/* Item Value (only for value-based goals) */}
+                        {goalType === 'value' && (
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Wert pro Display (€)</label>
+                            <input
+                              type="number"
+                              className={styles.input}
+                              placeholder="z.B. 300"
+                              value={display.itemValue || ''}
+                              onChange={(e) => updateDisplay(display.id, 'itemValue', e.target.value)}
+                              min="0"
+                              step="0.01"
+                            />
+                            <small className={styles.fieldHint}>
+                              Gesamtwert: {display.itemValue && display.targetNumber 
+                                ? `€${(parseFloat(display.itemValue) * parseFloat(display.targetNumber)).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                : '€0.00'
+                              }
+                            </small>
+                          </div>
+                        )}
 
                         <div className={styles.formSection}>
                           <label className={styles.label}>Display-Bild (optional)</label>
@@ -1003,6 +1068,28 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                             />
                           </div>
                         </div>
+
+                        {/* Item Value (only for value-based goals) */}
+                        {goalType === 'value' && (
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Wert pro Kartonware (€)</label>
+                            <input
+                              type="number"
+                              className={styles.input}
+                              placeholder="z.B. 300"
+                              value={item.itemValue || ''}
+                              onChange={(e) => updateKartonware(item.id, 'itemValue', e.target.value)}
+                              min="0"
+                              step="0.01"
+                            />
+                            <small className={styles.fieldHint}>
+                              Gesamtwert: {item.itemValue && item.targetNumber 
+                                ? `€${(parseFloat(item.itemValue) * parseFloat(item.targetNumber)).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                : '€0.00'
+                              }
+                            </small>
+                          </div>
+                        )}
 
                         <div className={styles.formSection}>
                           <label className={styles.label}>Kartonware-Bild (optional)</label>
@@ -1149,7 +1236,9 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                 <button 
                   className={`${styles.nextButton} ${
                     (currentStep === 1 && selectedTypes.length === 0) ||
-                    (currentStep === 2 && (!waveName || !startDate || !endDate)) ||
+                    (currentStep === 2 && (!waveName || !startDate || !endDate || 
+                      (goalType === 'percentage' && !goalPercentage) || 
+                      (goalType === 'value' && !goalValue))) ||
                     (currentStep === 3 && selectedTypes[0] === 'display' && displays.length === 0) ||
                     (currentStep === 3 && selectedTypes[0] === 'kartonware' && kartonwareItems.length === 0) ||
                     (currentStep === 4 && selectedTypes[0] === 'display' && kartonwareItems.length === 0) ||
@@ -1159,7 +1248,9 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                   onClick={handleNext}
                   disabled={
                     (currentStep === 1 && selectedTypes.length === 0) ||
-                    (currentStep === 2 && (!waveName || !startDate || !endDate)) ||
+                    (currentStep === 2 && (!waveName || !startDate || !endDate || 
+                      (goalType === 'percentage' && !goalPercentage) || 
+                      (goalType === 'value' && !goalValue))) ||
                     (currentStep === 3 && selectedTypes[0] === 'display' && displays.length === 0) ||
                     (currentStep === 3 && selectedTypes[0] === 'kartonware' && kartonwareItems.length === 0) ||
                     (currentStep === 4 && selectedTypes[0] === 'display' && kartonwareItems.length === 0) ||
@@ -1248,6 +1339,19 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Market Selector Modal */}
+      {isMarketSelectorOpen && (
+        <WelleMarketSelectorModal
+          isOpen={isMarketSelectorOpen}
+          onClose={() => setIsMarketSelectorOpen(false)}
+          selectedMarketIds={assignedMarketIds}
+          onConfirm={(marketIds) => {
+            setAssignedMarketIds(marketIds);
+            setIsMarketSelectorOpen(false);
+          }}
+        />
       )}
     </div>
   );

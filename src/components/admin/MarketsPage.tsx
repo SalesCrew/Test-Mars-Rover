@@ -981,6 +981,11 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
         <MarketDetailsModal
           market={selectedMarket}
           allMarkets={markets}
+          availableGLs={glsData.map(gl => ({ 
+            id: gl.id, 
+            name: gl.name, 
+            email: gl.email 
+          }))}
           onClose={handleCloseModal}
           onSave={handleSaveMarket}
         />

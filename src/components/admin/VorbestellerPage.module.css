@@ -1106,3 +1106,82 @@
   font-size: 14px;
 }
 
+/* Goal Type Toggle */
+.goalTypeToggle {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.goalTypeButton {
+  flex: 1;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.8), rgba(255, 255, 255, 0.9));
+  border: 1.5px solid rgba(226, 232, 240, 0.6);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.goalTypeButton:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(37, 99, 235, 0.04));
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3B82F6;
+  transform: translateY(-1px);
+}
+
+.goalTypeButtonActive {
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.goalTypeButtonActive:hover {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+/* Field Hint */
+.fieldHint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Market Assign Button */
+.marketAssignButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.05));
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3B82F6;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.marketAssignButton:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(37, 99, 235, 0.08));
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.marketAssignButton:active {
+  transform: translateY(0);
+}

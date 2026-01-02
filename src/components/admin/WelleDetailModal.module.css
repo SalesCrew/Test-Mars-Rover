@@ -71,6 +71,58 @@
   letter-spacing: 0.2px;
 }
 
+.headerButtons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.deleteButton:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+  transform: scale(1.05);
+}
+
+.deleteButton:active {
+  transform: scale(0.98);
+}
+
+.deleteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteButtonActive {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #EF4444;
+  animation: deleteButtonPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes deleteButtonPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
 .closeButton {
   display: flex;
   align-items: center;

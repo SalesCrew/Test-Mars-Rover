@@ -53,7 +53,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     if (inputWrapperRef.current) {
       const rect = inputWrapperRef.current.getBoundingClientRect();
       setDropdownPosition({
-        top: rect.top - 8,
+        top: rect.bottom + 8,
         left: rect.left,
         width: rect.width
       });
@@ -152,7 +152,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             placeholder={placeholder}
             className={styles.input}
           />
-          <Calendar size={20} weight="regular" className={styles.calendarIcon} />
+          <Calendar size={16} weight="regular" className={styles.calendarIcon} />
         </div>
       </div>
 
@@ -164,8 +164,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             position: 'fixed',
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,
-            minWidth: `${dropdownPosition.width}px`,
-            transform: 'translateY(-100%)'
+            minWidth: `${dropdownPosition.width}px`
           }}
         >
           <div className={styles.calendarHeader}>
