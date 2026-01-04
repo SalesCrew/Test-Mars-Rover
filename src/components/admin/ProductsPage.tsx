@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { FunnelSimple, X, MagnifyingGlass, Package } from '@phosphor-icons/react';
+import { FunnelSimple, X, MagnifyingGlass, Package, CaretDown } from '@phosphor-icons/react';
 import { getAllProducts } from '../../data/productsData';
 import type { Product } from '../../types/product-types';
 import styles from './ProductsPage.module.css';
 
 type FilterType = 'department' | 'productType' | 'weight' | 'price';
 
+type ModalDropdownType = 'department' | 'productType';
+
 export const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [openFilter, setOpenFilter] = useState<FilterType | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editedProduct, setEditedProduct] = useState<Product | null>(null);
+  const [openModalDropdown, setOpenModalDropdown] = useState<ModalDropdownType | null>(null);
   const [refreshKey, setRefreshKey] = useState(0); // Force re-render when products change
   const [products, setProducts] = useState<Product[]>([]); // State for products
   const [isLoading, setIsLoading] = useState(true); // Loading state
@@ -636,27 +639,75 @@ export const ProductsPage: React.FC = () => {
                 {/* Department */}
                 <div className={styles.detailItem}>
                   <label className={styles.detailLabel}>Abteilung</label>
-                  <select
-                    className={styles.detailSelect}
-                    value={editedProduct.department}
-                    onChange={(e) => handleInputChange('department', e.target.value)}
-                  >
-                    <option value="pets">Tiernahrung</option>
-                    <option value="food">Lebensmittel</option>
-                  </select>
+                  <div className={styles.customDropdownWrapper}>
+                    <button
+                      className={styles.customDropdownButton}
+                      onClick={() => setOpenModalDropdown(openModalDropdown === 'department' ? null : 'department')}
+                      type="button"
+                    >
+                      <span>{getDepartmentLabel(editedProduct.department)}</span>
+                      <CaretDown size={16} weight="bold" />
+                    </button>
+                    {openModalDropdown === 'department' && (
+                      <div className={styles.customDropdownMenu}>
+                        <div
+                          className={`${styles.customDropdownOption} ${editedProduct.department === 'pets' ? styles.customDropdownOptionSelected : ''}`}
+                          onClick={() => {
+                            handleInputChange('department', 'pets');
+                            setOpenModalDropdown(null);
+                          }}
+                        >
+                          Tiernahrung
+                        </div>
+                        <div
+                          className={`${styles.customDropdownOption} ${editedProduct.department === 'food' ? styles.customDropdownOptionSelected : ''}`}
+                          onClick={() => {
+                            handleInputChange('department', 'food');
+                            setOpenModalDropdown(null);
+                          }}
+                        >
+                          Lebensmittel
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Product Type */}
                 <div className={styles.detailItem}>
                   <label className={styles.detailLabel}>Produkttyp</label>
-                  <select
-                    className={styles.detailSelect}
-                    value={editedProduct.productType}
-                    onChange={(e) => handleInputChange('productType', e.target.value)}
-                  >
-                    <option value="standard">Standard</option>
-                    <option value="display">Display</option>
-                  </select>
+                  <div className={styles.customDropdownWrapper}>
+                    <button
+                      className={styles.customDropdownButton}
+                      onClick={() => setOpenModalDropdown(openModalDropdown === 'productType' ? null : 'productType')}
+                      type="button"
+                    >
+                      <span>{getProductTypeLabel(editedProduct.productType)}</span>
+                      <CaretDown size={16} weight="bold" />
+                    </button>
+                    {openModalDropdown === 'productType' && (
+                      <div className={styles.customDropdownMenu}>
+                        <div
+                          className={`${styles.customDropdownOption} ${editedProduct.productType === 'standard' ? styles.customDropdownOptionSelected : ''}`}
+                          onClick={() => {
+                            handleInputChange('productType', 'standard');
+                            setOpenModalDropdown(null);
+                          }}
+                        >
+                          Standard
+                        </div>
+                        <div
+                          className={`${styles.customDropdownOption} ${editedProduct.productType === 'display' ? styles.customDropdownOptionSelected : ''}`}
+                          onClick={() => {
+                            handleInputChange('productType', 'display');
+                            setOpenModalDropdown(null);
+                          }}
+                        >
+                          Display
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Weight */}
