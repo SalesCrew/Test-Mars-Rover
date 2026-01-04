@@ -179,17 +179,19 @@ export const AdminDashboard: React.FC = () => {
         ) : (
           <div className={styles.averagesGrid}>
             {chainAverages.map(chain => {
-              // Only adjust if specific GLs are selected (not when "all" is selected)
-              // When no filter is active, show full goal
-              // When filter is active, show proportional goal for selected GLs
+              // When no GL filter is active, show the original chain data from backend
+              // When filter is active, backend returns filtered data, but we adjust the goal proportionally
               const isFiltered = chainSelectedGLs.length > 0;
               const totalGLs = availableGLs.length || 1;
+              
+              // Only adjust goal when filtering - backend already filters the currentValue
               const adjustedChain = isFiltered ? {
                 ...chain,
-                // Divide goal by total GLs, then multiply by number of selected GLs
+                // Goal is proportional: (full goal / total GLs) * selected GLs
                 goalPercentage: chain.goalPercentage ? (chain.goalPercentage / totalGLs) * chainSelectedGLs.length : undefined,
                 goalValue: chain.goalValue ? (chain.goalValue / totalGLs) * chainSelectedGLs.length : undefined,
-              } : chain; // When no filter, use original values
+              } : chain; // No filter = show original backend values
+              
               return <ChainAverageCard key={chain.chainName} data={adjustedChain} />;
             })}
           </div>
@@ -218,14 +220,19 @@ export const AdminDashboard: React.FC = () => {
         ) : (
           <div className={styles.wavesGrid}>
             {activeWaves.map(wave => {
-              // Only adjust if specific GLs are selected (not when "all" is selected)
+              // When no GL filter is active, show original wave data from backend
+              // When filter is active, backend returns filtered data, we adjust goal proportionally
               const isFiltered = waveSelectedGLs.length > 0;
               const totalGLs = availableGLs.length || 1;
+              
+              // Only adjust goal when filtering - backend already filters the currentValue
               const adjustedWave = isFiltered ? {
                 ...wave,
+                // Goal is proportional: (full goal / total GLs) * selected GLs
                 goalPercentage: wave.goalPercentage ? (wave.goalPercentage / totalGLs) * waveSelectedGLs.length : undefined,
                 goalValue: wave.goalValue ? (wave.goalValue / totalGLs) * waveSelectedGLs.length : undefined,
-              } : wave; // When no filter, use original values
+              } : wave; // No filter = show original backend values
+              
               return <WaveProgressCard key={wave.id} wave={adjustedWave} onClick={() => setSelectedWave(wave)} />;
             })}
           </div>
