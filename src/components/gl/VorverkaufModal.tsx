@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, CaretDown, MagnifyingGlass, Plus, Minus, Receipt, Check, Storefront, CheckCircle, Package } from '@phosphor-icons/react';
+import { X, CaretDown, MagnifyingGlass, Plus, Minus, Receipt, Check, Storefront, CheckCircle, Package, Lightbulb, ArrowRight, Lightning } from '@phosphor-icons/react';
 import type { Product } from '../../types/product-types';
 import type { Market } from '../../types/market-types';
 import { getAllProducts } from '../../data/productsData';
 import { marketService } from '../../services/marketService';
+import { vorverkaufService } from '../../services/vorverkaufService';
+import { useAuth } from '../../contexts/AuthContext';
 import styles from './VorverkaufModal.module.css';
 
 interface VorverkaufModalProps {
@@ -17,44 +19,66 @@ interface ProductWithQuantity {
   quantity: number;
 }
 
+interface SuggestionBundle {
+  type: 'single' | 'bundle';
+  title: string;
+  description: string;
+  products: Product[];
+  totalValue: number;
+}
+
 type ReasonType = 'OOS' | 'Listungslücke' | 'Platzierung';
 
 const reasons: { value: ReasonType; label: string }[] = [
-  { value: 'OOS', label: 'OOS (Out of Stock)' },
+  { value: 'OOS', label: 'OOS' },
   { value: 'Listungslücke', label: 'Listungslücke' },
-  { value: 'Platzierung', label: 'Platzierung (Display)' },
+  { value: 'Platzierung', label: 'Platzierung' },
 ];
 
 export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClose }) => {
-  const [selectedProducts, setSelectedProducts] = useState<ProductWithQuantity[]>([]);
+  const { user } = useAuth();
+  
+  const [takeOutProducts, setTakeOutProducts] = useState<ProductWithQuantity[]>([]);
+  const [replaceWithProducts, setReplaceWithProducts] = useState<ProductWithQuantity[]>([]);
+  
   const [selectedReason, setSelectedReason] = useState<ReasonType | null>(null);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
-  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  
+  const [isTakeOutDropdownOpen, setIsTakeOutDropdownOpen] = useState(false);
+  const [isReplaceDropdownOpen, setIsReplaceDropdownOpen] = useState(false);
   const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
-  const [productSearchQuery, setProductSearchQuery] = useState('');
+  
+  const [takeOutSearchQuery, setTakeOutSearchQuery] = useState('');
+  const [replaceSearchQuery, setReplaceSearchQuery] = useState('');
   const [marketSearchQuery, setMarketSearchQuery] = useState('');
+  
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [showMarketConfirmation, setShowMarketConfirmation] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [allMarkets, setAllMarkets] = useState<Market[]>([]);
-  const [_isLoadingMarkets, setIsLoadingMarkets] = useState(true);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [_isLoadingProducts, setIsLoadingProducts] = useState(true);
-  void _isLoadingMarkets; void _isLoadingProducts; // Reserved for loading state display
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const productDropdownRef = useRef<HTMLDivElement>(null);
-  const productSearchInputRef = useRef<HTMLInputElement>(null);
+  const [allMarkets, setAllMarkets] = useState<Market[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const takeOutDropdownRef = useRef<HTMLDivElement>(null);
+  const replaceDropdownRef = useRef<HTMLDivElement>(null);
   const marketDropdownRef = useRef<HTMLDivElement>(null);
-  const marketSearchInputRef = useRef<HTMLInputElement>(null);
+  const takeOutSearchRef = useRef<HTMLInputElement>(null);
+  const replaceSearchRef = useRef<HTMLInputElement>(null);
 
-  // Fetch real markets from database
   useEffect(() => {
-    const fetchMarkets = async () => {
+    if (!isOpen) return;
+    
+    const loadData = async () => {
+      setIsLoading(true);
       try {
-        setIsLoadingMarkets(true);
-        const dbMarkets = await marketService.getAllMarkets();
-        // Transform to Market type
-        const markets: Market[] = dbMarkets.map(m => ({
+        const [markets, products] = await Promise.all([
+          marketService.getAllMarkets(),
+          getAllProducts()
+        ]);
+        setAllMarkets(markets.map(m => ({
           id: m.id,
           name: m.name,
           address: m.address,
@@ -65,319 +89,314 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
           currentVisits: 0,
           lastVisitDate: '',
           isCompleted: false,
-        }));
-        setAllMarkets(markets);
-      } catch (error) {
-        console.error('Error fetching markets:', error);
-      } finally {
-        setIsLoadingMarkets(false);
-      }
-    };
-
-    if (isOpen) {
-      fetchMarkets();
-    }
-  }, [isOpen]);
-
-  // Fetch real products from database
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoadingProducts(true);
-        const products = await getAllProducts();
+        })));
         setAllProducts(products);
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error loading data:', error);
       } finally {
-        setIsLoadingProducts(false);
+        setIsLoading(false);
       }
     };
-
-    if (isOpen) {
-      fetchProducts();
-    }
+    
+    loadData();
   }, [isOpen]);
 
-  // Filter products based on search query
-  const filteredProducts = useMemo(() => {
-    const query = productSearchQuery.toLowerCase().trim();
-    if (!query) return allProducts;
-    
+  const filteredTakeOutProducts = useMemo(() => {
+    const query = takeOutSearchQuery.toLowerCase().trim();
+    if (!query) return allProducts.slice(0, 30);
     return allProducts.filter(p => 
       p.name.toLowerCase().includes(query) ||
-      p.department.toLowerCase().includes(query) ||
-      (p.sku && p.sku.toLowerCase().includes(query))
-    );
-  }, [productSearchQuery, allProducts]);
+      p.brand?.toLowerCase().includes(query) ||
+      p.sku?.toLowerCase().includes(query)
+    ).slice(0, 30);
+  }, [takeOutSearchQuery, allProducts]);
 
-  // Group products by category
-  const groupedProducts = useMemo(() => {
-    const groups: Record<string, Product[]> = {};
-    filteredProducts.forEach(product => {
-      const key = `${product.department}-${product.productType}`;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(product);
-    });
-    return groups;
-  }, [filteredProducts]);
+  const filteredReplaceProducts = useMemo(() => {
+    const query = replaceSearchQuery.toLowerCase().trim();
+    if (!query) return allProducts.slice(0, 30);
+    return allProducts.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      p.brand?.toLowerCase().includes(query) ||
+      p.sku?.toLowerCase().includes(query)
+    ).slice(0, 30);
+  }, [replaceSearchQuery, allProducts]);
 
-  const getCategoryLabel = (department: string, productType: string) => {
-    const deptLabel = department === 'pets' ? 'Tiernahrung' : 'Lebensmittel';
-    const typeLabel = productType === 'standard' ? 'Standard' : 'Display';
-    return `${deptLabel} - ${typeLabel}`;
-  };
-
-  const formatPrice = (price: number) => `€${price.toFixed(2)}`;
-
-  // Filter markets
   const filteredMarkets = useMemo(() => {
     const query = marketSearchQuery.toLowerCase().trim();
     if (!query) return allMarkets;
-    
     return allMarkets.filter(m =>
       m.name.toLowerCase().includes(query) ||
-      m.address.toLowerCase().includes(query) ||
-      m.city.toLowerCase().includes(query)
+      m.chain.toLowerCase().includes(query) ||
+      m.address.toLowerCase().includes(query)
     );
   }, [marketSearchQuery, allMarkets]);
 
-  const uncompletedMarkets = filteredMarkets.filter(m => !m.isCompleted);
-  const completedMarkets = filteredMarkets.filter(m => m.isCompleted);
-
-  // Click outside handlers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
-        setIsProductDropdownOpen(false);
+      if (takeOutDropdownRef.current && !takeOutDropdownRef.current.contains(event.target as Node)) {
+        setIsTakeOutDropdownOpen(false);
+      }
+      if (replaceDropdownRef.current && !replaceDropdownRef.current.contains(event.target as Node)) {
+        setIsReplaceDropdownOpen(false);
       }
       if (marketDropdownRef.current && !marketDropdownRef.current.contains(event.target as Node)) {
         setIsMarketDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auto-focus search input
   useEffect(() => {
-    if (isProductDropdownOpen && productSearchInputRef.current) {
-      setTimeout(() => productSearchInputRef.current?.focus(), 100);
+    if (isTakeOutDropdownOpen && takeOutSearchRef.current) {
+      setTimeout(() => takeOutSearchRef.current?.focus(), 100);
     }
-  }, [isProductDropdownOpen]);
+  }, [isTakeOutDropdownOpen]);
 
-  // Animation for success modal
   useEffect(() => {
-    if (showConfirmation) {
-      setIsAnimating(true);
+    if (isReplaceDropdownOpen && replaceSearchRef.current) {
+      setTimeout(() => replaceSearchRef.current?.focus(), 100);
     }
+  }, [isReplaceDropdownOpen]);
+
+  useEffect(() => {
+    if (showConfirmation) setIsAnimating(true);
   }, [showConfirmation]);
 
-  const handleAddProduct = (product: Product) => {
-    if (!selectedProducts.some(p => p.product.id === product.id)) {
-      setSelectedProducts([...selectedProducts, { product, quantity: 0 }]);
+  const handleAddTakeOut = (product: Product) => {
+    if (!takeOutProducts.some(p => p.product.id === product.id)) {
+      setTakeOutProducts([...takeOutProducts, { product, quantity: 1 }]);
     }
-    // Don't close dropdown - allow multiple selections
-    setProductSearchQuery('');
+    setTakeOutSearchQuery('');
+    setIsTakeOutDropdownOpen(false);
   };
 
-  const handleRemoveProduct = (productId: string) => {
-    setSelectedProducts(selectedProducts.filter(p => p.product.id !== productId));
+  const handleRemoveTakeOut = (productId: string) => {
+    setTakeOutProducts(takeOutProducts.filter(p => p.product.id !== productId));
   };
 
-  const handleUpdateQuantity = (productId: string, change: number) => {
-    setSelectedProducts(selectedProducts.map(p => {
-      if (p.product.id === productId) {
-        const newQuantity = Math.max(0, p.quantity + change);
-        return { ...p, quantity: newQuantity };
-      }
-      return p;
-    }));
+  const handleUpdateTakeOutQty = (productId: string, change: number) => {
+    setTakeOutProducts(takeOutProducts.map(p => 
+      p.product.id === productId 
+        ? { ...p, quantity: Math.max(1, p.quantity + change) } 
+        : p
+    ));
   };
 
-  const handleManualQuantityChange = (productId: string, value: string) => {
-    if (value === '') {
-      // Allow empty value
-      setSelectedProducts(selectedProducts.map(p =>
-        p.product.id === productId ? { ...p, quantity: 0 } : p
-      ));
-    } else {
-      const numValue = parseInt(value, 10);
-      if (!isNaN(numValue) && numValue >= 0) {
-        setSelectedProducts(selectedProducts.map(p =>
-          p.product.id === productId ? { ...p, quantity: numValue } : p
-        ));
+  const handleAddReplace = (product: Product) => {
+    if (!replaceWithProducts.some(p => p.product.id === product.id)) {
+      setReplaceWithProducts([...replaceWithProducts, { product, quantity: 1 }]);
+    }
+    setReplaceSearchQuery('');
+    setIsReplaceDropdownOpen(false);
+  };
+
+  const handleRemoveReplace = (productId: string) => {
+    setReplaceWithProducts(replaceWithProducts.filter(p => p.product.id !== productId));
+  };
+
+  const handleUpdateReplaceQty = (productId: string, change: number) => {
+    setReplaceWithProducts(replaceWithProducts.map(p => 
+      p.product.id === productId 
+        ? { ...p, quantity: Math.max(1, p.quantity + change) } 
+        : p
+    ));
+  };
+
+  // Get smart suggestions - single products and bundles
+  const getSuggestions = (): SuggestionBundle[] => {
+    if (takeOutProducts.length === 0) return [];
+    
+    const takeOutBrands = new Set(takeOutProducts.map(p => p.product.brand).filter(Boolean));
+    const takeOutTotal = takeOutProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
+    const avgPrice = takeOutTotal / takeOutProducts.length;
+    
+    const suggestions: SuggestionBundle[] = [];
+    
+    // Single product suggestions (same brand or similar price)
+    const singleMatches = allProducts
+      .filter(p => !takeOutProducts.some(t => t.product.id === p.id))
+      .filter(p => !replaceWithProducts.some(r => r.product.id === p.id))
+      .filter(p => takeOutBrands.has(p.brand) || Math.abs(p.price - avgPrice) < avgPrice * 0.4)
+      .slice(0, 4);
+    
+    singleMatches.forEach(product => {
+      suggestions.push({
+        type: 'single',
+        title: product.name,
+        description: `${product.brand || ''} · ${product.weight || product.content || ''} · €${product.price.toFixed(2)}`,
+        products: [product],
+        totalValue: product.price
+      });
+    });
+    
+    // Bundle suggestions (2-3 products that match total value)
+    if (takeOutTotal > 10) {
+      const potentialBundleProducts = allProducts
+        .filter(p => !takeOutProducts.some(t => t.product.id === p.id))
+        .filter(p => !replaceWithProducts.some(r => r.product.id === p.id))
+        .filter(p => p.price < takeOutTotal * 0.8)
+        .slice(0, 20);
+      
+      // Try to find a 2-product bundle close to total value
+      for (let i = 0; i < Math.min(potentialBundleProducts.length, 10); i++) {
+        for (let j = i + 1; j < Math.min(potentialBundleProducts.length, 15); j++) {
+          const bundleTotal = potentialBundleProducts[i].price + potentialBundleProducts[j].price;
+          if (Math.abs(bundleTotal - takeOutTotal) < takeOutTotal * 0.25) {
+            suggestions.push({
+              type: 'bundle',
+              title: `Bundle: ${potentialBundleProducts[i].name.slice(0, 20)}... + 1`,
+              description: `2 Produkte · Wert: €${bundleTotal.toFixed(2)}`,
+              products: [potentialBundleProducts[i], potentialBundleProducts[j]],
+              totalValue: bundleTotal
+            });
+            break;
+          }
+        }
+        if (suggestions.filter(s => s.type === 'bundle').length >= 2) break;
       }
     }
+    
+    return suggestions.slice(0, 6);
   };
 
-  const getTotalValue = () => {
-    return selectedProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
+  const handleAddSuggestion = (suggestion: SuggestionBundle) => {
+    suggestion.products.forEach(product => {
+      if (!replaceWithProducts.some(p => p.product.id === product.id)) {
+        setReplaceWithProducts(prev => [...prev, { product, quantity: 1 }]);
+      }
+    });
   };
 
-  const getTotalQuantity = () => {
-    return selectedProducts.reduce((sum, p) => sum + p.quantity, 0);
-  };
+  const getTakeOutTotal = () => takeOutProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
+  const getReplaceTotal = () => replaceWithProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
+  const getTotalQuantity = () => takeOutProducts.reduce((sum, p) => sum + p.quantity, 0) + replaceWithProducts.reduce((sum, p) => sum + p.quantity, 0);
+
+  const formatPrice = (price: number) => `€${price.toFixed(2)}`;
 
   const handleSubmit = () => {
-    setShowMarketConfirmation(true);
+    if (replaceWithProducts.length === 0 && takeOutProducts.length > 0) {
+      setShowSuggestions(true);
+    } else {
+      setShowMarketConfirmation(true);
+    }
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!selectedMarketId || !selectedReason || !user?.id) return;
+    
+    setIsSubmitting(true);
+    try {
+      const allItems = [
+        ...takeOutProducts.map(p => ({ product_id: p.product.id, quantity: p.quantity })),
+        ...replaceWithProducts.map(p => ({ product_id: p.product.id, quantity: p.quantity }))
+      ];
+      
+      await vorverkaufService.createEntry({
+        gebietsleiter_id: user.id,
+        market_id: selectedMarketId,
+        reason: selectedReason,
+        items: allItems
+      });
+      
+      setShowMarketConfirmation(false);
+      setShowConfirmation(true);
+    } catch (error) {
+      console.error('Error submitting vorverkauf:', error);
+      alert('Fehler beim Speichern. Bitte versuche es erneut.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCloseConfirmation = () => {
     setShowConfirmation(false);
-    setSelectedProducts([]);
+    setTakeOutProducts([]);
+    setReplaceWithProducts([]);
     setSelectedReason(null);
+    setSelectedMarketId(null);
     onClose();
   };
 
   if (!isOpen) return null;
 
-  if (showMarketConfirmation) {
+  // Suggestions Modal - Clean compact design
+  if (showSuggestions) {
+    const suggestions = getSuggestions();
+    
     return (
-      <div className={`${styles.confirmationOverlay} ${styles.marketConfirmation}`} onClick={() => setShowMarketConfirmation(false)}>
-        <div className={`${styles.confirmationModal} ${styles.marketConfirmation}`} onClick={(e) => e.stopPropagation()}>
-          <div className={`${styles.confirmationHeader} ${styles.marketConfirmation}`}>
-            <div className={`${styles.confirmationIconWrapper} ${styles.marketConfirmation}`}>
-              <Storefront size={40} weight="duotone" />
+      <div className={styles.modalOverlay} onClick={() => setShowSuggestions(false)}>
+        <div className={styles.suggestionsModal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.suggestionsHeader}>
+            <Lightbulb size={24} weight="duotone" className={styles.suggestionsHeaderIcon} />
+            <div className={styles.suggestionsHeaderText}>
+              <h2>Ersatzvorschläge</h2>
+              <p>Basierend auf Warenwert €{getTakeOutTotal().toFixed(2)}</p>
             </div>
-            <div>
-              <h2 className={`${styles.confirmationTitle} ${styles.marketConfirmation}`}>Markt bestätigen</h2>
-              <p className={`${styles.confirmationSubtitle} ${styles.marketConfirmation}`}>
-                Ist dies der richtige Markt für diesen Tausch?
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.confirmationContent}>
-            {/* Warning Banner */}
-            <div className={styles.warningBanner}>
-              <div className={styles.warningIcon}>⚠</div>
-              <div className={styles.warningText}>
-                <strong>Achtung:</strong> Bitte überprüfen Sie den ausgewählten Markt sorgfältig, bevor Sie fortfahren.
-              </div>
-            </div>
-
-            {/* Market Selection */}
-            <div className={styles.confirmationSection}>
-              <label className={`${styles.confirmationLabel} ${styles.marketConfirmation}`}>Ausgewählter Markt</label>
-              <div className={`${styles.dropdownContainer} ${isMarketDropdownOpen ? styles.dropdownOpen : ''}`} ref={marketDropdownRef}>
-                <button
-                  className={`${styles.dropdownButton} ${isMarketDropdownOpen ? styles.open : ''}`}
-                  onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
-                >
-                  <span className={selectedMarketId ? styles.dropdownText : styles.dropdownPlaceholder}>
-                    {selectedMarketId 
-                      ? (() => {
-                          const market = allMarkets.find(m => m.id === selectedMarketId);
-                          return market ? (
-                            <>
-                              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>{market.chain}</span>
-                              <span style={{ opacity: 0.5, marginLeft: '8px' }}>
-                                {market.address}, {market.postalCode} {market.city}
-                              </span>
-                            </>
-                          ) : 'Markt wählen...';
-                        })()
-                      : 'Markt wählen...'}
-                  </span>
-                  <CaretDown size={16} className={styles.dropdownChevron} />
-                </button>
-
-                {isMarketDropdownOpen && (
-                  <div className={styles.dropdownMenu}>
-                    <div className={styles.searchContainer}>
-                      <MagnifyingGlass size={16} className={styles.searchIcon} />
-                      <input
-                        ref={marketSearchInputRef}
-                        type="text"
-                        className={styles.searchInput}
-                        placeholder="Markt suchen..."
-                        value={marketSearchQuery}
-                        onChange={(e) => setMarketSearchQuery(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-
-                    {uncompletedMarkets.length > 0 && (
-                      <div className={styles.dropdownSection}>
-                        <div className={styles.categoryLabel}>Verfügbare Märkte</div>
-                        {uncompletedMarkets.map((market) => (
-                          <button
-                            key={market.id}
-                            className={styles.dropdownItem}
-                            onClick={() => {
-                              setSelectedMarketId(market.id);
-                              setIsMarketDropdownOpen(false);
-                              setMarketSearchQuery('');
-                            }}
-                          >
-                            <div className={styles.productInfo}>
-                              <div className={styles.productName}>{market.chain}</div>
-                              <div className={styles.productDetails}>
-                                {market.address}, {market.postalCode} {market.city}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {completedMarkets.length > 0 && (
-                      <div className={styles.dropdownSection}>
-                        <div className={styles.categoryLabel}>Heute bereits besucht</div>
-                        {completedMarkets.map((market) => (
-                          <button
-                            key={market.id}
-                            className={`${styles.dropdownItem} ${styles.completed}`}
-                            onClick={() => {
-                              setSelectedMarketId(market.id);
-                              setIsMarketDropdownOpen(false);
-                              setMarketSearchQuery('');
-                            }}
-                          >
-                            <div className={styles.completedCheck}>
-                              <Check size={14} weight="bold" color="white" />
-                            </div>
-                            <div className={styles.productInfo}>
-                              <div className={styles.productName}>{market.chain}</div>
-                              <div className={styles.productDetails}>
-                                {market.address}, {market.postalCode} {market.city}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.confirmationFooter}>
-            <button
-              className={`${styles.button} ${styles.buttonSecondary}`}
-              onClick={() => setShowMarketConfirmation(false)}
-            >
-              Abbrechen
+            <button className={styles.closeBtn} onClick={() => setShowSuggestions(false)}>
+              <X size={18} />
             </button>
-            <button
-              className={`${styles.button} ${styles.buttonSuccess}`}
-              onClick={() => {
-                console.log('Vorverkauf submitted:', {
-                  marketId: selectedMarketId,
-                  products: selectedProducts,
-                  reason: selectedReason,
-                  totalValue: getTotalValue(),
-                  totalQuantity: getTotalQuantity(),
-                });
-                setShowMarketConfirmation(false);
-                setShowConfirmation(true);
-              }}
-              disabled={!selectedMarketId}
+          </div>
+
+          <div className={styles.suggestionsBody}>
+            {suggestions.length > 0 ? (
+              <div className={styles.suggestionGrid}>
+                {suggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    className={`${styles.suggestionCard} ${suggestion.type === 'bundle' ? styles.bundleCard : ''}`}
+                    onClick={() => handleAddSuggestion(suggestion)}
+                  >
+                    <div className={styles.suggestionCardIcon}>
+                      {suggestion.type === 'bundle' ? <Lightning size={16} weight="fill" /> : <Package size={16} />}
+                    </div>
+                    <div className={styles.suggestionCardContent}>
+                      <span className={styles.suggestionCardTitle}>{suggestion.title}</span>
+                      <span className={styles.suggestionCardMeta}>{suggestion.description}</span>
+                    </div>
+                    <Plus size={16} className={styles.suggestionCardAdd} />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.noSuggestionsCompact}>
+                <Package size={32} weight="thin" />
+                <span>Keine Vorschläge</span>
+              </div>
+            )}
+
+            {replaceWithProducts.length > 0 && (
+              <div className={styles.selectedSection}>
+                <div className={styles.selectedHeader}>
+                  <span>Ausgewählt ({replaceWithProducts.length})</span>
+                  <span className={styles.selectedTotal}>{formatPrice(getReplaceTotal())}</span>
+                </div>
+                <div className={styles.selectedChips}>
+                  {replaceWithProducts.map(p => (
+                    <div key={p.product.id} className={styles.selectedChip}>
+                      <span>{p.product.name.slice(0, 25)}{p.product.name.length > 25 ? '...' : ''}</span>
+                      <button onClick={(e) => { e.stopPropagation(); handleRemoveReplace(p.product.id); }}>
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.suggestionsActions}>
+            <button 
+              className={styles.btnSecondary}
+              onClick={() => { setShowSuggestions(false); setShowMarketConfirmation(true); }}
             >
-              <Check size={18} weight="bold" />
-              Markt bestätigen
+              Überspringen
+            </button>
+            <button 
+              className={styles.btnPrimary}
+              onClick={() => { setShowSuggestions(false); setShowMarketConfirmation(true); }}
+            >
+              Weiter <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -385,384 +404,303 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     );
   }
 
-  if (showConfirmation) {
-    const currentMarket = allMarkets.find(m => m.id === selectedMarketId);
+  // Market Confirmation Modal - Compact
+  if (showMarketConfirmation) {
+    const selectedMarket = allMarkets.find(m => m.id === selectedMarketId);
+    
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowMarketConfirmation(false)}>
+        <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.confirmHeader}>
+            <Storefront size={20} weight="duotone" />
+            <span>Markt bestätigen</span>
+          </div>
+          
+          <div className={styles.confirmBody}>
+            <div className={styles.confirmMarket}>
+              <strong>{selectedMarket?.chain}</strong>
+              <span>{selectedMarket?.address}, {selectedMarket?.city}</span>
+            </div>
+            
+            <div className={styles.confirmStats}>
+              <div className={styles.confirmStat}>
+                <span>Entnommen</span>
+                <strong>{takeOutProducts.length} · {formatPrice(getTakeOutTotal())}</strong>
+              </div>
+              <div className={styles.confirmStat}>
+                <span>Ersetzt</span>
+                <strong>{replaceWithProducts.length} · {formatPrice(getReplaceTotal())}</strong>
+              </div>
+            </div>
+          </div>
 
+          <div className={styles.confirmActions}>
+            <button className={styles.btnSecondary} onClick={() => setShowMarketConfirmation(false)}>
+              Zurück
+            </button>
+            <button 
+              className={styles.btnSuccess} 
+              onClick={handleConfirmSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '...' : <><Check size={16} /> Bestätigen</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Success Modal
+  if (showConfirmation) {
     return (
       <div className={styles.modalOverlay} onClick={handleCloseConfirmation}>
-        <div className={`${styles.successModal} ${isAnimating ? styles.modalAnimated : ''}`} onClick={(e) => e.stopPropagation()}>
-          {/* Success Icon */}
-          <div className={styles.successIconContainer}>
-            <CheckCircle size={72} weight="fill" className={styles.successIcon} />
-          </div>
-
-          {/* Title */}
-          <div className={styles.titleSection}>
-            <h2 className={styles.successTitle}>
-              Perfekt erfasst!
-            </h2>
-            <p className={styles.successSubtitle}>
-              Dein Vorverkauf wurde erfolgreich dokumentiert
-            </p>
-          </div>
-
-          {/* Stats Grid */}
-          <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>
-                <Package size={20} weight="fill" />
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statValue}>{getTotalQuantity()}</div>
-                <div className={styles.statLabel}>Produkte</div>
-              </div>
-            </div>
-
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>
-                <Receipt size={20} weight="fill" />
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statValue}>{selectedReason || 'N/A'}</div>
-                <div className={styles.statLabel}>Grund</div>
-              </div>
-            </div>
-
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>
-                <CheckCircle size={20} weight="fill" />
-              </div>
-              <div className={styles.statContent}>
-                <div className={styles.statValue}>{formatPrice(getTotalValue())}</div>
-                <div className={styles.statLabel}>Warenwert</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Market Info */}
-          <div className={styles.marketSection}>
-            <h3 className={styles.sectionTitle}>Markt</h3>
-            <div className={styles.marketCard}>
-              <div className={styles.marketName}>{currentMarket?.chain || 'Unbekannt'}</div>
-              <div className={styles.marketBadge}>Dokumentiert</div>
-            </div>
-          </div>
-
-          {/* Products List */}
-          <div className={styles.productsSection}>
-            <h3 className={styles.sectionTitle}>Vorverkaufte Produkte</h3>
-            <div className={styles.productsList}>
-              {selectedProducts.map((p, index) => (
-                <div key={p.product.id} className={styles.productItem}>
-                  <div className={styles.productNumber}>{index + 1}</div>
-                  <div className={styles.productDetails}>
-                    <div className={styles.productItemName}>{p.product.name}</div>
-                    <div className={styles.productItemMeta}>
-                      {p.quantity}x · {p.product.weight || p.product.content || '-'}
-                      {p.product.palletSize && ` · ${p.product.palletSize} Stk`} · {formatPrice(p.product.price * p.quantity)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Motivational Message */}
-          <div className={styles.messageSection}>
-            <p className={styles.message}>
-              Der Vorverkauf wurde erfasst und ist sofort in deinem Dashboard sichtbar. Weiter so!
-            </p>
-          </div>
-
-          {/* Close Button */}
-          <button className={styles.successCloseButton} onClick={handleCloseConfirmation}>
-            Zurück zum Dashboard
+        <div className={`${styles.successModal} ${isAnimating ? styles.successAnimated : ''}`} onClick={(e) => e.stopPropagation()}>
+          <CheckCircle size={56} weight="fill" className={styles.successIcon} />
+          <h2>Erfasst!</h2>
+          <p>{getTotalQuantity()} Produkte dokumentiert</p>
+          <button className={styles.btnPrimary} onClick={handleCloseConfirmation}>
+            Fertig
           </button>
         </div>
       </div>
     );
   }
 
+  // Main Modal
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className={styles.header}>
-          <div className={styles.headerContent}>
-            <div className={styles.iconWrapper}>
-              <Receipt size={24} weight="duotone" />
-            </div>
+          <div className={styles.headerLeft}>
+            <Receipt size={22} weight="duotone" className={styles.headerIcon} />
             <div>
-              <h2 className={styles.title}>Vorverkauf erfassen</h2>
-              <p className={styles.subtitle}>Produkte für Vorverkauf auswählen</p>
+              <h2>Vorverkauf</h2>
+              <p>Produkte tauschen</p>
             </div>
           </div>
-          <button className={styles.closeButton} onClick={onClose} aria-label="Schließen">
-            <X size={20} weight="bold" />
+          <button className={styles.closeBtn} onClick={onClose}>
+            <X size={18} />
           </button>
         </div>
 
-        {/* Content */}
         <div className={styles.content}>
           {/* Market Selection */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Markt auswählen</h3>
-            <p className={styles.sectionDescription}>Für welchen Markt ist dieser Vorverkauf?</p>
-
-            <div className={`${styles.dropdownContainer} ${isMarketDropdownOpen ? styles.dropdownOpen : ''}`} ref={marketDropdownRef}>
+          <div className={styles.field}>
+            <label>Markt</label>
+            <div className={styles.dropdown} ref={marketDropdownRef}>
               <button
-                className={`${styles.dropdownButton} ${isMarketDropdownOpen ? styles.open : ''}`}
+                className={`${styles.dropdownTrigger} ${selectedMarketId ? styles.hasValue : ''}`}
                 onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
               >
-                <span className={selectedMarketId ? styles.dropdownText : styles.dropdownPlaceholder}>
-                  {selectedMarketId 
-                    ? (() => {
-                        const market = allMarkets.find(m => m.id === selectedMarketId);
-                        return market ? (
-                          <>
-                            <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>{market.chain}</span>
-                            <span style={{ opacity: 0.5, marginLeft: '8px' }}>
-                              {market.address}, {market.postalCode} {market.city}
-                            </span>
-                          </>
-                        ) : 'Markt wählen...';
-                      })()
-                    : 'Markt wählen...'}
+                <span>
+                  {selectedMarketId ? (() => {
+                    const m = allMarkets.find(m => m.id === selectedMarketId);
+                    return m ? `${m.chain} · ${m.address}` : 'Wählen...';
+                  })() : 'Markt wählen...'}
                 </span>
-                <CaretDown size={16} className={styles.dropdownChevron} />
+                <CaretDown size={14} className={isMarketDropdownOpen ? styles.caretOpen : ''} />
               </button>
 
               {isMarketDropdownOpen && (
-                <div className={styles.dropdownMenu}>
-                  <div className={styles.searchContainer}>
-                    <MagnifyingGlass size={16} className={styles.searchIcon} />
+                <div className={styles.dropdownPanel}>
+                  <div className={styles.dropdownSearch}>
+                    <MagnifyingGlass size={14} />
                     <input
-                      ref={marketSearchInputRef}
                       type="text"
-                      className={styles.searchInput}
-                      placeholder="Markt suchen..."
+                      placeholder="Suchen..."
                       value={marketSearchQuery}
                       onChange={(e) => setMarketSearchQuery(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-
-                  {uncompletedMarkets.length > 0 && (
-                    <div className={styles.dropdownSection}>
-                      <div className={styles.categoryLabel}>Verfügbare Märkte</div>
-                      {uncompletedMarkets.map((market) => (
-                        <button
-                          key={market.id}
-                          className={styles.dropdownItem}
-                          onClick={() => {
-                            setSelectedMarketId(market.id);
-                            setIsMarketDropdownOpen(false);
-                            setMarketSearchQuery('');
-                          }}
-                        >
-                          <div className={styles.productInfo}>
-                            <div className={styles.productName}>{market.chain}</div>
-                            <div className={styles.productDetails}>
-                              {market.address}, {market.postalCode} {market.city}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {completedMarkets.length > 0 && (
-                    <div className={styles.dropdownSection}>
-                      <div className={styles.categoryLabel}>Heute bereits besucht</div>
-                      {completedMarkets.map((market) => (
-                        <button
-                          key={market.id}
-                          className={`${styles.dropdownItem} ${styles.completed}`}
-                          onClick={() => {
-                            setSelectedMarketId(market.id);
-                            setIsMarketDropdownOpen(false);
-                            setMarketSearchQuery('');
-                          }}
-                        >
-                          <div className={styles.completedCheck}>
-                            <Check size={14} weight="bold" color="white" />
-                          </div>
-                          <div className={styles.productInfo}>
-                            <div className={styles.productName}>{market.chain}</div>
-                            <div className={styles.productDetails}>
-                              {market.address}, {market.postalCode} {market.city}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className={styles.dropdownList}>
+                    {filteredMarkets.slice(0, 20).map((market) => (
+                      <button
+                        key={market.id}
+                        className={styles.dropdownOption}
+                        onClick={() => {
+                          setSelectedMarketId(market.id);
+                          setIsMarketDropdownOpen(false);
+                          setMarketSearchQuery('');
+                        }}
+                      >
+                        <strong>{market.chain}</strong>
+                        <span>{market.address}, {market.city}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Product Selection */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Produkte auswählen</h3>
-            <p className={styles.sectionDescription}>Welche Produkte werden vorverkauft?</p>
-
-            <div className={`${styles.dropdownContainer} ${isProductDropdownOpen ? styles.dropdownOpen : ''}`} ref={productDropdownRef}>
+          {/* Take Out Products */}
+          <div className={styles.field}>
+            <label>Entnehmen <span className={styles.labelHint}>(Was raus?)</span></label>
+            <div className={styles.dropdown} ref={takeOutDropdownRef}>
               <button
-                className={`${styles.dropdownButton} ${isProductDropdownOpen ? styles.open : ''}`}
-                onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
+                className={styles.dropdownTrigger}
+                onClick={() => setIsTakeOutDropdownOpen(!isTakeOutDropdownOpen)}
               >
-                <span className={styles.dropdownPlaceholder}>
-                  Produkt hinzufügen...
-                </span>
-                <CaretDown size={16} className={styles.dropdownChevron} />
+                <Plus size={14} />
+                <span>Produkt hinzufügen</span>
+                <CaretDown size={14} className={isTakeOutDropdownOpen ? styles.caretOpen : ''} />
               </button>
 
-              {isProductDropdownOpen && (
-                <div className={styles.dropdownMenu}>
-                  <div className={styles.searchContainer}>
-                    <MagnifyingGlass size={16} className={styles.searchIcon} />
+              {isTakeOutDropdownOpen && (
+                <div className={styles.dropdownPanel}>
+                  <div className={styles.dropdownSearch}>
+                    <MagnifyingGlass size={14} />
                     <input
-                      ref={productSearchInputRef}
+                      ref={takeOutSearchRef}
                       type="text"
-                      className={styles.searchInput}
                       placeholder="Produkt suchen..."
-                      value={productSearchQuery}
-                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                      value={takeOutSearchQuery}
+                      onChange={(e) => setTakeOutSearchQuery(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-
-                  {Object.entries(groupedProducts).map(([key, products]) => {
-                    const [department, productType] = key.split('-');
-                    return (
-                      <div key={key} className={styles.dropdownSection}>
-                        <div className={styles.categoryLabel}>
-                          {getCategoryLabel(department, productType)}
-                        </div>
-                        {products.map(product => (
-                          <button
-                            key={product.id}
-                            className={`${styles.dropdownItem} ${
-                              selectedProducts.some(p => p.product.id === product.id) ? styles.selected : ''
-                            }`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddProduct(product);
-                            }}
-                          >
-                            <div className={styles.productInfo}>
-                              <div className={styles.productName}>{product.name}</div>
-                              <div className={styles.productDetails}>
-                                {product.weight || product.content || '-'}
-                              </div>
-                            </div>
-                            <div className={styles.productPriceInfo}>
-                              {product.palletSize && (
-                                <span className={styles.palletSize}>{product.palletSize} Stk</span>
-                              )}
-                              <span className={styles.productPrice}>{formatPrice(product.price)}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })}
+                  <div className={styles.dropdownList}>
+                    {filteredTakeOutProducts.map((product) => (
+                      <button
+                        key={product.id}
+                        className={styles.dropdownOption}
+                        onClick={() => handleAddTakeOut(product)}
+                      >
+                        <strong>{product.name}</strong>
+                        <span>{product.brand} · {formatPrice(product.price)}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Selected Products */}
-            {selectedProducts.length > 0 && (
-              <div className={styles.selectedProducts}>
-                {selectedProducts.map(p => (
-                  <div key={p.product.id} className={styles.productCard}>
-                    <div className={styles.productCardInfo}>
-                      <div className={styles.productCardName}>{p.product.name}</div>
-                      <div className={styles.productCardMeta}>
-                        {p.product.weight || p.product.content || '-'}
-                        {p.product.palletSize && ` · ${p.product.palletSize} Stk`}
-                      </div>
+            {takeOutProducts.length > 0 && (
+              <div className={styles.productsList}>
+                {takeOutProducts.map(p => (
+                  <div key={p.product.id} className={styles.productRow}>
+                    <div className={styles.productInfo}>
+                      <span className={styles.productName}>{p.product.name}</span>
+                      <span className={styles.productMeta}>{formatPrice(p.product.price)}</span>
                     </div>
-                    <div className={styles.quantityControls}>
-                      <button
-                        className={styles.quantityButton}
-                        onClick={() => handleUpdateQuantity(p.product.id, -1)}
-                      >
-                        <Minus size={16} weight="bold" />
-                      </button>
-                      <input
-                        type="number"
-                        className={styles.quantityInput}
-                        value={p.quantity || ''}
-                        onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value)}
-                        min="0"
-                        placeholder=" "
-                      />
-                      <button
-                        className={styles.quantityButton}
-                        onClick={() => handleUpdateQuantity(p.product.id, 1)}
-                      >
-                        <Plus size={16} weight="bold" />
-                      </button>
+                    <div className={styles.qtyControls}>
+                      <button onClick={() => handleUpdateTakeOutQty(p.product.id, -1)}><Minus size={12} /></button>
+                      <span>{p.quantity}</span>
+                      <button onClick={() => handleUpdateTakeOutQty(p.product.id, 1)}><Plus size={12} /></button>
                     </div>
-                    <div className={styles.productCardPrice}>
-                      {p.quantity ? formatPrice(p.product.price * p.quantity) : formatPrice(0)}
-                    </div>
-                    <button
-                      className={styles.removeButton}
-                      onClick={() => handleRemoveProduct(p.product.id)}
-                    >
-                      <X size={16} weight="bold" />
+                    <button className={styles.removeBtn} onClick={() => handleRemoveTakeOut(p.product.id)}>
+                      <X size={14} />
                     </button>
                   </div>
                 ))}
-                <div className={styles.totalValue}>
-                  <span>Gesamtwert</span>
-                  <span className={styles.totalAmount}>{formatPrice(getTotalValue())}</span>
+                <div className={styles.productsTotal}>
+                  <span>Summe</span>
+                  <strong>{formatPrice(getTakeOutTotal())}</strong>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Replace With Products */}
+          <div className={styles.field}>
+            <label>Ersetzen <span className={styles.labelHint}>(Was rein? Optional)</span></label>
+            <div className={styles.dropdown} ref={replaceDropdownRef}>
+              <button
+                className={styles.dropdownTrigger}
+                onClick={() => setIsReplaceDropdownOpen(!isReplaceDropdownOpen)}
+              >
+                <Plus size={14} />
+                <span>Ersatzprodukt hinzufügen</span>
+                <CaretDown size={14} className={isReplaceDropdownOpen ? styles.caretOpen : ''} />
+              </button>
+
+              {isReplaceDropdownOpen && (
+                <div className={styles.dropdownPanel}>
+                  <div className={styles.dropdownSearch}>
+                    <MagnifyingGlass size={14} />
+                    <input
+                      ref={replaceSearchRef}
+                      type="text"
+                      placeholder="Produkt suchen..."
+                      value={replaceSearchQuery}
+                      onChange={(e) => setReplaceSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className={styles.dropdownList}>
+                    {filteredReplaceProducts.map((product) => (
+                      <button
+                        key={product.id}
+                        className={styles.dropdownOption}
+                        onClick={() => handleAddReplace(product)}
+                      >
+                        <strong>{product.name}</strong>
+                        <span>{product.brand} · {formatPrice(product.price)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {replaceWithProducts.length > 0 && (
+              <div className={`${styles.productsList} ${styles.replaceList}`}>
+                {replaceWithProducts.map(p => (
+                  <div key={p.product.id} className={styles.productRow}>
+                    <div className={styles.productInfo}>
+                      <span className={styles.productName}>{p.product.name}</span>
+                      <span className={styles.productMeta}>{formatPrice(p.product.price)}</span>
+                    </div>
+                    <div className={styles.qtyControls}>
+                      <button onClick={() => handleUpdateReplaceQty(p.product.id, -1)}><Minus size={12} /></button>
+                      <span>{p.quantity}</span>
+                      <button onClick={() => handleUpdateReplaceQty(p.product.id, 1)}><Plus size={12} /></button>
+                    </div>
+                    <button className={styles.removeBtn} onClick={() => handleRemoveReplace(p.product.id)}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <div className={styles.productsTotal}>
+                  <span>Summe</span>
+                  <strong>{formatPrice(getReplaceTotal())}</strong>
                 </div>
               </div>
             )}
           </div>
 
           {/* Reason Selection */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Grund auswählen</h3>
-            <p className={styles.sectionDescription}>Warum wird vorverkauft?</p>
-
-            <div className={styles.reasonPills}>
-              {reasons.map(reason => (
+          <div className={styles.field}>
+            <label>Grund</label>
+            <div className={styles.reasonButtons}>
+              {reasons.map(r => (
                 <button
-                  key={reason.value}
-                  className={`${styles.reasonPill} ${selectedReason === reason.value ? styles.selected : ''}`}
-                  onClick={() => setSelectedReason(reason.value)}
+                  key={r.value}
+                  className={`${styles.reasonBtn} ${selectedReason === r.value ? styles.reasonActive : ''}`}
+                  onClick={() => setSelectedReason(r.value)}
                 >
-                  {reason.label}
+                  {r.label}
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className={styles.footer}>
-          <button
-            className={`${styles.button} ${styles.buttonSecondary}`}
-            onClick={onClose}
-          >
+          <button className={styles.btnSecondary} onClick={onClose}>
             Abbrechen
           </button>
           <button
-            className={`${styles.button} ${styles.buttonPrimary}`}
+            className={styles.btnPrimary}
             onClick={handleSubmit}
-            disabled={selectedProducts.length === 0 || !selectedReason || !selectedMarketId}
+            disabled={takeOutProducts.length === 0 || !selectedReason || !selectedMarketId || isLoading}
           >
-            <Receipt size={18} weight="bold" />
-            Vorverkauf erfassen
+            Erfassen
           </button>
         </div>
       </div>
     </div>
   );
 };
-

@@ -16,7 +16,7 @@ import { StatisticsContent } from './StatisticsContent';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from '../admin/AdminPanel';
 import Aurora from './Aurora';
-import type { GLDashboard, NavigationTab, GLProfile } from '../../types/gl-types';
+import type { GLDashboard, NavigationTab, GLProfile, Bonuses, MarketFrequencyAlert } from '../../types/gl-types';
 import type { TourRoute, Market } from '../../types/market-types';
 import { allMarkets as mockMarkets } from '../../data/marketsData';
 import { mockProfileData } from '../../data/mockData';
@@ -24,6 +24,7 @@ import { useResponsive } from '../../hooks/useResponsive';
 import { useAuth } from '../../contexts/AuthContext';
 import { gebietsleiterService } from '../../services/gebietsleiterService';
 import { marketService } from '../../services/marketService';
+import { API_BASE_URL } from '../../config/database';
 import styles from './Dashboard.module.css';
 
 interface DashboardProps {
@@ -42,6 +43,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [glProfileData, setGlProfileData] = useState<any>(null);
   const [realMarkets, setRealMarkets] = useState<Market[]>([]);
+  const [realBonuses, setRealBonuses] = useState<Bonuses | null>(null);
+  const [realAlerts, setRealAlerts] = useState<MarketFrequencyAlert[]>([]);
   const { isMobile } = useResponsive();
   const { logout, user } = useAuth();
 
@@ -85,6 +88,58 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     };
     fetchMarkets();
   }, []);
+
+  // Fetch real dashboard stats
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/gebietsleiter/${user.id}/dashboard-stats`);
+        if (response.ok) {
+          const stats = await response.json();
+          setRealBonuses({
+            yearTotal: stats.yearTotal || 0,
+            percentageChange: stats.percentageChange || 0,
+            sellIns: stats.vorverkaufCount || 0,
+            preOrders: stats.vorbestellungCount || 0,
+            marketsVisited: {
+              current: stats.marketsVisited || 0,
+              target: stats.totalMarkets || 180
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      }
+    };
+    fetchDashboardStats();
+  }, [user?.id]);
+
+  // Fetch suggested markets
+  useEffect(() => {
+    const fetchSuggestedMarkets = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/gebietsleiter/${user.id}/suggested-markets`);
+        if (response.ok) {
+          const suggestions = await response.json();
+          setRealAlerts(suggestions.map((s: any) => ({
+            marketId: s.marketId,
+            name: s.name,
+            address: s.address,
+            visits: s.visits,
+            status: s.status,
+            lastVisitWeeks: s.lastVisitWeeks
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching suggested markets:', error);
+      }
+    };
+    fetchSuggestedMarkets();
+  }, [user?.id]);
 
   // Build profile data from GL data or use mock as fallback
   const profileData: GLProfile = useMemo(() => {
@@ -224,7 +279,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
             <>
               {/* Bonus Hero Card */}
               <section className={styles.section}>
-                <BonusHeroCard bonuses={data.bonuses} onClick={handleBonusClick} />
+                <BonusHeroCard bonuses={realBonuses || data.bonuses} onClick={handleBonusClick} />
               </section>
 
               {/* Quick Actions */}
@@ -238,11 +293,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                 />
               </section>
 
-              {/* Market Frequency Alerts */}
-              {data.frequencyAlerts.length > 0 && (
+              {/* Market Frequency Alerts - Vorschläge für heute */}
+              {(realAlerts.length > 0 || data.frequencyAlerts.length > 0) && (
                 <section className={styles.section}>
                   <MarketFrequencyAlerts
-                    alerts={data.frequencyAlerts}
+                    alerts={realAlerts.length > 0 ? realAlerts : data.frequencyAlerts}
                     onViewAll={handleViewAllFrequencies}
                     onMarketClick={handleMarketClick}
                   />
