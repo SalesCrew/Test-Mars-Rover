@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, Package, Storefront, Sparkle } from '@phosphor-ic
 import { ChainAverageCard } from './ChainAverageCard';
 import { WaveProgressCard } from './WaveProgressCard';
 import { DashboardFilters } from './DashboardFilters';
+import { WaveProgressDetailModal } from './WaveProgressDetailModal';
 import { API_BASE_URL } from '../../config/database';
 import styles from './AdminDashboard.module.css';
 
@@ -54,6 +55,7 @@ export const AdminDashboard: React.FC = () => {
   const [availableGLs, setAvailableGLs] = useState<Array<{ id: string; name: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedWave, setSelectedWave] = useState<WaveProgress | null>(null);
 
   // Filter states
   const [_chainDateRange, setChainDateRange] = useState({ start: '', end: '' });
@@ -138,6 +140,7 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   return (
+    <>
     <div className={styles.dashboard}>
       {/* Chain Averages Section */}
       <div className={styles.averagesSection}>
@@ -204,7 +207,7 @@ export const AdminDashboard: React.FC = () => {
                 goalPercentage: wave.goalPercentage ? wave.goalPercentage / glCount : undefined,
                 goalValue: wave.goalValue ? wave.goalValue / glCount : undefined,
               };
-              return <WaveProgressCard key={wave.id} wave={adjustedWave} />;
+              return <WaveProgressCard key={wave.id} wave={adjustedWave} onClick={() => setSelectedWave(wave)} />;
             })}
           </div>
         )}
@@ -225,7 +228,7 @@ export const AdminDashboard: React.FC = () => {
                 goalPercentage: wave.goalPercentage ? wave.goalPercentage / glCount : undefined,
                 goalValue: wave.goalValue ? wave.goalValue / glCount : undefined,
               };
-              return <WaveProgressCard key={wave.id} wave={adjustedWave} isFinished />;
+              return <WaveProgressCard key={wave.id} wave={adjustedWave} isFinished onClick={() => setSelectedWave(wave)} />;
             })}
           </div>
         </div>
@@ -302,7 +305,17 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
     </div>
+
     </div>
+
+    {/* Wave Progress Detail Modal */}
+    {selectedWave && (
+      <WaveProgressDetailModal
+        welle={selectedWave}
+        onClose={() => setSelectedWave(null)}
+      />
+    )}
+    </>
   );
 };
 

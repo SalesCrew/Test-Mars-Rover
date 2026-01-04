@@ -24,9 +24,10 @@ interface WaveProgressData {
 interface WaveProgressCardProps {
   wave: WaveProgressData;
   isFinished?: boolean;
+  onClick?: () => void;
 }
 
-export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFinished = false }) => {
+export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFinished = false, onClick }) => {
   const {
     name,
     startDate,
@@ -59,7 +60,10 @@ export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFini
     : (currentValue || 0) >= (goalValue || 0);
 
   return (
-    <div className={`${styles.card} ${isFinished ? styles.cardFinished : ''}`}>
+    <div 
+      className={`${styles.card} ${isFinished ? styles.cardFinished : ''} ${onClick ? styles.cardClickable : ''}`}
+      onClick={onClick}
+    >
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
