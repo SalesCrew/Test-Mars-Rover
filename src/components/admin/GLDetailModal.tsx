@@ -30,7 +30,7 @@ interface GLDetailModalProps {
   allMarkets?: AdminMarket[];
 }
 
-type TabType = 'details' | 'billa' | 'spar' | 'interspar' | 'hagebau' | 'spt' | 'markets' | 'statistics';
+type TabType = 'details' | 'billa' | 'spar' | 'zoofachhandel' | 'hagebau' | 'spt' | 'markets' | 'statistics';
 
 // Extended mock data for charts (20 KWs)
 // Displays: Values can only increase or stay the same (never decrease)
@@ -305,7 +305,7 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [billaTimeframe, setBillaTimeframe] = useState<'current' | '3months' | 'year'>('current');
   const [sparTimeframe, setSparTimeframe] = useState<'current' | '3months' | 'year'>('current');
-  const [intersparTimeframe, setIntersparTimeframe] = useState<'current' | '3months' | 'year'>('current');
+  const [zoofachhandelTimeframe, setZoofachhandelTimeframe] = useState<'current' | '3months' | 'year'>('current');
   const [hagebauTimeframe, setHagebauTimeframe] = useState<'current' | '3months' | 'year'>('current');
   const [marketSearchTerm, setMarketSearchTerm] = useState('');
   const [selectedChainFilter, setSelectedChainFilter] = useState<string[]>([]);
@@ -473,7 +473,7 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
     { id: 'details', label: 'Details' },
     { id: 'billa', label: 'Billa' },
     { id: 'spar', label: 'Spar' },
-    { id: 'interspar', label: 'Interspar' },
+    { id: 'zoofachhandel', label: 'Zoofachhandel' },
     { id: 'hagebau', label: 'Hagebau' },
     { id: 'spt', label: 'SPT' },
     { id: 'markets', label: 'Märkte' },
@@ -740,12 +740,12 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
             </div>
           )}
 
-          {activeTab === 'interspar' && (
+          {activeTab === 'zoofachhandel' && (
             <div className={styles.chainContent}>
               {/* Timeframe Selector */}
               <div className={styles.chainHeader}>
-                <h3 className={styles.chainTitle}>Interspar Performance</h3>
-                {renderTimeframeSelector(intersparTimeframe, setIntersparTimeframe)}
+                <h3 className={styles.chainTitle}>Zoofachhandel Performance</h3>
+                {renderTimeframeSelector(zoofachhandelTimeframe, setZoofachhandelTimeframe)}
               </div>
 
               {/* Displays: KPI left, Chart right */}
@@ -753,10 +753,10 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
                 <div className={styles.sectionLabel}>Displays</div>
                 <div className={styles.chainRow}>
                   <div className={styles.chainKPI}>
-                    {renderKPICard('Interspar', 12, 15, 'displays')}
+                    {renderKPICard('Zoofachhandel', 10, 12, 'displays')}
                   </div>
                   <div className={styles.chainChart}>
-                    <LineChart data={mockKWData.map(d => ({ ...d, displays: Math.floor(d.displays * 0.45) }))} type="displays" />
+                    <LineChart data={mockKWData.map(d => ({ ...d, displays: Math.floor(d.displays * 0.35) }))} type="displays" />
                   </div>
                 </div>
               </div>
@@ -766,10 +766,10 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
                 <div className={styles.sectionLabel}>Kartonware</div>
                 <div className={styles.chainRow}>
                   <div className={styles.chainChart}>
-                    <LineChart data={mockKWData.map(d => ({ ...d, kartonware: Math.floor(d.kartonware * 0.45) }))} type="kartonware" />
+                    <LineChart data={mockKWData.map(d => ({ ...d, kartonware: Math.floor(d.kartonware * 0.35) }))} type="kartonware" />
                   </div>
                   <div className={styles.chainKPI}>
-                    {renderKPICard('Interspar', 9, 12, 'kartonware')}
+                    {renderKPICard('Zoofachhandel', 7, 9, 'kartonware')}
                   </div>
                 </div>
               </div>
