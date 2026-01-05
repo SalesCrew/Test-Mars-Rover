@@ -1,5 +1,5 @@
-import React from 'react';
-import { CalendarBlank, Package, Users, Storefront, CheckCircle } from '@phosphor-icons/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CalendarBlank, Package, Users, Storefront, CheckCircle, PencilSimple } from '@phosphor-icons/react';
 import styles from './WaveProgressCard.module.css';
 
 interface WaveProgressData {
@@ -24,9 +24,37 @@ interface WaveProgressCardProps {
   wave: WaveProgressData;
   isFinished?: boolean;
   onClick?: () => void;
+  onEdit?: (waveId: string) => void;
 }
 
-export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFinished = false, onClick }) => {
+export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFinished = false, onClick, onEdit }) => {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    if (contextMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleEdit = () => {
+    setContextMenu(null);
+    if (onEdit) {
+      onEdit(wave.id);
+    }
+  };
   const {
     name,
     startDate,
@@ -59,9 +87,11 @@ export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFini
     : (currentValue || 0) >= (goalValue || 0);
 
   return (
+    <>
     <div 
       className={`${styles.card} ${isFinished ? styles.cardFinished : ''} ${onClick ? styles.cardClickable : ''}`}
       onClick={onClick}
+      onContextMenu={handleContextMenu}
     >
       {/* Header */}
       <div className={styles.header}>
@@ -155,5 +185,20 @@ export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFini
         </div>
       </div>
     </div>
+
+    {/* Context Menu */}
+    {contextMenu && onEdit && (
+      <div
+        ref={menuRef}
+        className={styles.contextMenu}
+        style={{ top: contextMenu.y, left: contextMenu.x }}
+      >
+        <button className={styles.contextMenuItem} onClick={handleEdit}>
+          <PencilSimple size={16} weight="regular" />
+          <span>Bearbeiten</span>
+        </button>
+      </div>
+    )}
+    </>
   );
 };

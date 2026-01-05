@@ -43,6 +43,8 @@ interface VorbestellerPageProps {
   isCreateWelleModalOpen: boolean;
   onCloseCreateWelleModal: () => void;
   onOpenCreateWelleModal: () => void;
+  waveIdToEdit?: string | null;
+  onClearWaveIdToEdit?: () => void;
 }
 
 interface DisplayItem {
@@ -108,7 +110,9 @@ interface Welle {
 export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({ 
   isCreateWelleModalOpen, 
   onCloseCreateWelleModal,
-  onOpenCreateWelleModal 
+  onOpenCreateWelleModal,
+  waveIdToEdit,
+  onClearWaveIdToEdit
 }) => {
   // State for wellen list
   const [wellenList, setWellenList] = useState<Welle[]>([]);
@@ -130,6 +134,47 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     };
     loadWellen();
   }, []);
+
+  // Handle waveIdToEdit from dashboard
+  useEffect(() => {
+    if (waveIdToEdit && wellenList.length > 0) {
+      const waveToEdit = wellenList.find(w => w.id === waveIdToEdit);
+      if (waveToEdit) {
+        // Open edit mode for this wave
+        setEditingWelle(waveToEdit);
+        setWaveName(waveToEdit.name);
+        setStartDate(waveToEdit.startDate);
+        setEndDate(waveToEdit.endDate);
+        setSelectedTypes(waveToEdit.types);
+        setWaveImagePreview(waveToEdit.image);
+        setGoalType(waveToEdit.goalType);
+        setGoalPercentage(waveToEdit.goalPercentage?.toString() || '');
+        setGoalValue(waveToEdit.goalValue?.toString() || '');
+        setAssignedMarketIds(waveToEdit.assignedMarketIds || []);
+        setDisplays(waveToEdit.displays?.map((d, idx) => ({
+          id: `existing-${idx}`,
+          name: d.name,
+          targetNumber: d.targetNumber?.toString() || '',
+          picture: null,
+          itemValue: d.itemValue?.toString() || ''
+        })) || []);
+        setKartonwareItems(waveToEdit.kartonwareItems?.map((k, idx) => ({
+          id: `existing-${idx}`,
+          name: k.name,
+          targetNumber: k.targetNumber?.toString() || '',
+          picture: null,
+          itemValue: k.itemValue?.toString() || ''
+        })) || []);
+        setKwDays(waveToEdit.kwDays || []);
+        setCurrentStep(2); // Skip type selection when editing
+        onOpenCreateWelleModal();
+        // Clear the waveIdToEdit
+        if (onClearWaveIdToEdit) {
+          onClearWaveIdToEdit();
+        }
+      }
+    }
+  }, [waveIdToEdit, wellenList]);
 
   // Load product displays (displays from products table)
   useEffect(() => {

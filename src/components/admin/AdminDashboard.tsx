@@ -47,7 +47,11 @@ interface WaveProgress {
   participatingGLs: number;
 }
 
-export const AdminDashboard: React.FC = () => {
+interface AdminDashboardProps {
+  onEditWave?: (waveId: string) => void;
+}
+
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) => {
   // Data states
   const [chainAverages, setChainAverages] = useState<ChainAverage[]>([]);
   const [activeWaves, setActiveWaves] = useState<WaveProgress[]>([]);
@@ -233,7 +237,7 @@ export const AdminDashboard: React.FC = () => {
                 goalValue: wave.goalValue ? (wave.goalValue / totalGLs) * waveSelectedGLs.length : undefined,
               } : wave; // No filter = show original backend values
               
-              return <WaveProgressCard key={wave.id} wave={adjustedWave} onClick={() => setSelectedWave(wave)} />;
+              return <WaveProgressCard key={wave.id} wave={adjustedWave} onClick={() => setSelectedWave(wave)} onEdit={onEditWave} />;
             })}
           </div>
         )}
@@ -254,7 +258,7 @@ export const AdminDashboard: React.FC = () => {
                 goalPercentage: wave.goalPercentage ? wave.goalPercentage / glCount : undefined,
                 goalValue: wave.goalValue ? wave.goalValue / glCount : undefined,
               };
-              return <WaveProgressCard key={wave.id} wave={adjustedWave} isFinished onClick={() => setSelectedWave(wave)} />;
+              return <WaveProgressCard key={wave.id} wave={adjustedWave} isFinished onClick={() => setSelectedWave(wave)} onEdit={onEditWave} />;
             })}
           </div>
         </div>

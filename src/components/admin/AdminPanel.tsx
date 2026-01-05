@@ -55,7 +55,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [isProductDragging, setIsProductDragging] = useState(false);
   const [isProductProcessing, setIsProductProcessing] = useState(false);
   const [productImportResult, setProductImportResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const [waveIdToEdit, setWaveIdToEdit] = useState<string | null>(null);
   const { logout } = useAuth();
+
+  // Handler for editing a wave from dashboard
+  const handleEditWaveFromDashboard = (waveId: string) => {
+    setWaveIdToEdit(waveId);
+    setSelectedPage('vorbesteller');
+  };
 
   const handleLogout = () => {
     logout();
@@ -412,10 +419,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
         </header>
         
         <div className={styles.pageContent}>
-          {selectedPage === 'dashboard' && <AdminDashboard />}
+          {selectedPage === 'dashboard' && <AdminDashboard onEditWave={handleEditWaveFromDashboard} />}
           {selectedPage === 'markets' && <MarketsPage importedMarkets={importedMarkets} />}
           {selectedPage === 'gebietsleiter' && <GebietsleiterPage isCreateModalOpen={isCreateGLModalOpen} onCloseCreateModal={() => setIsCreateGLModalOpen(false)} allMarkets={allMarkets} />}
-          {selectedPage === 'vorbesteller' && <VorbestellerPage isCreateWelleModalOpen={isCreateWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateWelleModalOpen(true)} />}
+          {selectedPage === 'vorbesteller' && <VorbestellerPage isCreateWelleModalOpen={isCreateWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateWelleModalOpen(true)} waveIdToEdit={waveIdToEdit} onClearWaveIdToEdit={() => setWaveIdToEdit(null)} />}
           {selectedPage === 'vorverkauf' && <VorverkaufPage />}
           {selectedPage === 'fragebogen' && <FragebogenPage isCreateModuleModalOpen={isCreateModuleModalOpen} onCloseCreateModuleModal={() => setIsCreateModuleModalOpen(false)} isCreateFragebogenModalOpen={isCreateFragebogenModalOpen} onCloseCreateFragebogenModal={() => setIsCreateFragebogenModalOpen(false)} />}
           {selectedPage === 'produkte' && <ProductsPage />}
