@@ -20,6 +20,16 @@ interface VorbestellerModalProps {
 //   quantity: number;
 // }
 
+// Format date from "2026-01-05" to "5.1"
+const formatCompactDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const day = parseInt(parts[2], 10);
+  const month = parseInt(parts[1], 10);
+  return `${day}.${month}`;
+};
+
 export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [wellen, setWellen] = useState<Welle[]>([]);
@@ -499,12 +509,17 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                               </div>
                             </div>
                             <div className={styles.cardContent}>
-                              <div className={styles.timeSlot}>
-                                {welle.kwDays && welle.kwDays.length > 0 
-                                  ? `${welle.kwDays[0].days.join('&')} ${welle.kwDays[0].kw}`
-                                  : 'Keine Verkaufstage'}
-                              </div>
                               <div className={styles.marktName}>{welle.name}</div>
+                              <div className={styles.cardSubheader}>
+                                <div className={styles.timeSlot}>
+                                  {welle.kwDays && welle.kwDays.length > 0 
+                                    ? `${welle.kwDays[0].days.join('&')} ${welle.kwDays[0].kw}`
+                                    : 'Keine Verkaufstage'}
+                                </div>
+                                <div className={styles.dateRange}>
+                                  {formatCompactDate(welle.startDate)}-{formatCompactDate(welle.endDate)}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -7,6 +7,37 @@ import { WelleDetailModal } from './WelleDetailModal';
 import { WelleMarketSelectorModal } from './WelleMarketSelectorModal';
 import { wellenService } from '../../services/wellenService';
 import { getAllProducts, type Product } from '../../data/productsData';
+import { API_BASE_URL } from '../../config/database';
+
+// Helper function to upload image to Supabase Storage
+const uploadImageToStorage = async (file: File, folder: string): Promise<string | null> => {
+  try {
+    // Convert file to base64
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const response = await fetch(`${API_BASE_URL}/wellen/upload-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, folder })
+    });
+
+    if (!response.ok) {
+      console.error('Image upload failed:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    return data.url;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    return null;
+  }
+};
 
 interface VorbestellerPageProps {
   isCreateWelleModalOpen: boolean;
@@ -127,6 +158,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   // Wave details
   const [waveName, setWaveName] = useState('');
   const [waveImagePreview, setWaveImagePreview] = useState<string | null>(null);
+  const [waveImageFile, setWaveImageFile] = useState<File | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [goalType, setGoalType] = useState<'percentage' | 'value'>('percentage');
@@ -143,6 +175,9 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   
   // KW + Days
   const [kwDays, setKwDays] = useState<KWDay[]>([]);
+  
+  // Saving state
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleToggleType = (type: 'display' | 'kartonware') => {
     setSelectedTypes(prev => {
@@ -167,6 +202,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       setWaveImagePreview(URL.createObjectURL(file));
+      setWaveImageFile(file);
     }
   };
 
@@ -234,27 +270,61 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   };
 
   const handleCreateWelle = async () => {
+    if (isSaving) return; // Prevent double-click
+    setIsSaving(true);
+    
     try {
+      // Upload wave image if a new file was selected
+      let imageUrl: string | null = waveImagePreview;
+      if (waveImageFile) {
+        const uploadedUrl = await uploadImageToStorage(waveImageFile, 'wellen');
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        }
+      }
+      // Keep existing image URL if it's already a valid URL (not a blob)
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        imageUrl = null; // Don't save blob URLs
+      }
+
+      // Upload display images
+      const processedDisplays = await Promise.all(displays.map(async (d) => {
+        let pictureUrl: string | null = null;
+        if (d.picture) {
+          pictureUrl = await uploadImageToStorage(d.picture, 'displays');
+        }
+        return {
+          name: d.name,
+          targetNumber: parseInt(d.targetNumber) || 0,
+          picture: pictureUrl,
+          itemValue: goalType === 'value' && d.itemValue ? parseFloat(d.itemValue) : null
+        };
+      }));
+
+      // Upload kartonware images
+      const processedKartonware = await Promise.all(kartonwareItems.map(async (k) => {
+        let pictureUrl: string | null = null;
+        if (k.picture) {
+          pictureUrl = await uploadImageToStorage(k.picture, 'kartonware');
+        }
+        return {
+          name: k.name,
+          targetNumber: parseInt(k.targetNumber) || 0,
+          picture: pictureUrl,
+          itemValue: goalType === 'value' && k.itemValue ? parseFloat(k.itemValue) : null
+        };
+      }));
+
       const welleData = {
         name: waveName,
-        image: waveImagePreview,
+        image: imageUrl,
         startDate,
         endDate,
         goalType,
         goalPercentage: goalType === 'percentage' ? parseFloat(goalPercentage) : null,
         goalValue: goalType === 'value' ? parseFloat(goalValue) : null,
-        displays: displays.map(d => ({
-          name: d.name,
-          targetNumber: parseInt(d.targetNumber) || 0,
-          picture: d.picture ? URL.createObjectURL(d.picture) : null,
-          itemValue: goalType === 'value' && d.itemValue ? parseFloat(d.itemValue) : null
-        })),
-        kartonwareItems: kartonwareItems.map(k => ({
-          name: k.name,
-          targetNumber: parseInt(k.targetNumber) || 0,
-          picture: k.picture ? URL.createObjectURL(k.picture) : null,
-          itemValue: goalType === 'value' && k.itemValue ? parseFloat(k.itemValue) : null
-        })),
+        displays: processedDisplays,
+        kartonwareItems: processedKartonware,
         kwDays: kwDays.map(kw => ({
           kw: kw.kw,
           days: kw.days
@@ -278,6 +348,8 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     } catch (error) {
       console.error('Error saving welle:', error);
       alert('Fehler beim Speichern der Welle');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -418,6 +490,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     setSelectedTypes([]);
     setWaveName('');
     setWaveImagePreview(null);
+    setWaveImageFile(null);
     setStartDate('');
     setEndDate('');
     setGoalType('percentage');
@@ -493,7 +566,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                     </button>
                   </div>
 
-                  <div className={styles.welleImage}>
+                  <div className={`${styles.welleImage} ${welle.image ? styles.hasImage : ''}`}>
                     {welle.image && <img src={welle.image} alt={welle.name} />}
                   </div>
 
@@ -569,7 +642,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                     </button>
                   </div>
 
-                  <div className={styles.welleImage}>
+                  <div className={`${styles.welleImage} ${welle.image ? styles.hasImage : ''}`}>
                     {welle.image && <img src={welle.image} alt={welle.name} />}
                   </div>
 
@@ -645,7 +718,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                     </button>
                   </div>
 
-                  <div className={styles.welleImage}>
+                  <div className={`${styles.welleImage} ${welle.image ? styles.hasImage : ''}`}>
                     {welle.image && <img src={welle.image} alt={welle.name} />}
                   </div>
 
@@ -1293,12 +1366,21 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                 </button>
               ) : (
                 <button 
-                  className={`${styles.createButton} ${kwDays.length === 0 ? styles.createButtonDisabled : ''}`}
+                  className={`${styles.createButton} ${kwDays.length === 0 || isSaving ? styles.createButtonDisabled : ''}`}
                   onClick={handleCreateWelle}
-                  disabled={kwDays.length === 0}
+                  disabled={kwDays.length === 0 || isSaving}
                 >
-                  <CalendarPlus size={18} weight="bold" />
-                  <span>{editingWelle ? 'Welle aktualisieren' : 'Welle erstellen'}</span>
+                  {isSaving ? (
+                    <>
+                      <span className={styles.spinner}></span>
+                      <span>Speichern...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CalendarPlus size={18} weight="bold" />
+                      <span>{editingWelle ? 'Welle aktualisieren' : 'Welle erstellen'}</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
