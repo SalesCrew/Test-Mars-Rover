@@ -23,6 +23,7 @@ export interface Market {
   branch?: string; // Filiale (Row O)
   maingroup?: string; // Row R
   subgroup?: string; // Row S
+  gebietsleiter?: string; // UUID of assigned GL
   gebietsleiterName?: string; // Row L - Gebietsleiter name
   isActive?: boolean; // Row N - status
 }

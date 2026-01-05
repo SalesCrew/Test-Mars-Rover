@@ -305,6 +305,14 @@
   background: rgba(59, 130, 246, 0.15);
 }
 
+.dropdownItem.otherMarket {
+  opacity: 0.6;
+}
+
+.dropdownItem.otherMarket:hover {
+  opacity: 0.85;
+}
+
 .productInfo {
   flex: 1;
   min-width: 0;

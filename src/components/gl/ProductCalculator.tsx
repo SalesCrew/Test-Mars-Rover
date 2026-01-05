@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, Sparkle, Check, ArrowsLeftRight, Storefront } from '@phosphor-icons/react';
 import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../types/product-types';
+import type { Market } from '../../types/market-types';
 import { getAllProducts } from '../../data/productsData';
-import { allMarkets } from '../../data/marketsData';
+import { marketService } from '../../services/marketService';
+import { useAuth } from '../../contexts/AuthContext';
 import { RingLoader } from 'react-spinners';
 import { ExchangeSuccessModal } from './ExchangeSuccessModal';
 import styles from './ProductCalculator.module.css';
@@ -14,6 +16,7 @@ interface ProductCalculatorProps {
 }
 
 export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, onClose, userName = 'Thomas' }) => {
+  const { user } = useAuth();
   const [removedProducts, setRemovedProducts] = useState<ProductWithQuantity[]>([]);
   const [availableProducts, setAvailableProducts] = useState<ProductWithQuantity[]>([]);
   const [suggestions, setSuggestions] = useState<ReplacementSuggestion[]>([]);
@@ -31,6 +34,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const marketDropdownRef = useRef<HTMLDivElement>(null);
   const marketSearchInputRef = useRef<HTMLInputElement>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allMarkets, setAllMarkets] = useState<Market[]>([]);
   const [_isLoadingProducts, setIsLoadingProducts] = useState(true);
   void _isLoadingProducts; // Reserved for loading state display
   
@@ -46,22 +50,38 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const availableDropdownRef = useRef<HTMLDivElement>(null);
   const availableSearchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch real products from database
+  // Fetch real products and markets from database
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
         setIsLoadingProducts(true);
-        const products = await getAllProducts();
+        const [products, markets] = await Promise.all([
+          getAllProducts(),
+          marketService.getAllMarkets()
+        ]);
         setAllProducts(products);
+        setAllMarkets(markets.map(m => ({
+          id: m.id,
+          name: m.name,
+          address: m.address,
+          city: m.city,
+          postalCode: m.postalCode,
+          chain: m.chain || '',
+          frequency: m.frequency || 12,
+          currentVisits: 0,
+          lastVisitDate: '',
+          isCompleted: false,
+          gebietsleiter: m.gebietsleiter,
+        })));
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoadingProducts(false);
       }
     };
 
     if (isOpen) {
-      fetchProducts();
+      fetchData();
     }
   }, [isOpen]);
 
@@ -120,16 +140,35 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       m.city.toLowerCase().includes(query) ||
       m.postalCode.includes(query)
     );
-  }, [marketSearchQuery]);
+  }, [marketSearchQuery, allMarkets]);
 
-  const sortedMarkets = [...filteredMarkets].sort((a, b) => {
+  // Split markets into GL's markets and other markets
+  const glMarkets = useMemo(() => {
+    if (!user?.id) return [];
+    return filteredMarkets.filter(m => m.gebietsleiter === user.id);
+  }, [filteredMarkets, user?.id]);
+
+  const otherMarkets = useMemo(() => {
+    if (!user?.id) return filteredMarkets;
+    return filteredMarkets.filter(m => m.gebietsleiter !== user.id);
+  }, [filteredMarkets, user?.id]);
+
+  const sortedGLMarkets = [...glMarkets].sort((a, b) => {
     if (a.isCompleted && !b.isCompleted) return 1;
     if (!a.isCompleted && b.isCompleted) return -1;
     return a.name.localeCompare(b.name);
   });
 
-  const uncompletedMarkets = sortedMarkets.filter(m => !m.isCompleted);
-  const completedMarkets = sortedMarkets.filter(m => m.isCompleted);
+  const sortedOtherMarkets = [...otherMarkets].sort((a, b) => {
+    if (a.isCompleted && !b.isCompleted) return 1;
+    if (!a.isCompleted && b.isCompleted) return -1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const uncompletedGLMarkets = sortedGLMarkets.filter(m => !m.isCompleted);
+  const completedGLMarkets = sortedGLMarkets.filter(m => m.isCompleted);
+  const uncompletedOtherMarkets = sortedOtherMarkets.filter(m => !m.isCompleted);
+  const completedOtherMarkets = sortedOtherMarkets.filter(m => m.isCompleted);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -489,13 +528,62 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                       />
                     </div>
 
-                    {uncompletedMarkets.length > 0 && (
+                    {/* GL's Markets */}
+                    {(uncompletedGLMarkets.length > 0 || completedGLMarkets.length > 0) && (
+                      <>
+                        <div className={styles.dropdownSection}>
+                          <div className={styles.categoryLabel}>Meine Märkte</div>
+                          {uncompletedGLMarkets.map((market) => (
+                            <button
+                              key={market.id}
+                              className={styles.dropdownItem}
+                              onClick={() => {
+                                setSelectedMarketId(market.id);
+                                setIsMarketDropdownOpen(false);
+                                setMarketSearchQuery('');
+                              }}
+                            >
+                              <div className={styles.productInfo}>
+                                <div className={styles.productName}>{market.name}</div>
+                                <div className={styles.productDetails}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                          {completedGLMarkets.map((market) => (
+                            <button
+                              key={market.id}
+                              className={`${styles.dropdownItem} ${styles.completed}`}
+                              onClick={() => {
+                                setSelectedMarketId(market.id);
+                                setIsMarketDropdownOpen(false);
+                                setMarketSearchQuery('');
+                              }}
+                            >
+                              <div className={styles.completedCheck}>
+                                <Check size={14} weight="bold" color="white" />
+                              </div>
+                              <div className={styles.productInfo}>
+                                <div className={styles.productName}>{market.name}</div>
+                                <div className={styles.productDetails}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Other Markets */}
+                    {(uncompletedOtherMarkets.length > 0 || completedOtherMarkets.length > 0) && (
                       <div className={styles.dropdownSection}>
-                        <div className={styles.categoryLabel}>Verfügbare Märkte</div>
-                        {uncompletedMarkets.map((market) => (
+                        <div className={styles.categoryLabel}>Andere Märkte</div>
+                        {uncompletedOtherMarkets.map((market) => (
                           <button
                             key={market.id}
-                            className={styles.dropdownItem}
+                            className={`${styles.dropdownItem} ${styles.otherMarket}`}
                             onClick={() => {
                               setSelectedMarketId(market.id);
                               setIsMarketDropdownOpen(false);
@@ -510,16 +598,10 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                             </div>
                           </button>
                         ))}
-                      </div>
-                    )}
-
-                    {completedMarkets.length > 0 && (
-                      <div className={styles.dropdownSection}>
-                        <div className={styles.categoryLabel}>Heute bereits besucht</div>
-                        {completedMarkets.map((market) => (
+                        {completedOtherMarkets.map((market) => (
                           <button
                             key={market.id}
-                            className={`${styles.dropdownItem} ${styles.completed}`}
+                            className={`${styles.dropdownItem} ${styles.completed} ${styles.otherMarket}`}
                             onClick={() => {
                               setSelectedMarketId(market.id);
                               setIsMarketDropdownOpen(false);
@@ -1014,10 +1096,11 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                         />
                       </div>
 
-                      {uncompletedMarkets.length > 0 && (
+                      {/* GL's Markets */}
+                      {(uncompletedGLMarkets.length > 0 || completedGLMarkets.length > 0) && (
                         <div className={styles.dropdownSection}>
-                          <div className={styles.categoryLabel}>Verfügbare Märkte</div>
-                          {uncompletedMarkets.map((market) => (
+                          <div className={styles.categoryLabel}>Meine Märkte</div>
+                          {uncompletedGLMarkets.map((market) => (
                             <button
                               key={market.id}
                               className={styles.dropdownItem}
@@ -1035,16 +1118,56 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                               </div>
                             </button>
                           ))}
-                        </div>
-                      )}
-
-                      {completedMarkets.length > 0 && (
-                        <div className={styles.dropdownSection}>
-                          <div className={styles.categoryLabel}>Heute bereits besucht</div>
-                          {completedMarkets.map((market) => (
+                          {completedGLMarkets.map((market) => (
                             <button
                               key={market.id}
                               className={`${styles.dropdownItem} ${styles.completed}`}
+                              onClick={() => {
+                                setSelectedMarketId(market.id);
+                                setIsMarketDropdownOpen(false);
+                                setMarketSearchQuery('');
+                              }}
+                            >
+                              <div className={styles.completedCheck}>
+                                <Check size={14} weight="bold" color="white" />
+                              </div>
+                              <div className={styles.productInfo}>
+                                <div className={styles.productName}>{market.name}</div>
+                                <div className={styles.productDetails}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Other Markets */}
+                      {(uncompletedOtherMarkets.length > 0 || completedOtherMarkets.length > 0) && (
+                        <div className={styles.dropdownSection}>
+                          <div className={styles.categoryLabel}>Andere Märkte</div>
+                          {uncompletedOtherMarkets.map((market) => (
+                            <button
+                              key={market.id}
+                              className={`${styles.dropdownItem} ${styles.otherMarket}`}
+                              onClick={() => {
+                                setSelectedMarketId(market.id);
+                                setIsMarketDropdownOpen(false);
+                                setMarketSearchQuery('');
+                              }}
+                            >
+                              <div className={styles.productInfo}>
+                                <div className={styles.productName}>{market.name}</div>
+                                <div className={styles.productDetails}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                          {completedOtherMarkets.map((market) => (
+                            <button
+                              key={market.id}
+                              className={`${styles.dropdownItem} ${styles.completed} ${styles.otherMarket}`}
                               onClick={() => {
                                 setSelectedMarketId(market.id);
                                 setIsMarketDropdownOpen(false);

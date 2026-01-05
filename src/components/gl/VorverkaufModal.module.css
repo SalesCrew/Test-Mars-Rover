@@ -206,16 +206,8 @@
 }
 
 .dropdownList {
-  height: 220px;
-  overflow: hidden;
-}
-
-.dropdownList :global(.scroll-list-container) {
-  height: 100%;
-}
-
-.dropdownList :global(.scroll-list) {
-  height: 100%;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .dropdownOption {
@@ -240,6 +232,24 @@
   font-size: 13px;
   font-weight: 500;
   color: #1a1a1a;
+}
+
+.dropdownSectionLabel {
+  padding: 8px 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9CA3AF;
+  background: #F9FAFB;
+}
+
+.dropdownOption.otherMarketOption {
+  opacity: 0.6;
+}
+
+.dropdownOption.otherMarketOption:hover {
+  opacity: 0.85;
 }
 
 .dropdownOption span {
@@ -1062,16 +1072,8 @@
 }
 
 .marketDropdownList {
-  height: 220px;
-  overflow: hidden;
-}
-
-.marketDropdownList :global(.scroll-list-container) {
-  height: 100%;
-}
-
-.marketDropdownList :global(.scroll-list) {
-  height: 100%;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .marketDropdownItem {
@@ -1112,6 +1114,25 @@
 .marketDropdownItemAddress {
   font-size: 12px;
   color: #6B7280;
+}
+
+.marketSectionLabel {
+  padding: 8px 14px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9CA3AF;
+  background: #F9FAFB;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.marketDropdownItem.otherMarket {
+  opacity: 0.6;
+}
+
+.marketDropdownItem.otherMarket:hover {
+  opacity: 0.85;
 }
 
 /* Exchange Summary */
