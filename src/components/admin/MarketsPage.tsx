@@ -639,10 +639,14 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
       subgroup: '',
       status: ''
     });
+    // Reset sort to default
+    setSortField('name');
+    setSortDirection('asc');
   };
 
   const hasActiveFilters = selectedGL !== null || 
-    Object.values(selectedFilters).some(arr => arr.length > 0);
+    Object.values(selectedFilters).some(arr => arr.length > 0) ||
+    sortField !== 'name' || sortDirection !== 'asc';
 
   return (
     <div className={styles.pageContainer}>
@@ -702,9 +706,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
               </div>
             )}
           </div>
-          <div className={styles.marketStats}>
-            <MapPin size={18} weight="regular" />
-            <span>{filteredMarkets.length} Märkte</span>
+          <div className={styles.statsWrapper}>
+            <div className={styles.marketStats}>
+              <MapPin size={18} weight="regular" />
+              <span>{filteredMarkets.length} Märkte</span>
+            </div>
+            {hasActiveFilters && (
+              <button 
+                className={styles.clearFiltersButton}
+                onClick={handleClearAllFilters}
+                title="Alle Filter löschen"
+              >
+                <X size={14} weight="bold" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -1003,17 +1018,6 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
               </div>
             )}
           </div>
-          
-          {/* Clear All Filters Button */}
-          {hasActiveFilters && (
-            <button 
-              className={styles.clearFiltersButton}
-              onClick={handleClearAllFilters}
-              title="Alle Filter löschen"
-            >
-              <X size={10} weight="bold" />
-            </button>
-          )}
         </div>
 
         {/* Markets List */}
