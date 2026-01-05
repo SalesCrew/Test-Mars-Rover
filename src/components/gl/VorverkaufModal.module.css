@@ -1143,6 +1143,7 @@
   display: flex;
   gap: 12px;
   background: #F9FAFB;
+  border-radius: 0 0 20px 20px;
 }
 
 .confirmBtnSecondary {

@@ -598,7 +598,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
                       />
                     </div>
                     <div className={styles.marketDropdownList}>
-                      {filteredMarkets.slice(0, 15).map((market) => (
+                      {filteredMarkets.map((market) => (
                         <button
                           key={market.id}
                           className={`${styles.marketDropdownItem} ${market.id === selectedMarketId ? styles.active : ''}`}
@@ -758,7 +758,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
                     />
                   </div>
                   <div className={styles.dropdownList}>
-                    {filteredMarkets.slice(0, 20).map((market) => (
+                    {filteredMarkets.map((market) => (
                       <button
                         key={market.id}
                         className={styles.dropdownOption}
