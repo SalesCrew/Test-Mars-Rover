@@ -226,6 +226,10 @@ Das Mars Rover Team`;
         <GLDetailModal 
           gl={selectedGL} 
           onClose={() => setSelectedGL(null)}
+          onDelete={(deletedId) => {
+            setGebietsleiterList(prev => prev.filter(gl => gl.id !== deletedId));
+            setSelectedGL(null);
+          }}
           allMarkets={allMarkets}
         />
       )}

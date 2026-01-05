@@ -276,13 +276,13 @@ router.get('/:id/dashboard-stats', async (req: Request, res: Response) => {
     if (displayIds.length > 0) {
       const { data: displays } = await supabase
         .from('wellen_displays')
-        .select('id, price')
+        .select('id, item_value')
         .in('id', displayIds);
       
       if (displays) {
         glProgress?.filter(p => p.item_type === 'display').forEach(p => {
           const display = displays.find(d => d.id === p.item_id);
-          if (display) glYearTotal += (display.price || 0) * (p.current_number || 0);
+          if (display) glYearTotal += (display.item_value || 0) * (p.current_number || 0);
         });
       }
     }
@@ -290,13 +290,13 @@ router.get('/:id/dashboard-stats', async (req: Request, res: Response) => {
     if (kartonwareIds.length > 0) {
       const { data: kartonware } = await supabase
         .from('wellen_kartonware')
-        .select('id, price')
+        .select('id, item_value')
         .in('id', kartonwareIds);
       
       if (kartonware) {
         glProgress?.filter(p => p.item_type === 'kartonware').forEach(p => {
           const item = kartonware.find(k => k.id === p.item_id);
-          if (item) glYearTotal += (item.price || 0) * (p.current_number || 0);
+          if (item) glYearTotal += (item.item_value || 0) * (p.current_number || 0);
         });
       }
     }
@@ -315,21 +315,21 @@ router.get('/:id/dashboard-stats', async (req: Request, res: Response) => {
     const allKartonwareIds = [...new Set(allProgress?.filter(p => p.item_type === 'kartonware').map(p => p.item_id) || [])];
 
     if (allDisplayIds.length > 0) {
-      const { data: displays } = await supabase.from('wellen_displays').select('id, price').in('id', allDisplayIds);
+      const { data: displays } = await supabase.from('wellen_displays').select('id, item_value').in('id', allDisplayIds);
       if (displays && allProgress) {
         allProgress.filter(p => p.item_type === 'display').forEach(p => {
           const display = displays.find(d => d.id === p.item_id);
-          if (display) agencyTotal += (display.price || 0) * (p.current_number || 0);
+          if (display) agencyTotal += (display.item_value || 0) * (p.current_number || 0);
         });
       }
     }
 
     if (allKartonwareIds.length > 0) {
-      const { data: kartonware } = await supabase.from('wellen_kartonware').select('id, price').in('id', allKartonwareIds);
+      const { data: kartonware } = await supabase.from('wellen_kartonware').select('id, item_value').in('id', allKartonwareIds);
       if (kartonware && allProgress) {
         allProgress.filter(p => p.item_type === 'kartonware').forEach(p => {
           const item = kartonware.find(k => k.id === p.item_id);
-          if (item) agencyTotal += (item.price || 0) * (p.current_number || 0);
+          if (item) agencyTotal += (item.item_value || 0) * (p.current_number || 0);
         });
       }
     }
@@ -350,14 +350,19 @@ router.get('/:id/dashboard-stats', async (req: Request, res: Response) => {
       .eq('gebietsleiter_id', id);
 
     // 5. Get markets visited (markets where GL has any action)
-    // Get all markets assigned to this GL
-    const { data: assignedMarkets } = await supabase
-      .from('gl_markets')
-      .select('market_id')
-      .eq('gebietsleiter_id', id);
-
-    const assignedMarketIds = assignedMarkets?.map(m => m.market_id) || [];
-    const totalAssignedMarkets = assignedMarketIds.length;
+    // Get all markets assigned to this GL (table may not exist)
+    let assignedMarketIds: string[] = [];
+    let totalAssignedMarkets = 0;
+    try {
+      const { data: assignedMarkets } = await supabase
+        .from('gl_markets')
+        .select('market_id')
+        .eq('gebietsleiter_id', id);
+      assignedMarketIds = assignedMarkets?.map(m => m.market_id) || [];
+      totalAssignedMarkets = assignedMarketIds.length;
+    } catch (e) {
+      console.log('gl_markets table may not exist, continuing...');
+    }
 
     // Get markets where GL has submitted progress
     const { data: progressMarkets } = await supabase
@@ -411,15 +416,19 @@ router.get('/:id/suggested-markets', async (req: Request, res: Response) => {
       .select('id, name, start_date, end_date')
       .eq('status', 'active');
 
-    // Get markets assigned to this GL (if gl_markets table exists)
+    // Get markets assigned to this GL (table may not exist)
     let assignedMarketIds: string[] = [];
-    const { data: glMarkets } = await supabase
-      .from('gl_markets')
-      .select('market_id')
-      .eq('gebietsleiter_id', id);
+    try {
+      const { data: glMarkets } = await supabase
+        .from('gl_markets')
+        .select('market_id')
+        .eq('gebietsleiter_id', id);
 
-    if (glMarkets && glMarkets.length > 0) {
-      assignedMarketIds = glMarkets.map(m => m.market_id);
+      if (glMarkets && glMarkets.length > 0) {
+        assignedMarketIds = glMarkets.map(m => m.market_id);
+      }
+    } catch (e) {
+      console.log('gl_markets table may not exist, continuing...');
     }
 
     // Get markets from active waves

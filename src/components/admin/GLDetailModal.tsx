@@ -48,6 +48,7 @@ interface GL {
 interface GLDetailModalProps {
   gl: GL;
   onClose: () => void;
+  onDelete?: (glId: string) => void;
   allMarkets?: AdminMarket[];
 }
 
@@ -296,12 +297,17 @@ const LineChart: React.FC<LineChartProps> = ({ data, type }) => {
   );
 };
 
-export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMarkets = [] }) => {
+export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, onDelete, allMarkets = [] }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [billaTimeframe, setBillaTimeframe] = useState<'current' | '3months' | 'year'>('current');
   const [sparTimeframe, setSparTimeframe] = useState<'current' | '3months' | 'year'>('current');
   const [zoofachhandelTimeframe, setZoofachhandelTimeframe] = useState<'current' | '3months' | 'year'>('current');
   const [hagebauTimeframe, setHagebauTimeframe] = useState<'current' | '3months' | 'year'>('current');
+  
+  // Delete confirmation state
+  const [deleteClickedOnce, setDeleteClickedOnce] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [marketSearchTerm, setMarketSearchTerm] = useState('');
   const [selectedChainFilter, setSelectedChainFilter] = useState<string[]>([]);
   const [isAddMarketsModalOpen, setIsAddMarketsModalOpen] = useState(false);
@@ -568,6 +574,49 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
     );
   };
 
+  // Handle delete with double-click confirmation
+  const handleDeleteClick = async () => {
+    if (deleteClickedOnce) {
+      // Second click within 2 seconds - perform delete
+      if (deleteTimeoutRef.current) {
+        clearTimeout(deleteTimeoutRef.current);
+      }
+      setIsDeleting(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/gebietsleiter/${gl.id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          onDelete?.(gl.id);
+          onClose();
+        } else {
+          alert('Fehler beim Löschen des Gebietsleiters');
+        }
+      } catch (error) {
+        console.error('Error deleting GL:', error);
+        alert('Fehler beim Löschen des Gebietsleiters');
+      } finally {
+        setIsDeleting(false);
+        setDeleteClickedOnce(false);
+      }
+    } else {
+      // First click - start 2 second window
+      setDeleteClickedOnce(true);
+      deleteTimeoutRef.current = setTimeout(() => {
+        setDeleteClickedOnce(false);
+      }, 2000);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (deleteTimeoutRef.current) {
+        clearTimeout(deleteTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return ReactDOM.createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -586,9 +635,18 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, allMa
               <span className={styles.modalSubtitle}>{gl.email}</span>
             </div>
           </div>
-          <button className={styles.modalClose} onClick={onClose}>
-            <X size={24} weight="bold" />
-          </button>
+          <div className={styles.headerActions}>
+            <button 
+              className={`${styles.deleteButton} ${deleteClickedOnce ? styles.deleteConfirm : ''}`}
+              onClick={handleDeleteClick}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Löschen...' : deleteClickedOnce ? 'Nochmal klicken!' : 'Löschen'}
+            </button>
+            <button className={styles.modalClose} onClick={onClose}>
+              <X size={24} weight="bold" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
