@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { FunnelSimple, X, MagnifyingGlass, Package, CaretDown } from '@phosphor-icons/react';
-import { getAllProducts } from '../../data/productsData';
+import { getAllProducts, deleteProduct } from '../../data/productsData';
 import type { Product } from '../../types/product-types';
 import styles from './ProductsPage.module.css';
 
@@ -28,6 +28,11 @@ export const ProductsPage: React.FC = () => {
     weight: [],
     price: []
   });
+  
+  // Delete confirmation state
+  const [deleteClickedOnce, setDeleteClickedOnce] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchTerms, setSearchTerms] = useState<Record<FilterType, string>>({
     department: '',
     productType: '',
@@ -250,6 +255,46 @@ export const ProductsPage: React.FC = () => {
     console.log('Saving product:', editedProduct);
     // After saving, refresh products
     setRefreshKey(prev => prev + 1);
+    handleCloseModal();
+  };
+
+  // Handle delete with double-click confirmation
+  const handleDeleteClick = async () => {
+    if (!selectedProduct) return;
+    
+    if (deleteClickedOnce) {
+      // Second click within 2 seconds - perform delete
+      if (deleteTimeoutRef.current) {
+        clearTimeout(deleteTimeoutRef.current);
+      }
+      setIsDeleting(true);
+      try {
+        await deleteProduct(selectedProduct.id);
+        setProducts(prev => prev.filter(p => p.id !== selectedProduct.id));
+        setRefreshKey(prev => prev + 1);
+        handleCloseModal();
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        alert('Fehler beim Löschen des Produkts');
+      } finally {
+        setIsDeleting(false);
+        setDeleteClickedOnce(false);
+      }
+    } else {
+      // First click - start 2 second window
+      setDeleteClickedOnce(true);
+      deleteTimeoutRef.current = setTimeout(() => {
+        setDeleteClickedOnce(false);
+      }, 2000);
+    }
+  };
+
+  // Cleanup timeout on modal close
+  const handleCloseModalWithCleanup = () => {
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current);
+    }
+    setDeleteClickedOnce(false);
     handleCloseModal();
   };
 
@@ -602,7 +647,7 @@ export const ProductsPage: React.FC = () => {
 
       {/* Product Detail Modal */}
       {selectedProduct && editedProduct && (
-        <div className={styles.modalOverlay} onClick={handleCloseModal}>
+        <div className={styles.modalOverlay} onClick={handleCloseModalWithCleanup}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <div className={styles.modalTitleRow}>
@@ -619,7 +664,7 @@ export const ProductsPage: React.FC = () => {
                   {getDepartmentLabel(selectedProduct.department)}
                 </span>
               </div>
-              <button className={styles.modalClose} onClick={handleCloseModal}>
+              <button className={styles.modalClose} onClick={handleCloseModalWithCleanup}>
                 <X size={20} weight="bold" />
               </button>
             </div>
@@ -772,12 +817,21 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <div className={styles.modalActions}>
-                <button className={styles.cancelButton} onClick={handleCloseModal}>
-                  Abbrechen
+                <button 
+                  className={`${styles.deleteButton} ${deleteClickedOnce ? styles.deleteConfirm : ''}`}
+                  onClick={handleDeleteClick}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Löschen...' : deleteClickedOnce ? 'Nochmal klicken!' : 'Löschen'}
                 </button>
-                <button className={styles.saveButton} onClick={handleSaveProduct}>
-                  Speichern
-                </button>
+                <div className={styles.modalActionsRight}>
+                  <button className={styles.cancelButton} onClick={handleCloseModalWithCleanup}>
+                    Abbrechen
+                  </button>
+                  <button className={styles.saveButton} onClick={handleSaveProduct}>
+                    Speichern
+                  </button>
+                </div>
               </div>
             </div>
           </div>
