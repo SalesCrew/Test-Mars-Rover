@@ -442,3 +442,660 @@
   border: 1px solid rgba(226, 232, 240, 0.6);
   border-radius: 16px;
 }
+
+/* Activity Header Actions */
+.activityHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.historyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.08), rgba(107, 114, 128, 0.04));
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  border-radius: 8px;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.historyButton:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3B82F6;
+}
+
+/* Activity Type Icons */
+.typeIconVorbestellung {
+  color: #3B82F6;
+}
+
+.typeIconVorverkauf {
+  color: #F59E0B;
+}
+
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* History Modal */
+.historyModal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.historyHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1F2937;
+}
+
+.historyList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.historyList::-webkit-scrollbar {
+  display: none;
+}
+
+.historyRow {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.8), rgba(255, 255, 255, 0.6));
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.historyRow:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(37, 99, 235, 0.02));
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.historyRowMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.historyRowInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.historyGL {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.historyChain {
+  padding: 3px 8px;
+  border-radius: 5px;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.historyAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  color: #10B981;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.historyRowMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.historyMarket {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.historyTime {
+  font-size: 11px;
+  color: #9CA3AF;
+  font-weight: 600;
+}
+
+/* Edit Modal */
+.editModal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.25s ease;
+}
+
+.editHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.editHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.editContent {
+  padding: 24px;
+}
+
+.editInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.editRow {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.editLabel {
+  font-weight: 600;
+  color: #6B7280;
+  min-width: 50px;
+}
+
+.editType {
+  padding: 2px 8px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #3B82F6;
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editField label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.editField input,
+.editField select {
+  padding: 12px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.editField input:focus,
+.editField select:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.editFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(249, 250, 251, 0.5);
+  border-radius: 0 0 16px 16px;
+}
+
+.editActions {
+  display: flex;
+  gap: 10px;
+}
+
+.deleteButton {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.cancelButton {
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover {
+  background: rgba(249, 250, 251, 1);
+  border-color: rgba(209, 213, 219, 1);
+}
+
+.saveButton {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.saveButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Enhanced Edit Modal Styles */
+.editInfoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.editInfoRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editInfoLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9CA3AF;
+  min-width: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.editInfoValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+}
+
+.chainBadgeSmall {
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.typeBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.typeBadgeBlue {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06));
+  color: #3B82F6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.typeBadgeOrange {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.06));
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.editFieldsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.editFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editFieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Item Display */
+.itemDisplay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1F2937;
+}
+
+.itemIcon {
+  color: #3B82F6;
+}
+
+.itemTypeBadge {
+  margin-left: auto;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.1), rgba(107, 114, 128, 0.05));
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+}
+
+/* Quantity Control */
+.quantityControl {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.quantityBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: white;
+  border: none;
+  font-size: 20px;
+  font-weight: 500;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quantityBtn:hover {
+  background: rgba(59, 130, 246, 0.05);
+  color: #3B82F6;
+}
+
+.quantityBtn:active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.quantityInput {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-left: 1px solid rgba(226, 232, 240, 0.6);
+  border-right: 1px solid rgba(226, 232, 240, 0.6);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  color: #1F2937;
+  background: white;
+  font-family: inherit;
+}
+
+.quantityInput:focus {
+  outline: none;
+  background: rgba(59, 130, 246, 0.02);
+}
+
+.quantityInput::-webkit-inner-spin-button,
+.quantityInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Welle Display */
+.welleDisplay {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0.02));
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3B82F6;
+}
+
+/* Custom Dropdown */
+.customDropdown {
+  position: relative;
+}
+
+.dropdownTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.dropdownTrigger:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.dropdownTrigger:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dropdownTrigger svg {
+  color: #9CA3AF;
+  transition: transform 0.2s ease;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  overflow: hidden;
+  animation: dropdownSlideIn 0.15s ease;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownOption {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.dropdownOption:hover {
+  background: rgba(59, 130, 246, 0.06);
+  color: #3B82F6;
+}
+
+.dropdownOptionSelected {
+  background: rgba(59, 130, 246, 0.08);
+  color: #3B82F6;
+  font-weight: 600;
+}
+
+.dropdownOptionSelected:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* Notes Input */
+.notesInput {
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1F2937;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+.notesInput:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.notesInput:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.notesInput::placeholder {
+  color: #9CA3AF;
+}

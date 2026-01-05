@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Package, Storefront, Sparkle } from '@phosphor-icons/react';
+import { Package, Storefront, Sparkle, ClockCounterClockwise, X, ShoppingCart, ArrowsLeftRight } from '@phosphor-icons/react';
 import { ChainAverageCard } from './ChainAverageCard';
 import { WaveProgressCard } from './WaveProgressCard';
 import { DashboardFilters } from './DashboardFilters';
@@ -7,14 +7,19 @@ import { WaveProgressDetailModal } from './WaveProgressDetailModal';
 import { API_BASE_URL } from '../../config/database';
 import styles from './AdminDashboard.module.css';
 
-// Mock live activity data
-const liveActivities = [
-  { id: 1, gl: 'Max Mader', chain: 'Billa+', market: 'Schöneberg', action: '+1 Display', hasFragebogen: true, time: '2 min' },
-  { id: 2, gl: 'Anna Schmidt', chain: 'Spar', market: 'Floridsdorf', action: '+2 Kartonware', hasFragebogen: true, time: '5 min' },
-  { id: 3, gl: 'Thomas Weber', chain: 'Billa+', market: 'Meidling', action: '+1 Display', hasFragebogen: false, time: '8 min' },
-  { id: 4, gl: 'Sarah Wagner', chain: 'Spar', market: 'Leopoldstadt', action: '+1 Kartonware', hasFragebogen: true, time: '12 min' },
-  { id: 5, gl: 'Michael Müller', chain: 'Billa+', market: 'Favoriten', action: '+3 Display', hasFragebogen: true, time: '15 min' },
-];
+interface Activity {
+  id: string;
+  type: 'vorbestellung' | 'vorverkauf';
+  glId: string;
+  glName: string;
+  marketId: string;
+  marketChain: string;
+  marketAddress: string;
+  marketCity: string;
+  action: string;
+  details: any;
+  createdAt: string;
+}
 
 interface ChainAverage {
   chainName: string;
@@ -61,6 +66,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
   const [error, setError] = useState<string | null>(null);
   const [selectedWave, setSelectedWave] = useState<WaveProgress | null>(null);
 
+  // Activity states
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [editForm, setEditForm] = useState<{
+    quantity: number;
+    reason: string;
+    notes: string;
+    isReasonDropdownOpen: boolean;
+  }>({
+    quantity: 0,
+    reason: '',
+    notes: '',
+    isReasonDropdownOpen: false
+  });
+
   // Filter states
   const [chainDateRange, setChainDateRange] = useState({ start: '', end: '' });
   const [chainSelectedGLs, setChainSelectedGLs] = useState<string[]>([]);
@@ -68,6 +89,123 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
   
   const [waveSelectedGLs, setWaveSelectedGLs] = useState<string[]>([]);
   const [waveSelectedType, setWaveSelectedType] = useState<'all' | 'displays' | 'kartonware'>('all');
+
+  // Fetch activities
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/activities?limit=100`);
+        if (!response.ok) throw new Error('Failed to fetch activities');
+        const data = await response.json();
+        setActivities(data);
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+      }
+    };
+
+    fetchActivities();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchActivities, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'jetzt';
+    if (diffMins < 60) return `${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} Std`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} Tag${diffDays > 1 ? 'e' : ''}`;
+  };
+
+  // Get chain color
+  const getChainColor = (chain: string) => {
+    const chainLower = chain.toLowerCase();
+    if (chainLower.includes('billa') || chainLower.includes('adeg')) {
+      return 'linear-gradient(135deg, #FED304, #F9C80E)';
+    }
+    if (chainLower.includes('spar') || chainLower.includes('interspar') || chainLower.includes('eurospar')) {
+      return 'linear-gradient(135deg, #EF4444, #DC2626)';
+    }
+    if (chainLower.includes('hagebau')) {
+      return 'linear-gradient(135deg, #06B6D4, #0891B2)';
+    }
+    return 'linear-gradient(135deg, #6B7280, #4B5563)';
+  };
+
+  // Handle activity edit
+  const handleActivityEdit = async () => {
+    if (!editingActivity) return;
+    
+    try {
+      const url = editingActivity.type === 'vorbestellung'
+        ? `${API_BASE_URL}/activities/vorbestellung/${editingActivity.id}`
+        : `${API_BASE_URL}/activities/vorverkauf/${editingActivity.id}`;
+      
+      const body = editingActivity.type === 'vorbestellung'
+        ? { current_number: editForm.quantity }
+        : { reason: editForm.reason, notes: editForm.notes };
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      if (!response.ok) throw new Error('Failed to update');
+      
+      // Refresh activities
+      const refreshRes = await fetch(`${API_BASE_URL}/activities?limit=100`);
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setActivities(data);
+      }
+      
+      setEditingActivity(null);
+      setEditForm({ quantity: 0, reason: '', notes: '', isReasonDropdownOpen: false });
+    } catch (error) {
+      console.error('Error updating activity:', error);
+    }
+  };
+
+  // Initialize edit form when activity is selected
+  const openEditModal = (activity: Activity) => {
+    setEditingActivity(activity);
+    setEditForm({
+      quantity: activity.details?.quantity || 0,
+      reason: activity.details?.reason || 'OOS',
+      notes: activity.details?.notes || '',
+      isReasonDropdownOpen: false
+    });
+  };
+
+  // Handle activity delete
+  const handleActivityDelete = async (activity: Activity) => {
+    if (!confirm('Aktivität wirklich löschen?')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/activities/${activity.type}/${activity.id}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete');
+      
+      // Refresh activities
+      const refreshRes = await fetch(`${API_BASE_URL}/activities?limit=100`);
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setActivities(data);
+      }
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+    }
+  };
 
   // Fetch GLs
   useEffect(() => {
@@ -311,43 +449,56 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
             </div>
             <span>Live Aktivitäten</span>
           </div>
-          <span className={styles.activityBadge}>{liveActivities.length} neu</span>
+          <div className={styles.activityHeaderActions}>
+            <span className={styles.activityBadge}>{activities.length} neu</span>
+            <button 
+              className={styles.historyButton}
+              onClick={() => setIsHistoryOpen(true)}
+              title="Verlauf anzeigen"
+            >
+              <ClockCounterClockwise size={16} weight="bold" />
+            </button>
+          </div>
         </div>
         
         <div className={styles.activityList}>
-          {liveActivities.length === 0 ? (
+          {activities.length === 0 ? (
             <div className={styles.activityEmpty}>
               <span>Keine Aktivitäten</span>
             </div>
           ) : (
-            liveActivities.map((activity) => (
-              <div key={activity.id} className={styles.activityRow}>
+            activities.slice(0, 5).map((activity) => (
+              <div 
+                key={activity.id} 
+                className={styles.activityRow}
+                onClick={() => openEditModal(activity)}
+              >
                 <div className={styles.activityInfo}>
-                  <span className={styles.activityGL}>{activity.gl}</span>
+                  <span className={styles.activityGL}>{activity.glName}</span>
                   <span 
                     className={styles.activityChain}
-                    style={{ 
-                      background: activity.chain === 'Billa+' 
-                        ? 'linear-gradient(135deg, #FED304, #F9C80E)' 
-                        : 'linear-gradient(135deg, #EF4444, #DC2626)'
-                    }}
+                    style={{ background: getChainColor(activity.marketChain) }}
                   >
-                    {activity.chain}
+                    {activity.marketChain}
                   </span>
                   <Storefront size={14} weight="regular" className={styles.activityMarketIcon} />
-                  <span className={styles.activityMarket}>{activity.market}</span>
+                  <span className={styles.activityMarket}>{activity.marketCity || activity.marketAddress}</span>
                 </div>
                 <div className={styles.activityAction}>
-                  <Package size={14} weight="fill" />
+                  {activity.type === 'vorbestellung' ? (
+                    <Package size={14} weight="fill" />
+                  ) : (
+                    <ArrowsLeftRight size={14} weight="fill" />
+                  )}
                   <span>{activity.action}</span>
                 </div>
                 <div className={styles.activityMeta}>
-                  {activity.hasFragebogen ? (
-                    <CheckCircle size={18} weight="fill" className={styles.fragebogenYes} />
+                  {activity.type === 'vorbestellung' ? (
+                    <ShoppingCart size={16} weight="fill" className={styles.typeIconVorbestellung} />
                   ) : (
-                    <XCircle size={18} weight="fill" className={styles.fragebogenNo} />
+                    <ArrowsLeftRight size={16} weight="fill" className={styles.typeIconVorverkauf} />
                   )}
-                  <span className={styles.activityTime}>{activity.time}</span>
+                  <span className={styles.activityTime}>{formatTimeAgo(activity.createdAt)}</span>
                 </div>
               </div>
             ))
@@ -379,6 +530,221 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
         welle={selectedWave}
         onClose={() => setSelectedWave(null)}
       />
+    )}
+
+    {/* Activity History Modal */}
+    {isHistoryOpen && (
+      <div className={styles.modalOverlay} onClick={() => setIsHistoryOpen(false)}>
+        <div className={styles.historyModal} onClick={e => e.stopPropagation()}>
+          <div className={styles.historyHeader}>
+            <h3>Aktivitäten-Verlauf</h3>
+            <button className={styles.closeButton} onClick={() => setIsHistoryOpen(false)}>
+              <X size={20} weight="bold" />
+            </button>
+          </div>
+          <div className={styles.historyList}>
+            {activities.map((activity) => (
+              <div 
+                key={activity.id} 
+                className={styles.historyRow}
+                onClick={() => {
+                  setIsHistoryOpen(false);
+                  openEditModal(activity);
+                }}
+              >
+                <div className={styles.historyRowMain}>
+                  <div className={styles.historyRowInfo}>
+                    <span className={styles.historyGL}>{activity.glName}</span>
+                    <span 
+                      className={styles.historyChain}
+                      style={{ background: getChainColor(activity.marketChain) }}
+                    >
+                      {activity.marketChain}
+                    </span>
+                  </div>
+                  <div className={styles.historyAction}>
+                    {activity.type === 'vorbestellung' ? (
+                      <Package size={14} weight="fill" />
+                    ) : (
+                      <ArrowsLeftRight size={14} weight="fill" />
+                    )}
+                    <span>{activity.action}</span>
+                  </div>
+                </div>
+                <div className={styles.historyRowMeta}>
+                  <span className={styles.historyMarket}>
+                    <Storefront size={12} weight="regular" />
+                    {activity.marketCity || activity.marketAddress}
+                  </span>
+                  <span className={styles.historyTime}>{formatTimeAgo(activity.createdAt)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Activity Modal */}
+    {editingActivity && (
+      <div className={styles.modalOverlay} onClick={() => setEditingActivity(null)}>
+        <div className={styles.editModal} onClick={e => e.stopPropagation()}>
+          <div className={styles.editHeader}>
+            <h3>Aktivität bearbeiten</h3>
+            <button className={styles.closeButton} onClick={() => setEditingActivity(null)}>
+              <X size={20} weight="bold" />
+            </button>
+          </div>
+          <div className={styles.editContent}>
+            {/* Info Section */}
+            <div className={styles.editInfoSection}>
+              <div className={styles.editInfoRow}>
+                <span className={styles.editInfoLabel}>GL</span>
+                <span className={styles.editInfoValue}>{editingActivity.glName}</span>
+              </div>
+              <div className={styles.editInfoRow}>
+                <span className={styles.editInfoLabel}>Markt</span>
+                <span className={styles.editInfoValue}>
+                  <span className={styles.chainBadgeSmall} style={{ background: getChainColor(editingActivity.marketChain) }}>
+                    {editingActivity.marketChain}
+                  </span>
+                  {editingActivity.marketCity || editingActivity.marketAddress}
+                </span>
+              </div>
+              <div className={styles.editInfoRow}>
+                <span className={styles.editInfoLabel}>Typ</span>
+                <span className={`${styles.typeBadge} ${editingActivity.type === 'vorbestellung' ? styles.typeBadgeBlue : styles.typeBadgeOrange}`}>
+                  {editingActivity.type === 'vorbestellung' ? 'Vorbestellung' : 'Vorverkauf'}
+                </span>
+              </div>
+            </div>
+
+            {/* Editable Fields */}
+            <div className={styles.editFieldsSection}>
+              {editingActivity.type === 'vorbestellung' ? (
+                <>
+                  {/* Item Info */}
+                  <div className={styles.editFieldGroup}>
+                    <label className={styles.editFieldLabel}>Artikel</label>
+                    <div className={styles.itemDisplay}>
+                      <Package size={16} weight="fill" className={styles.itemIcon} />
+                      <span>{editingActivity.details?.itemName || 'Display/Kartonware'}</span>
+                      <span className={styles.itemTypeBadge}>
+                        {editingActivity.details?.itemType === 'display' ? 'Display' : 'Kartonware'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Quantity */}
+                  <div className={styles.editFieldGroup}>
+                    <label className={styles.editFieldLabel}>Anzahl</label>
+                    <div className={styles.quantityControl}>
+                      <button 
+                        className={styles.quantityBtn}
+                        onClick={() => setEditForm(f => ({ ...f, quantity: Math.max(0, f.quantity - 1) }))}
+                      >
+                        −
+                      </button>
+                      <input 
+                        type="number" 
+                        className={styles.quantityInput}
+                        value={editForm.quantity}
+                        onChange={(e) => setEditForm(f => ({ ...f, quantity: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        min="0"
+                      />
+                      <button 
+                        className={styles.quantityBtn}
+                        onClick={() => setEditForm(f => ({ ...f, quantity: f.quantity + 1 }))}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Welle Info */}
+                  {editingActivity.details?.welleName && (
+                    <div className={styles.editFieldGroup}>
+                      <label className={styles.editFieldLabel}>Welle</label>
+                      <div className={styles.welleDisplay}>
+                        {editingActivity.details.welleName}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Reason Dropdown */}
+                  <div className={styles.editFieldGroup}>
+                    <label className={styles.editFieldLabel}>Grund</label>
+                    <div className={styles.customDropdown}>
+                      <button 
+                        className={styles.dropdownTrigger}
+                        onClick={() => setEditForm(f => ({ ...f, isReasonDropdownOpen: !f.isReasonDropdownOpen }))}
+                      >
+                        <span>{editForm.reason || 'Grund auswählen'}</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      {editForm.isReasonDropdownOpen && (
+                        <div className={styles.dropdownMenu}>
+                          {['OOS', 'Listungslücke', 'Platzierung'].map(reason => (
+                            <button
+                              key={reason}
+                              className={`${styles.dropdownOption} ${editForm.reason === reason ? styles.dropdownOptionSelected : ''}`}
+                              onClick={() => setEditForm(f => ({ ...f, reason, isReasonDropdownOpen: false }))}
+                            >
+                              {reason}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div className={styles.editFieldGroup}>
+                    <label className={styles.editFieldLabel}>Notizen</label>
+                    <textarea 
+                      className={styles.notesInput}
+                      value={editForm.notes}
+                      onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                      placeholder="Optionale Notizen..."
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <div className={styles.editFooter}>
+            <button 
+              className={styles.deleteButton}
+              onClick={() => {
+                handleActivityDelete(editingActivity);
+                setEditingActivity(null);
+              }}
+            >
+              Löschen
+            </button>
+            <div className={styles.editActions}>
+              <button 
+                className={styles.cancelButton}
+                onClick={() => setEditingActivity(null)}
+              >
+                Abbrechen
+              </button>
+              <button 
+                className={styles.saveButton}
+                onClick={handleActivityEdit}
+              >
+                Speichern
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );
