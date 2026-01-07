@@ -133,6 +133,16 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
   }, [searchQuery, selectedVorbesteller, allMarkets]);
 
   // Split markets into "Meine Märkte" and "Andere Märkte"
+  // Debug: log the user ID and sample market gebietsleiter IDs
+  useEffect(() => {
+    if (allMarkets.length > 0 && user?.id) {
+      console.log('🔍 DEBUG Market Clustering:');
+      console.log('  User ID:', user.id);
+      console.log('  Sample market gebietsleiter IDs:', allMarkets.slice(0, 5).map(m => ({ name: m.name, gl: m.gebietsleiter })));
+      console.log('  Markets matching user:', allMarkets.filter(m => m.gebietsleiter === user.id).length);
+    }
+  }, [allMarkets, user?.id]);
+
   const myMarkets = useMemo(() => 
     filteredMarkets
       .filter(m => m.gebietsleiter === user?.id)
