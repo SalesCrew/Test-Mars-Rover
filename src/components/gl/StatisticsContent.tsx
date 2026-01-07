@@ -1,81 +1,183 @@
-import React, { useState } from 'react';
-import { TimeframeSelector } from './TimeframeSelector';
-import { KPIHeroCard } from './KPIHeroCard';
-import { wellenData, threeMonthsAverage, oneYearAverage, timeframeOptions } from '../../data/statisticsData';
-import type { WelleData } from '../../types/gl-types';
+import React, { useState, useEffect } from 'react';
+import { ChartLine, CalendarBlank, Spinner } from '@phosphor-icons/react';
+import { GLChainCard } from './GLChainCard';
+import { GLWaveCard } from './GLWaveCard';
+import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../config/database';
 import styles from './StatisticsContent.module.css';
 
+interface ChainAverage {
+  chainName: string;
+  chainColor: string;
+  goalType: 'percentage' | 'value';
+  goalPercentage?: number;
+  goalValue?: number;
+  totalValue?: number;
+  currentValue?: number;
+  totalMarkets: number;
+  marketsWithProgress: number;
+  currentPercentage?: number;
+}
+
+interface WaveProgress {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'finished';
+  displayCount: number;
+  displayTarget: number;
+  kartonwareCount: number;
+  kartonwareTarget: number;
+}
+
+const TOTAL_GLS = 8; // Total number of GLs for goal division
+
 export const StatisticsContent: React.FC = () => {
-  const [selectedOption, setSelectedOption] = useState<'current' | '3months' | 'year'>('current');
-  const [selectedWelleIndex, setSelectedWelleIndex] = useState<number>(0);
+  const { user } = useAuth();
+  const [chainAverages, setChainAverages] = useState<ChainAverage[]>([]);
+  const [activeWaves, setActiveWaves] = useState<WaveProgress[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Determine current data based on selected option
-  const getCurrentData = (): WelleData => {
-    switch (selectedOption) {
-      case 'current':
-        return wellenData[selectedWelleIndex];
-      case '3months':
-        return threeMonthsAverage;
-      case 'year':
-        return oneYearAverage;
-      default:
-        return wellenData[0];
-    }
-  };
+  // Fetch chain averages for current GL
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return;
 
-  const currentData = getCurrentData();
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  // Navigation handlers
-  const handleNavigatePrevious = () => {
-    if (selectedWelleIndex < wellenData.length - 1) {
-      setSelectedWelleIndex(selectedWelleIndex + 1);
-    }
-  };
+        // Fetch chain averages with GL filter
+        const chainRes = await fetch(`${API_BASE_URL}/wellen/dashboard/chain-averages?glIds=${user.id}`);
+        if (!chainRes.ok) throw new Error('Fehler beim Laden der Ketten-Daten');
+        const chainData = await chainRes.json();
+        
+        // Goal percentages (80%, 60%) stay the same - only target numbers/values get divided
+        // For value-based goals (Zoofachhandel, Hagebau), divide goalValue AND totalValue by 8
+        const adjustedChainData = chainData.map((chain: any) => {
+          const isValueBased = chain.goalType === 'value';
+          return {
+            ...chain,
+            // goalPercentage stays the same (80% for Billa, 60% for Spar, etc.)
+            // For value-based goals, divide the goalValue and totalValue by 8
+            goalValue: isValueBased && chain.goalValue 
+              ? Math.ceil(chain.goalValue / TOTAL_GLS) 
+              : chain.goalValue,
+            totalValue: isValueBased && chain.totalValue 
+              ? Math.ceil(chain.totalValue / TOTAL_GLS) 
+              : chain.totalValue,
+            // Divide totalMarkets by 8 to show GL's share
+            totalMarkets: Math.ceil((chain.totalMarkets || 0) / TOTAL_GLS),
+            marketsWithProgress: chain.marketsWithProgress || 0,
+          };
+        });
+        setChainAverages(adjustedChainData);
 
-  const handleNavigateNext = () => {
-    if (selectedWelleIndex > 0) {
-      setSelectedWelleIndex(selectedWelleIndex - 1);
-    }
-  };
+        // Fetch waves progress with GL filter
+        const wavesRes = await fetch(`${API_BASE_URL}/wellen/dashboard/waves?glIds=${user.id}`);
+        if (!wavesRes.ok) throw new Error('Fehler beim Laden der Wellen-Daten');
+        const wavesData = await wavesRes.json();
+        
+        // Filter for active waves and adjust targets
+        const active = wavesData
+          .filter((w: WaveProgress) => w.status === 'active')
+          .map((wave: WaveProgress) => ({
+            ...wave,
+            displayTarget: Math.ceil(wave.displayTarget / TOTAL_GLS),
+            kartonwareTarget: Math.ceil(wave.kartonwareTarget / TOTAL_GLS),
+          }));
+        setActiveWaves(active);
 
-  const canNavigatePrevious = selectedWelleIndex < wellenData.length - 1;
-  const canNavigateNext = selectedWelleIndex > 0;
+      } catch (err: any) {
+        console.error('Error fetching statistics:', err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Option change handler
-  const handleOptionChange = (optionId: 'current' | '3months' | 'year') => {
-    setSelectedOption(optionId);
-    // Reset to current welle when switching back to current mode
-    if (optionId === 'current') {
-      setSelectedWelleIndex(0);
-    }
-  };
+    fetchData();
+  }, [user?.id]);
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingState}>
+        <Spinner size={32} weight="bold" className={styles.spinner} />
+        <span>Lade Statistiken...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.errorState}>
+        <span>{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.statisticsContent}>
-      <TimeframeSelector
-        currentTimeframe={currentData.name}
-        selectedOption={selectedOption}
-        options={timeframeOptions}
-        onOptionChange={handleOptionChange}
-        onNavigatePrevious={handleNavigatePrevious}
-        onNavigateNext={handleNavigateNext}
-        canNavigatePrevious={canNavigatePrevious}
-        canNavigateNext={canNavigateNext}
-      />
+      {/* Chain Averages Section */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <ChartLine size={20} weight="duotone" className={styles.sectionIcon} />
+          <h2 className={styles.sectionTitle}>Meine Ketten-Ziele</h2>
+        </div>
+        <div className={styles.chainsGrid}>
+          {chainAverages.length > 0 ? (
+            chainAverages.map((chain: any) => (
+              <GLChainCard
+                key={chain.chainName}
+                chainName={chain.chainName}
+                chainColor={chain.chainColor}
+                goalType={chain.goalType}
+                currentPercentage={chain.currentPercentage}
+                goalPercentage={chain.goalPercentage}
+                currentValue={chain.currentValue}
+                goalValue={chain.goalValue}
+                totalValue={chain.totalValue}
+                totalMarkets={chain.totalMarkets}
+                marketsWithProgress={chain.marketsWithProgress}
+              />
+            ))
+          ) : (
+            <div className={styles.emptyState}>
+              <span>Keine Ketten-Daten verfügbar</span>
+            </div>
+          )}
+        </div>
+      </section>
 
-      <div className={styles.cardsContainer}>
-        <KPIHeroCard chain="billa" data={currentData.billaPlus} key={`billa-${currentData.id}`} />
-        <KPIHeroCard chain="spar" data={currentData.spar} key={`spar-${currentData.id}`} />
-      </div>
+      {/* Active Waves Section */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <CalendarBlank size={20} weight="duotone" className={styles.sectionIcon} />
+          <h2 className={styles.sectionTitle}>Aktive Wellen</h2>
+        </div>
+        <div className={styles.wavesGrid}>
+          {activeWaves.length > 0 ? (
+            activeWaves.map((wave) => (
+              <GLWaveCard
+                key={wave.id}
+                name={wave.name}
+                startDate={wave.startDate}
+                endDate={wave.endDate}
+                displayCount={wave.displayCount}
+                displayTarget={wave.displayTarget}
+                kartonwareCount={wave.kartonwareCount}
+                kartonwareTarget={wave.kartonwareTarget}
+              />
+            ))
+          ) : (
+            <div className={styles.emptyState}>
+              <span>Keine aktiven Wellen</span>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };
-
-
-
-
-
-
-
-
-

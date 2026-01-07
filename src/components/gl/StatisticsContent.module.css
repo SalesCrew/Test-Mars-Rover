@@ -6,21 +6,132 @@
   padding: 0 0 var(--space-2xl) 0;
 }
 
-.cardsContainer {
+/* Section */
+.section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
-  width: 100%;
-  padding-bottom: var(--space-xl);
+  gap: var(--space-lg);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sectionIcon {
+  color: #3B82F6;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.3px;
+}
+
+/* Chains Grid */
+.chainsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Waves Grid */
+.wavesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Loading State */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-3xl) var(--space-xl);
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.spinner {
+  color: #3B82F6;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xl) var(--space-xl);
+  color: #EF4444;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* Stagger animation for cards */
-.cardsContainer > *:nth-child(1) {
+.chainsGrid > *,
+.wavesGrid > * {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+.chainsGrid > *:nth-child(1),
+.wavesGrid > *:nth-child(1) {
   animation-delay: 0s;
 }
 
-.cardsContainer > *:nth-child(2) {
-  animation-delay: 0.15s;
+.chainsGrid > *:nth-child(2),
+.wavesGrid > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.chainsGrid > *:nth-child(3),
+.wavesGrid > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.chainsGrid > *:nth-child(4),
+.wavesGrid > *:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Mobile adjustments */
@@ -30,9 +141,15 @@
     padding: 0 0 var(--space-xl) 0;
   }
 
-  .cardsContainer {
-    gap: var(--space-lg);
-    padding-bottom: var(--space-lg);
+  .sectionTitle {
+    font-size: 16px;
+  }
+
+  .chainsGrid {
+    gap: var(--space-md);
+  }
+
+  .wavesGrid {
+    gap: var(--space-sm);
   }
 }
-
