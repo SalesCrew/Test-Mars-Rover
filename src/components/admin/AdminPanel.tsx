@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus, Plus, Stack, SignOut, Receipt } from '@phosphor-icons/react';
+import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus, Plus, Stack, SignOut, Receipt, TrendUp } from '@phosphor-icons/react';
 import { AdminDashboard } from './AdminDashboard';
 import { MarketsPage } from './MarketsPage';
 import { GebietsleiterPage } from './GebietsleiterPage';
 import { VorbestellerPage } from './VorbestellerPage';
 import { ProduktErsatzPage } from './VorverkaufPage';
+import { VorverkaufAdminPage } from './VorverkaufAdminPage';
 import { FragebogenPage } from './FragebogenPage';
 import { ProductsPage } from './ProductsPage';
 import { CreateDisplayModal } from './CreateDisplayModal';
@@ -21,7 +22,7 @@ interface AdminPanelProps {
   onClose?: () => void;
 }
 
-type AdminPage = 'dashboard' | 'markets' | 'gebietsleiter' | 'vorbesteller' | 'produktersatz' | 'fragebogen' | 'produkte';
+type AdminPage = 'dashboard' | 'markets' | 'gebietsleiter' | 'vorbesteller' | 'vorverkauf' | 'produktersatz' | 'fragebogen' | 'produkte';
 
 interface MenuItem {
   id: AdminPage;
@@ -36,6 +37,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [isHistorieModalOpen, setIsHistorieModalOpen] = useState(false);
   const [isCreateGLModalOpen, setIsCreateGLModalOpen] = useState(false);
   const [isCreateWelleModalOpen, setIsCreateWelleModalOpen] = useState(false);
+  const [isCreateVorverkaufWelleModalOpen, setIsCreateVorverkaufWelleModalOpen] = useState(false);
   const [isCreateModuleModalOpen, setIsCreateModuleModalOpen] = useState(false);
   const [isCreateFragebogenModalOpen, setIsCreateFragebogenModalOpen] = useState(false);
   const [isProductImportModalOpen, setIsProductImportModalOpen] = useState(false);
@@ -137,6 +139,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
     { id: 'markets', label: 'Märkte', icon: <MapPin size={20} weight="regular" /> },
     { id: 'gebietsleiter', label: 'Gebietsleiter', icon: <Users size={20} weight="regular" /> },
     { id: 'vorbesteller', label: 'Vorbesteller', icon: <CalendarCheck size={20} weight="regular" /> },
+    { id: 'vorverkauf', label: 'Vorverkauf', icon: <TrendUp size={20} weight="regular" /> },
     { id: 'produktersatz', label: 'Produktersatz', icon: <Receipt size={20} weight="regular" /> },
     { id: 'fragebogen', label: 'Fragebogen', icon: <ClipboardText size={20} weight="regular" /> },
     { id: 'produkte', label: 'Produkte', icon: <Package size={20} weight="regular" /> },
@@ -387,6 +390,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
               </button>
             </div>
           )}
+          {selectedPage === 'vorverkauf' && (
+            <div className={styles.headerButtons}>
+              <button 
+                className={styles.createWelleButton}
+                onClick={() => setIsCreateVorverkaufWelleModalOpen(true)}
+              >
+                <CalendarPlus size={18} weight="bold" />
+                <span>Welle erstellen</span>
+              </button>
+            </div>
+          )}
           {selectedPage === 'fragebogen' && (
             <div className={styles.headerButtons}>
               <button 
@@ -423,6 +437,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           {selectedPage === 'markets' && <MarketsPage importedMarkets={importedMarkets} />}
           {selectedPage === 'gebietsleiter' && <GebietsleiterPage isCreateModalOpen={isCreateGLModalOpen} onCloseCreateModal={() => setIsCreateGLModalOpen(false)} allMarkets={allMarkets} />}
           {selectedPage === 'vorbesteller' && <VorbestellerPage isCreateWelleModalOpen={isCreateWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateWelleModalOpen(true)} waveIdToEdit={waveIdToEdit} onClearWaveIdToEdit={() => setWaveIdToEdit(null)} />}
+          {selectedPage === 'vorverkauf' && <VorverkaufAdminPage isCreateWelleModalOpen={isCreateVorverkaufWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateVorverkaufWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateVorverkaufWelleModalOpen(true)} />}
           {selectedPage === 'produktersatz' && <ProduktErsatzPage />}
           {selectedPage === 'fragebogen' && <FragebogenPage isCreateModuleModalOpen={isCreateModuleModalOpen} onCloseCreateModuleModal={() => setIsCreateModuleModalOpen(false)} isCreateFragebogenModalOpen={isCreateFragebogenModalOpen} onCloseCreateFragebogenModal={() => setIsCreateFragebogenModalOpen(false)} />}
           {selectedPage === 'produkte' && <ProductsPage />}

@@ -1,157 +1,146 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, CaretDown, MagnifyingGlass, Plus, Minus, Receipt, Check, Storefront, CheckCircle, Package, Lightbulb, ArrowRight, Lightning } from '@phosphor-icons/react';
-import type { Product } from '../../types/product-types';
+import { X, Package, MagnifyingGlass, Check, Plus, Minus, Storefront, CheckCircle, TrendUp, CaretDown, CaretUp, Clock, CalendarBlank } from '@phosphor-icons/react';
 import type { Market } from '../../types/market-types';
-import { getAllProducts } from '../../data/productsData';
-import { marketService } from '../../services/marketService';
-import { vorverkaufService } from '../../services/vorverkaufService';
+import type { Product } from '../../types/product-types';
 import { useAuth } from '../../contexts/AuthContext';
+import { vorverkaufWellenService, type VorverkaufWelle } from '../../services/vorverkaufWellenService';
+import { getAllProducts } from '../../data/productsData';
 import styles from './VorverkaufModal.module.css';
 
 interface VorverkaufModalProps {
   isOpen: boolean;
   onClose: () => void;
-  marketName?: string;
-}
-
-interface ProductWithQuantity {
-  product: Product;
-  quantity: number;
-}
-
-interface SuggestionBundle {
-  type: 'single' | 'bundle';
-  title: string;
-  description: string;
-  products: Product[];
-  totalValue: number;
 }
 
 type ReasonType = 'OOS' | 'Listungslücke' | 'Platzierung';
 
-const reasons: { value: ReasonType; label: string }[] = [
+interface ProductWithQuantity {
+  product: Product;
+  quantity: number;
+  reason?: ReasonType;
+}
+
+const reasonOptions: { value: ReasonType; label: string }[] = [
   { value: 'OOS', label: 'OOS' },
   { value: 'Listungslücke', label: 'Listungslücke' },
   { value: 'Platzierung', label: 'Platzierung' },
 ];
 
+// Category display names
+const getCategoryName = (department: string, productType: string): string => {
+  if (department === 'pets' && productType === 'standard') return 'Tiernahrung';
+  if (department === 'pets' && productType === 'display') return 'Tiernahrung Displays';
+  if (department === 'food' && productType === 'standard') return 'Lebensmittel';
+  if (department === 'food' && productType === 'display') return 'Lebensmittel Displays';
+  return 'Sonstige';
+};
+
+// Format date range
+const formatDateRange = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const formatOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' };
+  return `${start.toLocaleDateString('de-DE', formatOptions)} - ${end.toLocaleDateString('de-DE', formatOptions)}`;
+};
+
 export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   
-  const [takeOutProducts, setTakeOutProducts] = useState<ProductWithQuantity[]>([]);
-  const [replaceWithProducts, setReplaceWithProducts] = useState<ProductWithQuantity[]>([]);
+  // Data states
+  const [waves, setWaves] = useState<VorverkaufWelle[]>([]);
+  const [waveMarkets, setWaveMarkets] = useState<Market[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [isLoadingWaves, setIsLoadingWaves] = useState(false);
+  const [isLoadingMarkets, setIsLoadingMarkets] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   
-  const [selectedReason, setSelectedReason] = useState<ReasonType | null>(null);
+  // Selection states
+  const [selectedWaveId, setSelectedWaveId] = useState<string | null>(null);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<ProductWithQuantity[]>([]);
+  const [globalReason, setGlobalReason] = useState<ReasonType | null>(null);
+  const [useIndividualReasons, setUseIndividualReasons] = useState(false);
   
-  const [isTakeOutDropdownOpen, setIsTakeOutDropdownOpen] = useState(false);
-  const [isReplaceDropdownOpen, setIsReplaceDropdownOpen] = useState(false);
+  // View states
+  const [step, setStep] = useState<'waves' | 'markets' | 'products' | 'confirmation' | 'success'>('waves');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Dropdown states
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
-  
-  const [takeOutSearchQuery, setTakeOutSearchQuery] = useState('');
-  const [replaceSearchQuery, setReplaceSearchQuery] = useState('');
+  const [productSearchQuery, setProductSearchQuery] = useState('');
   const [marketSearchQuery, setMarketSearchQuery] = useState('');
   
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showMarketConfirmation, setShowMarketConfirmation] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [expandedBundles, setExpandedBundles] = useState<Set<number>>(new Set());
-  
-  const [allMarkets, setAllMarkets] = useState<Market[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  const takeOutDropdownRef = useRef<HTMLDivElement>(null);
-  const replaceDropdownRef = useRef<HTMLDivElement>(null);
+  // Refs
+  const productDropdownRef = useRef<HTMLDivElement>(null);
   const marketDropdownRef = useRef<HTMLDivElement>(null);
-  const takeOutSearchRef = useRef<HTMLInputElement>(null);
-  const replaceSearchRef = useRef<HTMLInputElement>(null);
+  const productSearchInputRef = useRef<HTMLInputElement>(null);
+  const marketSearchInputRef = useRef<HTMLInputElement>(null);
 
+  // Load waves for GL
   useEffect(() => {
-    if (!isOpen) return;
-    
-    const loadData = async () => {
-      setIsLoading(true);
+    const loadWaves = async () => {
+      if (!isOpen || !user?.id) return;
+      
       try {
-        const [markets, products] = await Promise.all([
-          marketService.getAllMarkets(),
-          getAllProducts()
-        ]);
-        setAllMarkets(markets.map(m => ({
-          id: m.id,
-          name: m.name,
-          address: m.address,
-          city: m.city,
-          postalCode: m.postalCode,
-          chain: m.chain || '',
-          frequency: m.frequency || 12,
-          currentVisits: 0,
-          lastVisitDate: '',
-          isCompleted: false,
-          gebietsleiter: m.gebietsleiter,
-        })));
-        setAllProducts(products);
+        setIsLoadingWaves(true);
+        const fetchedWaves = await vorverkaufWellenService.getWellenForGL(user.id);
+        setWaves(fetchedWaves);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error loading vorverkauf waves:', error);
       } finally {
-        setIsLoading(false);
+        setIsLoadingWaves(false);
       }
     };
     
-    loadData();
+    loadWaves();
+  }, [isOpen, user?.id]);
+
+  // Load products
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (!isOpen) return;
+      
+      try {
+        setIsLoadingProducts(true);
+        const products = await getAllProducts();
+        setAllProducts(products);
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+    
+    loadProducts();
   }, [isOpen]);
 
-  const filteredTakeOutProducts = useMemo(() => {
-    const query = takeOutSearchQuery.toLowerCase().trim();
-    if (!query) return allProducts.slice(0, 30);
-    return allProducts.filter(p => 
-      p.name.toLowerCase().includes(query) ||
-      p.department?.toLowerCase().includes(query) ||
-      p.sku?.toLowerCase().includes(query)
-    ).slice(0, 30);
-  }, [takeOutSearchQuery, allProducts]);
+  // Load markets when wave is selected
+  useEffect(() => {
+    const loadWaveMarkets = async () => {
+      if (!selectedWaveId) return;
+      
+      try {
+        setIsLoadingMarkets(true);
+        // Fetch all markets assigned to this wave (no GL filter - admin selected these specifically)
+        const markets = await vorverkaufWellenService.getWelleMarkets(selectedWaveId);
+        console.log('Loaded wave markets:', markets.length);
+        setWaveMarkets(markets);
+      } catch (error) {
+        console.error('Error loading wave markets:', error);
+      } finally {
+        setIsLoadingMarkets(false);
+      }
+    };
+    
+    loadWaveMarkets();
+  }, [selectedWaveId]);
 
-  const filteredReplaceProducts = useMemo(() => {
-    const query = replaceSearchQuery.toLowerCase().trim();
-    if (!query) return allProducts.slice(0, 30);
-    return allProducts.filter(p => 
-      p.name.toLowerCase().includes(query) ||
-      p.department?.toLowerCase().includes(query) ||
-      p.sku?.toLowerCase().includes(query)
-    ).slice(0, 30);
-  }, [replaceSearchQuery, allProducts]);
-
-  const filteredMarkets = useMemo(() => {
-    const query = marketSearchQuery.toLowerCase().trim();
-    if (!query) return allMarkets;
-    return allMarkets.filter(m =>
-      m.name.toLowerCase().includes(query) ||
-      m.chain.toLowerCase().includes(query) ||
-      m.address.toLowerCase().includes(query)
-    );
-  }, [marketSearchQuery, allMarkets]);
-
-  // Split markets into GL's markets and other markets
-  const glMarkets = useMemo(() => {
-    if (!user?.id) return [];
-    return filteredMarkets.filter(m => m.gebietsleiter === user.id);
-  }, [filteredMarkets, user?.id]);
-
-  const otherMarkets = useMemo(() => {
-    if (!user?.id) return filteredMarkets;
-    return filteredMarkets.filter(m => m.gebietsleiter !== user.id);
-  }, [filteredMarkets, user?.id]);
-
-
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (takeOutDropdownRef.current && !takeOutDropdownRef.current.contains(event.target as Node)) {
-        setIsTakeOutDropdownOpen(false);
-      }
-      if (replaceDropdownRef.current && !replaceDropdownRef.current.contains(event.target as Node)) {
-        setIsReplaceDropdownOpen(false);
+      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
+        setIsProductDropdownOpen(false);
       }
       if (marketDropdownRef.current && !marketDropdownRef.current.contains(event.target as Node)) {
         setIsMarketDropdownOpen(false);
@@ -161,216 +150,171 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Focus search input when dropdown opens
   useEffect(() => {
-    if (isTakeOutDropdownOpen && takeOutSearchRef.current) {
-      setTimeout(() => takeOutSearchRef.current?.focus(), 100);
+    if (isProductDropdownOpen && productSearchInputRef.current) {
+      productSearchInputRef.current.focus();
     }
-  }, [isTakeOutDropdownOpen]);
-
-  useEffect(() => {
-    if (isReplaceDropdownOpen && replaceSearchRef.current) {
-      setTimeout(() => replaceSearchRef.current?.focus(), 100);
-    }
-  }, [isReplaceDropdownOpen]);
+  }, [isProductDropdownOpen]);
 
   useEffect(() => {
-    if (showConfirmation) setIsAnimating(true);
-  }, [showConfirmation]);
-
-  const handleAddTakeOut = (product: Product) => {
-    if (!takeOutProducts.some(p => p.product.id === product.id)) {
-      setTakeOutProducts([...takeOutProducts, { product, quantity: 1 }]);
+    if (isMarketDropdownOpen && marketSearchInputRef.current) {
+      marketSearchInputRef.current.focus();
     }
-    setTakeOutSearchQuery('');
-    setIsTakeOutDropdownOpen(false);
-  };
+  }, [isMarketDropdownOpen]);
 
-  const handleRemoveTakeOut = (productId: string) => {
-    setTakeOutProducts(takeOutProducts.filter(p => p.product.id !== productId));
-  };
+  const selectedWave = waves.find(w => w.id === selectedWaveId);
+  const selectedMarket = waveMarkets.find(m => m.id === selectedMarketId);
+  const totalQuantity = selectedProducts.reduce((sum, p) => sum + p.quantity, 0);
+  const totalValue = selectedProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
 
-  const handleUpdateTakeOutQty = (productId: string, change: number) => {
-    setTakeOutProducts(takeOutProducts.map(p => 
-      p.product.id === productId 
-        ? { ...p, quantity: Math.max(1, p.quantity + change) } 
-        : p
-    ));
-  };
-
-  const handleAddReplace = (product: Product) => {
-    if (!replaceWithProducts.some(p => p.product.id === product.id)) {
-      setReplaceWithProducts([...replaceWithProducts, { product, quantity: 1 }]);
+  // Check if all products have reasons (either global or individual)
+  const allProductsHaveReasons = useMemo(() => {
+    if (!useIndividualReasons) {
+      return globalReason !== null;
     }
-    setReplaceSearchQuery('');
-    setIsReplaceDropdownOpen(false);
-  };
+    return selectedProducts.every(p => p.reason !== undefined);
+  }, [selectedProducts, globalReason, useIndividualReasons]);
 
-  const handleRemoveReplace = (productId: string) => {
-    setReplaceWithProducts(replaceWithProducts.filter(p => p.product.id !== productId));
-  };
+  // Filter markets based on search
+  const filteredMarkets = useMemo(() => {
+    const query = marketSearchQuery.toLowerCase().trim();
+    if (!query) return waveMarkets;
+    
+    return waveMarkets.filter(m => 
+      m.name.toLowerCase().includes(query) ||
+      m.address.toLowerCase().includes(query) ||
+      m.city.toLowerCase().includes(query) ||
+      m.chain.toLowerCase().includes(query)
+    );
+  }, [marketSearchQuery, waveMarkets]);
 
-  const handleUpdateReplaceQty = (productId: string, change: number) => {
-    setReplaceWithProducts(replaceWithProducts.map(p => 
-      p.product.id === productId 
-        ? { ...p, quantity: Math.max(1, p.quantity + change) } 
-        : p
-    ));
-  };
+  // Filter and group products by category
+  const filteredProducts = useMemo(() => {
+    const query = productSearchQuery.toLowerCase().trim();
+    if (!query) return allProducts;
+    
+    return allProducts.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      (p.sku && p.sku.toLowerCase().includes(query))
+    );
+  }, [productSearchQuery, allProducts]);
 
-  // Get smart suggestions - single products and bundles (category-aware)
-  const getSuggestions = (): SuggestionBundle[] => {
-    if (takeOutProducts.length === 0) return [];
-    
-    const takeOutDepts = takeOutProducts.map(p => p.product.department).filter(Boolean);
-    const mainDept = takeOutDepts.length > 0 ? takeOutDepts[0] : null;
-    const takeOutTotal = takeOutProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
-    const avgPrice = takeOutTotal / takeOutProducts.reduce((sum, p) => sum + p.quantity, 0);
-    
-    const suggestions: SuggestionBundle[] = [];
-    const usedProductIds = new Set<string>();
-    
-    // Get available products (excluding already selected)
-    const availableProducts = allProducts
-      .filter(p => !takeOutProducts.some(t => t.product.id === p.id))
-      .filter(p => !replaceWithProducts.some(r => r.product.id === p.id));
-    
-    // Priority 1: Same department, similar price (best matches)
-    const sameDeptSimilarPrice = availableProducts
-      .filter(p => p.department === mainDept)
-      .filter(p => Math.abs(p.price - avgPrice) < avgPrice * 0.5)
-      .sort((a, b) => Math.abs(a.price - avgPrice) - Math.abs(b.price - avgPrice))
-      .slice(0, 3);
-    
-    sameDeptSimilarPrice.forEach(product => {
-      if (usedProductIds.has(product.id)) return;
-      usedProductIds.add(product.id);
-      suggestions.push({
-        type: 'single',
-        title: product.name,
-        description: `${product.weight || product.content || ''} · €${product.price.toFixed(2)}`,
-        products: [product],
-        totalValue: product.price
-      });
+  // Group products by department + productType
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, Product[]> = {};
+    filteredProducts.forEach(product => {
+      const categoryKey = getCategoryName(product.department, product.productType);
+      if (!groups[categoryKey]) groups[categoryKey] = [];
+      groups[categoryKey].push(product);
     });
-    
-    // Priority 2: Same department, any price
-    const sameDeptAnyPrice = availableProducts
-      .filter(p => p.department === mainDept && !usedProductIds.has(p.id))
-      .sort((a, b) => Math.abs(a.price - avgPrice) - Math.abs(b.price - avgPrice))
-      .slice(0, 3);
-    
-    sameDeptAnyPrice.forEach(product => {
-      if (usedProductIds.has(product.id)) return;
-      usedProductIds.add(product.id);
-      suggestions.push({
-        type: 'single',
-        title: product.name,
-        description: `${product.weight || product.content || ''} · €${product.price.toFixed(2)}`,
-        products: [product],
-        totalValue: product.price
-      });
-    });
-    
-    // Priority 3: Bundles (2 products from same department that match total value)
-    if (takeOutTotal > 5) {
-      const bundleCandidates = availableProducts
-        .filter(p => p.department === mainDept && !usedProductIds.has(p.id))
-        .filter(p => p.price < takeOutTotal * 0.8)
-        .slice(0, 15);
-      
-      const bundlesFound: SuggestionBundle[] = [];
-      
-      for (let i = 0; i < bundleCandidates.length && bundlesFound.length < 3; i++) {
-        for (let j = i + 1; j < bundleCandidates.length; j++) {
-          const bundleTotal = bundleCandidates[i].price + bundleCandidates[j].price;
-          const diff = Math.abs(bundleTotal - takeOutTotal);
-          
-          if (diff < takeOutTotal * 0.3) {
-            bundlesFound.push({
-              type: 'bundle',
-              title: `${bundleCandidates[i].name.slice(0, 25)}...`,
-              description: `+ ${bundleCandidates[j].name.slice(0, 20)}... · €${bundleTotal.toFixed(2)}`,
-              products: [bundleCandidates[i], bundleCandidates[j]],
-              totalValue: bundleTotal
-            });
-            break;
-          }
-        }
-      }
-      
-      bundlesFound.forEach(b => suggestions.push(b));
-    }
-    
-    // Priority 4: Similar price from any department (fill up to 8-10)
-    if (suggestions.length < 8) {
-      const similarPriceAnyDept = availableProducts
-        .filter(p => !usedProductIds.has(p.id))
-        .sort((a, b) => Math.abs(a.price - avgPrice) - Math.abs(b.price - avgPrice))
-        .slice(0, 8 - suggestions.length);
-      
-      similarPriceAnyDept.forEach(product => {
-        suggestions.push({
-          type: 'single',
-          title: product.name,
-          description: `${product.weight || product.content || ''} · €${product.price.toFixed(2)}`,
-          products: [product],
-          totalValue: product.price
-        });
-      });
-    }
-    
-    return suggestions.slice(0, 10);
+    return groups;
+  }, [filteredProducts]);
+
+  const handleSelectWave = (waveId: string) => {
+    setSelectedWaveId(waveId);
   };
 
-  const handleAddSuggestion = (suggestion: SuggestionBundle) => {
-    suggestion.products.forEach(product => {
-      if (!replaceWithProducts.some(p => p.product.id === product.id)) {
-        setReplaceWithProducts(prev => [...prev, { product, quantity: 1 }]);
-      }
-    });
+  const handleWeiterToMarkets = () => {
+    if (selectedWaveId) {
+      setStep('markets');
+    }
   };
 
-  const getTakeOutTotal = () => takeOutProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
-  const getReplaceTotal = () => replaceWithProducts.reduce((sum, p) => sum + p.product.price * p.quantity, 0);
-  const getTotalQuantity = () => takeOutProducts.reduce((sum, p) => sum + p.quantity, 0) + replaceWithProducts.reduce((sum, p) => sum + p.quantity, 0);
+  const handleSelectMarket = (marketId: string) => {
+    setSelectedMarketId(marketId);
+  };
 
-  const formatPrice = (price: number) => `€${price.toFixed(2)}`;
+  const handleWeiterToProducts = () => {
+    if (selectedMarketId) {
+      setStep('products');
+    }
+  };
 
-  const handleSubmit = () => {
-    if (replaceWithProducts.length === 0 && takeOutProducts.length > 0) {
-      setShowSuggestions(true);
+  const handleAddProduct = (product: Product) => {
+    const existing = selectedProducts.find(p => p.product.id === product.id);
+    if (existing) {
+      // Remove if already selected
+      setSelectedProducts(selectedProducts.filter(p => p.product.id !== product.id));
     } else {
-      setShowMarketConfirmation(true);
+      // Add with default quantity 1
+      setSelectedProducts([...selectedProducts, { product, quantity: 1, reason: useIndividualReasons ? undefined : undefined }]);
     }
   };
 
-  const handleConfirmSubmit = async () => {
-    if (!selectedMarketId || !selectedReason || !user?.id) return;
+  const handleUpdateQuantity = (productId: string, delta: number) => {
+    setSelectedProducts(selectedProducts.map(p => {
+      if (p.product.id === productId) {
+        const newQty = Math.max(1, p.quantity + delta);
+        return { ...p, quantity: newQty };
+      }
+      return p;
+    }));
+  };
+
+  const handleManualQuantityChange = (productId: string, value: string) => {
+    if (value === '') {
+      setSelectedProducts(selectedProducts.map(p => 
+        p.product.id === productId ? { ...p, quantity: 1 } : p
+      ));
+    } else {
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue) && numValue >= 1) {
+        setSelectedProducts(selectedProducts.map(p => 
+          p.product.id === productId ? { ...p, quantity: numValue } : p
+        ));
+      }
+    }
+  };
+
+  const handleRemoveProduct = (productId: string) => {
+    setSelectedProducts(selectedProducts.filter(p => p.product.id !== productId));
+  };
+
+  const handleSetProductReason = (productId: string, reason: ReasonType) => {
+    setSelectedProducts(selectedProducts.map(p => 
+      p.product.id === productId ? { ...p, reason } : p
+    ));
+  };
+
+  const handleToggleIndividualReasons = () => {
+    setUseIndividualReasons(!useIndividualReasons);
+    if (!useIndividualReasons) {
+      // Switching to individual - clear global reason
+      setGlobalReason(null);
+    } else {
+      // Switching to global - clear individual reasons
+      setSelectedProducts(selectedProducts.map(p => ({ ...p, reason: undefined })));
+    }
+  };
+
+  const handleWeiterToConfirmation = () => {
+    if (selectedProducts.length > 0 && allProductsHaveReasons) {
+      setStep('confirmation');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedWaveId || !selectedMarketId || !user?.id || selectedProducts.length === 0 || !allProductsHaveReasons) return;
     
     setIsSubmitting(true);
     try {
-      const allItems = [
-        ...takeOutProducts.map(p => ({ product_id: p.product.id, quantity: p.quantity })),
-        ...replaceWithProducts.map(p => ({ product_id: p.product.id, quantity: p.quantity }))
-      ];
-      
-      await vorverkaufService.createEntry({
+      // Prepare products with reasons
+      const productsToSubmit = selectedProducts.map(p => ({
+        productId: p.product.id,
+        quantity: p.quantity,
+        reason: (useIndividualReasons ? p.reason : globalReason) as ReasonType
+      }));
+
+      // Submit to backend
+      await vorverkaufWellenService.submitVorverkauf({
+        welleId: selectedWaveId,
         gebietsleiter_id: user.id,
         market_id: selectedMarketId,
-        reason: selectedReason,
-        items: allItems
+        products: productsToSubmit
       });
       
-      // Record visit to update market frequency
-      try {
-        await marketService.recordVisit(selectedMarketId, user.id);
-      } catch (visitError) {
-        console.warn('Could not record market visit:', visitError);
-        // Don't fail the whole submission if visit recording fails
-      }
-      
-      setShowMarketConfirmation(false);
-      setShowConfirmation(true);
+      setStep('success');
     } catch (error) {
       console.error('Error submitting vorverkauf:', error);
       alert('Fehler beim Speichern. Bitte versuche es erneut.');
@@ -379,643 +323,590 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handleCloseConfirmation = () => {
-    setShowConfirmation(false);
-    setTakeOutProducts([]);
-    setReplaceWithProducts([]);
-    setSelectedReason(null);
+  const handleBack = () => {
+    if (step === 'markets') {
+      setStep('waves');
+      setSelectedMarketId(null);
+    } else if (step === 'products') {
+      setStep('markets');
+    } else if (step === 'confirmation') {
+      setStep('products');
+    }
+  };
+
+  const handleClose = () => {
+    // Reset all states
+    setSelectedWaveId(null);
     setSelectedMarketId(null);
+    setSelectedProducts([]);
+    setGlobalReason(null);
+    setUseIndividualReasons(false);
+    setStep('waves');
+    setMarketSearchQuery('');
+    setProductSearchQuery('');
+    setIsProductDropdownOpen(false);
+    setIsMarketDropdownOpen(false);
+    setWaveMarkets([]);
     onClose();
   };
 
+  const formatPrice = (price: number) => `€${price.toFixed(2)}`;
+
   if (!isOpen) return null;
 
-  // Suggestions Modal - Clean professional design
-  if (showSuggestions) {
-    const suggestions = getSuggestions();
-    const mainDept = takeOutProducts[0]?.product.department;
-    const deptLabel = mainDept === 'pets' ? 'Tiernahrung' : mainDept === 'food' ? 'Lebensmittel' : 'Produkte';
-    
-    return (
-      <div className={styles.modalOverlay} onClick={() => setShowSuggestions(false)}>
-        <div className={styles.suggestionsModal} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.suggestionsHeader}>
-            <div className={styles.suggestionsHeaderTop}>
-              <div className={styles.suggestionsHeaderLeft}>
-                <Lightbulb size={22} weight="duotone" className={styles.suggestionsHeaderIcon} />
-                <div className={styles.suggestionsHeaderText}>
-                  <h2>Ersatzvorschläge</h2>
-                  <p>Passende {deptLabel} für €{getTakeOutTotal().toFixed(2)} Warenwert</p>
+  // Get header info based on step
+  const getHeaderInfo = () => {
+    switch (step) {
+      case 'markets':
+        return { title: selectedWave?.name || 'Vorverkauf', subtitle: 'Markt auswählen' };
+      case 'products':
+        return { title: selectedMarket?.name || 'Produkte', subtitle: 'Produkte und Grund auswählen' };
+      case 'confirmation':
+        return { title: 'Bestätigung', subtitle: 'Überprüfe deine Eingaben' };
+      default:
+        return { title: 'Vorverkauf', subtitle: 'Wähle eine Kampagne aus' };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
+
+  // Status config for pills
+  const getStatusConfig = (status: string) => {
+    if (status === 'active') {
+      return { label: 'Aktiv', color: '#F97316', bgColor: 'rgba(249, 115, 22, 0.1)' };
+    }
+    return { label: 'Bevorstehend', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.1)' };
+  };
+
+  return (
+    <div className={styles.modalOverlay} onClick={(e) => {
+      if (e.target === e.currentTarget && step !== 'success') {
+        handleClose();
+      }
+    }}>
+      <div className={`${styles.modal} ${step === 'success' ? styles.successModal : ''} ${step === 'waves' ? styles.waveStep : ''}`} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        {step !== 'success' && (
+          <div className={styles.header}>
+            <div className={styles.headerContent}>
+              <div className={styles.iconWrapper}>
+                <TrendUp size={24} weight="duotone" />
+              </div>
+              <div>
+                <h2 className={styles.title}>{headerInfo.title}</h2>
+                <p className={styles.subtitle}>{headerInfo.subtitle}</p>
+              </div>
+            </div>
+            <button className={styles.closeButton} onClick={handleClose} aria-label="Schließen">
+              <X size={20} weight="bold" />
+            </button>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className={styles.content}>
+          {step === 'success' ? (
+            /* Success Confirmation */
+            <div className={styles.successContent}>
+              <div className={styles.successIconWrapper}>
+                <CheckCircle size={72} weight="fill" className={styles.successCheckIcon} />
+              </div>
+
+              <div className={styles.successHeader}>
+                <h2 className={styles.successTitle}>Erfolgreich erfasst!</h2>
+                <p className={styles.successSubtext}>Vorverkauf wurde dokumentiert</p>
+              </div>
+
+              <div className={styles.successStats}>
+                <div className={styles.successStat}>
+                  <div className={styles.successStatIcon}>
+                    <Package size={20} weight="fill" />
+                  </div>
+                  <div className={styles.successStatInfo}>
+                    <div className={styles.successStatValue}>{totalQuantity}</div>
+                    <div className={styles.successStatLabel}>Produkte</div>
+                  </div>
+                </div>
+
+                <div className={styles.successStat}>
+                  <div className={styles.successStatIcon}>
+                    <TrendUp size={20} weight="fill" />
+                  </div>
+                  <div className={styles.successStatInfo}>
+                    <div className={styles.successStatValue}>{formatPrice(totalValue)}</div>
+                    <div className={styles.successStatLabel}>Warenwert</div>
+                  </div>
                 </div>
               </div>
-              <button className={styles.closeBtn} onClick={() => setShowSuggestions(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            
-            {/* Progress indicator */}
-            <div className={styles.valueProgress}>
-              <div className={styles.valueProgressInfo}>
-                <span>Ersetzt: €{getReplaceTotal().toFixed(2)}</span>
-                <span className={styles.valueProgressTarget}>Ziel: €{getTakeOutTotal().toFixed(2)}</span>
-              </div>
-              <div className={styles.valueProgressBar}>
-                <div 
-                  className={styles.valueProgressFill}
-                  style={{ 
-                    width: `${Math.min(100, (getReplaceTotal() / getTakeOutTotal()) * 100)}%`,
-                    background: getReplaceTotal() >= getTakeOutTotal() ? '#10B981' : '#3B82F6'
-                  }}
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* What's being replaced summary */}
-          <div className={styles.replaceSummary}>
-            <div className={styles.replaceSummaryLabel}>
-              <span>Entnommen:</span>
-              <strong>{takeOutProducts.length} {takeOutProducts.length === 1 ? 'Produkt' : 'Produkte'}</strong>
-            </div>
-            <div className={styles.replaceSummaryItems}>
-              {takeOutProducts.slice(0, 3).map(p => (
-                <span key={p.product.id} className={styles.replaceSummaryChip}>
-                  {p.product.name.slice(0, 20)}{p.product.name.length > 20 ? '...' : ''} ×{p.quantity}
-                </span>
-              ))}
-              {takeOutProducts.length > 3 && (
-                <span className={styles.replaceSummaryMore}>+{takeOutProducts.length - 3} weitere</span>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.suggestionsBody}>
-            <div className={styles.suggestionsSectionTitle}>Vorgeschlagene Ersatzprodukte</div>
-            
-            {suggestions.length > 0 ? (
-              <div className={styles.suggestionsList}>
-                {suggestions.map((suggestion, idx) => {
-                  const isBundle = suggestion.type === 'bundle';
-                  const isExpanded = expandedBundles.has(idx);
-                  
-                  return (
-                    <div
-                      key={idx}
-                      className={`${styles.suggestionItem} ${isBundle ? styles.bundleItem : ''} ${isExpanded ? styles.bundleExpanded : ''}`}
-                    >
-                      <div 
-                        className={styles.suggestionItemMain}
-                        onClick={() => {
-                          if (isBundle) {
-                            setExpandedBundles(prev => {
-                              const next = new Set(prev);
-                              if (next.has(idx)) next.delete(idx);
-                              else next.add(idx);
-                              return next;
-                            });
-                          }
-                        }}
-                        style={{ cursor: isBundle ? 'pointer' : 'default' }}
-                      >
-                        <div className={styles.suggestionItemLeft}>
-                          <div className={styles.suggestionItemIcon}>
-                            {isBundle ? <Lightning size={18} weight="fill" /> : <Package size={18} />}
-                          </div>
-                          <div className={styles.suggestionItemInfo}>
-                            <span className={styles.suggestionItemTitle}>
-                              {isBundle ? `Bundle: ${suggestion.products.length} Produkte` : suggestion.title}
-                            </span>
-                            <span className={styles.suggestionItemMeta}>
-                              {isBundle && !isExpanded ? 'Klicken zum Anzeigen' : suggestion.description}
-                            </span>
-                          </div>
-                        </div>
-                        <div className={styles.suggestionItemRight}>
-                          <span className={styles.suggestionItemPrice}>€{suggestion.totalValue.toFixed(2)}</span>
-                          <button 
-                            className={styles.suggestionAddBtn}
-                            onClick={(e) => { e.stopPropagation(); handleAddSuggestion(suggestion); }}
-                          >
-                            <Plus size={16} weight="bold" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {isBundle && isExpanded && (
-                        <div className={styles.bundleProducts}>
-                          {suggestion.products.map((product, pIdx) => (
-                            <div key={pIdx} className={styles.bundleProductItem}>
-                              <span className={styles.bundleProductName}>{product.name}</span>
-                              <span className={styles.bundleProductPrice}>€{product.price.toFixed(2)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+              <div className={styles.successDetailsSection}>
+                <h3 className={styles.successSectionTitle}>Details</h3>
+                <div className={styles.successDetailsList}>
+                  <div className={styles.successDetailRow}>
+                    <div className={styles.successDetailCheck}>
+                      <Check size={14} weight="bold" />
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className={styles.noSuggestions}>
-                <Package size={40} weight="thin" />
-                <span>Keine passenden Vorschläge gefunden</span>
-              </div>
-            )}
-
-            {replaceWithProducts.length > 0 && (
-              <div className={styles.selectedSection}>
-                <div className={styles.selectedSectionTitle}>
-                  <Check size={16} weight="bold" />
-                  <span>Ausgewählt ({replaceWithProducts.length})</span>
-                  <span className={styles.selectedTotal}>€{getReplaceTotal().toFixed(2)}</span>
+                    <div className={styles.successDetailText}>{selectedMarket?.name}</div>
+                  </div>
+                  {selectedProducts.slice(0, 3).map(p => (
+                    <div key={p.product.id} className={styles.successDetailRow}>
+                      <div className={styles.successDetailCheck}>
+                        <Check size={14} weight="bold" />
+                      </div>
+                      <div className={styles.successDetailText}>
+                        {p.product.name}: {p.quantity}x ({useIndividualReasons ? p.reason : globalReason})
+                      </div>
+                    </div>
+                  ))}
+                  {selectedProducts.length > 3 && (
+                    <div className={styles.successDetailRow}>
+                      <div className={styles.successDetailCheck}>
+                        <Check size={14} weight="bold" />
+                      </div>
+                      <div className={styles.successDetailText}>
+                        +{selectedProducts.length - 3} weitere Produkte
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className={styles.selectedList}>
-                  {replaceWithProducts.map(p => (
-                    <div key={p.product.id} className={styles.selectedItem}>
-                      <span className={styles.selectedItemName}>{p.product.name}</span>
-                      <span className={styles.selectedItemPrice}>€{(p.product.price * p.quantity).toFixed(2)}</span>
-                      <button 
-                        className={styles.selectedItemRemove}
-                        onClick={(e) => { e.stopPropagation(); handleRemoveReplace(p.product.id); }}
+              </div>
+
+              <div className={styles.successFooter}>
+                <button className={styles.successBtn} onClick={handleClose}>
+                  <CheckCircle size={18} weight="bold" />
+                  <span>Fertig</span>
+                </button>
+              </div>
+            </div>
+          ) : step === 'products' ? (
+            /* Product Selection View */
+            <div className={styles.productSection}>
+              {/* Product Dropdown */}
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle}>Produkte auswählen</h3>
+              </div>
+
+              {isLoadingProducts ? (
+                <div className={styles.loadingState}>Produkte laden...</div>
+              ) : (
+                <div className={`${styles.dropdownContainer} ${isProductDropdownOpen ? styles.dropdownOpen : ''}`} ref={productDropdownRef}>
+                  <button
+                    className={`${styles.dropdownButton} ${isProductDropdownOpen ? styles.open : ''}`}
+                    onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
+                  >
+                    <span className={styles.dropdownPlaceholder}>
+                      Produkt hinzufügen...
+                    </span>
+                    <CaretDown size={16} className={styles.dropdownChevron} />
+                  </button>
+
+                  {isProductDropdownOpen && (
+                    <div className={styles.dropdownMenu}>
+                      <div className={styles.searchContainer}>
+                        <MagnifyingGlass size={16} className={styles.searchIcon} />
+                        <input
+                          ref={productSearchInputRef}
+                          type="text"
+                          className={styles.searchInput}
+                          placeholder="Produkt suchen..."
+                          value={productSearchQuery}
+                          onChange={(e) => setProductSearchQuery(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      <div className={styles.dropdownScrollArea}>
+                        {Object.entries(groupedProducts).map(([category, products]) => (
+                          <div key={category} className={styles.dropdownSection}>
+                            <div className={styles.categoryLabel}>{category}</div>
+                            {products.map(product => (
+                              <button
+                                key={product.id}
+                                className={`${styles.dropdownItem} ${
+                                  selectedProducts.some(p => p.product.id === product.id) ? styles.selected : ''
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddProduct(product);
+                                }}
+                              >
+                                <div className={styles.productInfo}>
+                                  <div className={styles.productName}>{product.name}</div>
+                                  <div className={styles.productDetails}>
+                                    {product.weight}
+                                  </div>
+                                </div>
+                                <div className={styles.productPriceInfo}>
+                                  <span className={styles.productPrice}>{formatPrice(product.price)}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Selected Products */}
+              {selectedProducts.length > 0 && (
+                <div className={styles.selectedProducts}>
+                  {selectedProducts.map(p => (
+                    <div key={p.product.id} className={styles.productCard}>
+                      <div className={styles.productCardInfo}>
+                        <div className={styles.productCardName}>{p.product.name}</div>
+                        <div className={styles.productCardMeta}>
+                          {p.product.weight}
+                        </div>
+                        {/* Individual reason selector */}
+                        {useIndividualReasons && (
+                          <div className={styles.productReasonRow}>
+                            {reasonOptions.map(reason => (
+                              <button
+                                key={reason.value}
+                                className={`${styles.productReasonChip} ${p.reason === reason.value ? styles.active : ''}`}
+                                onClick={() => handleSetProductReason(p.product.id, reason.value)}
+                              >
+                                {reason.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className={styles.quantityControls}>
+                        <button
+                          className={styles.quantityButton}
+                          onClick={() => handleUpdateQuantity(p.product.id, -1)}
+                        >
+                          <Minus size={16} weight="bold" />
+                        </button>
+                        <input
+                          type="number"
+                          className={styles.quantityInput}
+                          value={p.quantity || ''}
+                          onChange={(e) => handleManualQuantityChange(p.product.id, e.target.value)}
+                          min="1"
+                        />
+                        <button
+                          className={styles.quantityButton}
+                          onClick={() => handleUpdateQuantity(p.product.id, 1)}
+                        >
+                          <Plus size={16} weight="bold" />
+                        </button>
+                      </div>
+                      <div className={styles.productCardPrice}>
+                        {formatPrice(p.product.price * p.quantity)}
+                      </div>
+                      <button
+                        className={styles.removeButton}
+                        onClick={() => handleRemoveProduct(p.product.id)}
                       >
-                        <X size={14} />
+                        <X size={16} weight="bold" />
                       </button>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.suggestionsFooter}>
-            <button 
-              className={styles.btnSecondary}
-              onClick={() => { setShowSuggestions(false); setShowMarketConfirmation(true); }}
-            >
-              Überspringen
-            </button>
-            <button 
-              className={styles.btnPrimary}
-              onClick={() => { setShowSuggestions(false); setShowMarketConfirmation(true); }}
-              disabled={replaceWithProducts.length === 0}
-            >
-              Weiter <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Market Confirmation Modal - Matching ProductCalculator style
-  if (showMarketConfirmation) {
-    const selectedMarket = allMarkets.find(m => m.id === selectedMarketId);
-    
-    return (
-      <div className={styles.confirmOverlay} onClick={() => setShowMarketConfirmation(false)}>
-        <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
-          {/* Header */}
-          <div className={styles.confirmHeader}>
-            <div className={styles.confirmIconWrapper}>
-              <Storefront size={36} weight="duotone" />
-            </div>
-            <div className={styles.confirmTitleGroup}>
-              <h2 className={styles.confirmTitle}>Markt bestätigen</h2>
-              <p className={styles.confirmSubtitle}>Ist dies der richtige Markt für diesen Vorverkauf?</p>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className={styles.confirmContent}>
-            {/* Market Selection */}
-            <div className={styles.confirmSection}>
-              <label className={styles.confirmLabel}>Ausgewählter Markt</label>
-              <div className={styles.marketDropdownContainer} ref={marketDropdownRef}>
-                <button
-                  className={`${styles.marketDropdownBtn} ${isMarketDropdownOpen ? styles.open : ''}`}
-                  onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
-                >
-                  <span className={styles.marketDropdownText}>
-                    {selectedMarket ? (
-                      <>
-                        <strong>{selectedMarket.chain}</strong>
-                        <span>{selectedMarket.address}, {selectedMarket.postalCode} {selectedMarket.city}</span>
-                      </>
-                    ) : 'Markt wählen...'}
-                  </span>
-                  <CaretDown size={16} className={styles.marketDropdownChevron} />
-                </button>
-                
-                {isMarketDropdownOpen && (
-                  <div className={styles.marketDropdownMenu}>
-                    <div className={styles.marketDropdownSearch}>
-                      <MagnifyingGlass size={16} />
-                      <input
-                        type="text"
-                        placeholder="Markt suchen..."
-                        value={marketSearchQuery}
-                        onChange={(e) => setMarketSearchQuery(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className={styles.marketDropdownList}>
-                      {glMarkets.length > 0 && (
-                        <div className={styles.marketSectionLabel}>Meine Märkte</div>
-                      )}
-                      {glMarkets.map((market) => (
-                        <button
-                          key={market.id}
-                          className={`${styles.marketDropdownItem} ${market.id === selectedMarketId ? styles.active : ''}`}
-                          onClick={() => {
-                            setSelectedMarketId(market.id);
-                            setIsMarketDropdownOpen(false);
-                            setMarketSearchQuery('');
-                          }}
-                        >
-                          <div className={styles.marketDropdownItemInfo}>
-                            <div className={styles.marketDropdownItemName}>{market.chain}</div>
-                            <div className={styles.marketDropdownItemAddress}>{market.address}, {market.postalCode} {market.city}</div>
-                          </div>
-                        </button>
-                      ))}
-                      {otherMarkets.length > 0 && (
-                        <div className={styles.marketSectionLabel}>Andere Märkte</div>
-                      )}
-                      {otherMarkets.map((market) => (
-                        <button
-                          key={market.id}
-                          className={`${styles.marketDropdownItem} ${market.id === selectedMarketId ? styles.active : ''} ${styles.otherMarket}`}
-                          onClick={() => {
-                            setSelectedMarketId(market.id);
-                            setIsMarketDropdownOpen(false);
-                            setMarketSearchQuery('');
-                          }}
-                        >
-                          <div className={styles.marketDropdownItemInfo}>
-                            <div className={styles.marketDropdownItemName}>{market.chain}</div>
-                            <div className={styles.marketDropdownItemAddress}>{market.address}, {market.postalCode} {market.city}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                  <div className={styles.totalValue}>
+                    <span>Gesamtwert</span>
+                    <span className={styles.totalAmount}>{formatPrice(totalValue)}</span>
                   </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Exchange Summary */}
-            <div className={styles.exchangeSummary}>
-              <div className={styles.exchangeRow}>
-                <div className={styles.exchangeLabel}>Entnommen</div>
-                <div className={styles.exchangeValue}>
-                  <span className={styles.exchangeCount}>{takeOutProducts.reduce((sum, p) => sum + p.quantity, 0)}×</span>
-                  <strong>{formatPrice(getTakeOutTotal())}</strong>
                 </div>
-              </div>
-              <div className={styles.exchangeRow}>
-                <div className={styles.exchangeLabel}>Ersetzt</div>
-                <div className={styles.exchangeValue}>
-                  <span className={styles.exchangeCount}>{replaceWithProducts.reduce((sum, p) => sum + p.quantity, 0)}×</span>
-                  <strong>{formatPrice(getReplaceTotal())}</strong>
+              )}
+
+              {/* Reason Selection */}
+              {selectedProducts.length > 0 && (
+                <div className={styles.reasonSection}>
+                  <div className={styles.reasonHeader}>
+                    <h3 className={styles.sectionTitle}>Grund</h3>
+                    <button 
+                      className={styles.reasonModeToggle}
+                      onClick={handleToggleIndividualReasons}
+                    >
+                      {useIndividualReasons ? (
+                        <>
+                          <CaretUp size={14} weight="bold" />
+                          <span>Für alle gleich</span>
+                        </>
+                      ) : (
+                        <>
+                          <CaretDown size={14} weight="bold" />
+                          <span>Pro Produkt</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {!useIndividualReasons && (
+                    <div className={styles.reasonButtons}>
+                      {reasonOptions.map(reason => (
+                        <button
+                          key={reason.value}
+                          className={`${styles.reasonButton} ${globalReason === reason.value ? styles.reasonSelected : ''}`}
+                          onClick={() => setGlobalReason(reason.value)}
+                        >
+                          {reason.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {useIndividualReasons && (
+                    <p className={styles.reasonHint}>
+                      Wähle für jedes Produkt oben einen Grund aus
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
-          </div>
-
-          {/* Footer */}
-          <div className={styles.confirmFooter}>
-            <button className={styles.confirmBtnSecondary} onClick={() => setShowMarketConfirmation(false)}>
-              Abbrechen
-            </button>
-            <button 
-              className={styles.confirmBtnSuccess} 
-              onClick={handleConfirmSubmit}
-              disabled={isSubmitting || !selectedMarketId}
-            >
-              <Check size={18} weight="bold" />
-              {isSubmitting ? 'Speichern...' : 'Markt bestätigen'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Success Modal - Matching VorbestellerModal style
-  if (showConfirmation) {
-    return (
-      <div className={styles.successOverlay} onClick={handleCloseConfirmation}>
-        <div className={`${styles.successModal} ${isAnimating ? styles.successAnimated : ''}`} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.successContent}>
-            {/* Success Icon */}
-            <div className={styles.successIconWrapper}>
-              <CheckCircle size={72} weight="fill" className={styles.successCheckIcon} />
-            </div>
-
-            {/* Title */}
-            <div className={styles.successHeader}>
-              <h2 className={styles.successTitle}>Hervorragende Leistung!</h2>
-              <p className={styles.successSubtext}>Vorverkauf erfolgreich dokumentiert</p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className={styles.successStats}>
-              <div className={styles.successStat}>
-                <div className={styles.successStatIcon}>
-                  <Package size={20} weight="fill" />
+          ) : step === 'markets' ? (
+            /* Market Selection View */
+            <div className={styles.marketSection}>
+              {isLoadingMarkets ? (
+                <div className={styles.loadingState}>Märkte laden...</div>
+              ) : waveMarkets.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Storefront size={48} weight="regular" />
+                  <p>Keine Märkte für diese Kampagne verfügbar.</p>
                 </div>
-                <div className={styles.successStatInfo}>
-                  <div className={styles.successStatValue}>{getTotalQuantity()}</div>
-                  <div className={styles.successStatLabel}>Produkte</div>
-                </div>
-              </div>
-
-              <div className={styles.successStat}>
-                <div className={styles.successStatIcon}>
-                  <Receipt size={20} weight="fill" />
-                </div>
-                <div className={styles.successStatInfo}>
-                  <div className={styles.successStatValue}>€{(getTakeOutTotal() + getReplaceTotal()).toFixed(0)}</div>
-                  <div className={styles.successStatLabel}>Warenwert</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className={styles.successFooter}>
-            <button className={styles.successBtn} onClick={handleCloseConfirmation}>
-              Zurück zum Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Main Modal
-  return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <Receipt size={22} weight="duotone" className={styles.headerIcon} />
-            <div>
-              <h2>Vorverkauf</h2>
-              <p>Produkte tauschen</p>
-            </div>
-          </div>
-          <button className={styles.closeBtn} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className={styles.content}>
-          {/* Market Selection */}
-          <div className={styles.field}>
-            <label>Markt</label>
-            <div className={styles.dropdown} ref={marketDropdownRef}>
-              <button
-                className={`${styles.dropdownTrigger} ${selectedMarketId ? styles.hasValue : ''}`}
-                onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
-              >
-                <span>
-                  {selectedMarketId ? (() => {
-                    const m = allMarkets.find(m => m.id === selectedMarketId);
-                    return m ? `${m.chain} · ${m.address}` : 'Wählen...';
-                  })() : 'Markt wählen...'}
-                </span>
-                <CaretDown size={14} className={isMarketDropdownOpen ? styles.caretOpen : ''} />
-              </button>
-
-              {isMarketDropdownOpen && (
-                <div className={styles.dropdownPanel}>
-                  <div className={styles.dropdownSearch}>
-                    <MagnifyingGlass size={14} />
+              ) : (
+                <>
+                  <div className={styles.searchWrapper}>
+                    <MagnifyingGlass size={18} className={styles.searchIcon} />
                     <input
                       type="text"
-                      placeholder="Suchen..."
+                      className={styles.searchInput}
+                      placeholder="Markt suchen..."
                       value={marketSearchQuery}
                       onChange={(e) => setMarketSearchQuery(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-                  <div className={styles.dropdownList}>
-                    {glMarkets.length > 0 && (
-                      <div className={styles.dropdownSectionLabel}>Meine Märkte</div>
-                    )}
-                    {glMarkets.map((market) => (
+
+                  <div className={styles.marketsList}>
+                    {filteredMarkets.map(market => (
                       <button
                         key={market.id}
-                        className={styles.dropdownOption}
-                        onClick={() => {
-                          setSelectedMarketId(market.id);
-                          setIsMarketDropdownOpen(false);
-                          setMarketSearchQuery('');
-                        }}
+                        className={`${styles.marketItem} ${selectedMarketId === market.id ? styles.marketSelected : ''}`}
+                        onClick={() => handleSelectMarket(market.id)}
                       >
-                        <strong>{market.chain}</strong>
-                        <span>{market.address}, {market.city}</span>
-                      </button>
-                    ))}
-                    {otherMarkets.length > 0 && (
-                      <div className={styles.dropdownSectionLabel}>Andere Märkte</div>
-                    )}
-                    {otherMarkets.map((market) => (
-                      <button
-                        key={market.id}
-                        className={`${styles.dropdownOption} ${styles.otherMarketOption}`}
-                        onClick={() => {
-                          setSelectedMarketId(market.id);
-                          setIsMarketDropdownOpen(false);
-                          setMarketSearchQuery('');
-                        }}
-                      >
-                        <strong>{market.chain}</strong>
-                        <span>{market.address}, {market.city}</span>
+                        <div className={styles.marketInfo}>
+                          <div className={styles.marketName}>{market.name}</div>
+                          <div className={styles.marketAddress}>{market.address}, {market.city}</div>
+                        </div>
+                        <div className={styles.marketChain}>{market.chain}</div>
+                        {selectedMarketId === market.id && (
+                          <div className={styles.marketCheck}>
+                            <Check size={16} weight="bold" />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
-                </div>
+                </>
               )}
             </div>
-          </div>
-
-          {/* Take Out Products */}
-          <div className={styles.field}>
-            <label>Entnehmen <span className={styles.labelHint}>(Was raus?)</span></label>
-            <div className={styles.dropdown} ref={takeOutDropdownRef}>
-              <button
-                className={styles.dropdownTrigger}
-                onClick={() => setIsTakeOutDropdownOpen(!isTakeOutDropdownOpen)}
-              >
-                <Plus size={14} />
-                <span>Produkt hinzufügen</span>
-                <CaretDown size={14} className={isTakeOutDropdownOpen ? styles.caretOpen : ''} />
-              </button>
-
-              {isTakeOutDropdownOpen && (
-                <div className={styles.dropdownPanel}>
-                  <div className={styles.dropdownSearch}>
-                    <MagnifyingGlass size={14} />
-                    <input
-                      ref={takeOutSearchRef}
-                      type="text"
-                      placeholder="Produkt suchen..."
-                      value={takeOutSearchQuery}
-                      onChange={(e) => setTakeOutSearchQuery(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <div className={styles.dropdownList}>
-                    {filteredTakeOutProducts.map((product) => (
-                      <button
-                        key={product.id}
-                        className={styles.dropdownOption}
-                        onClick={() => handleAddTakeOut(product)}
-                      >
-                        <strong>{product.name}</strong>
-                        <span>{product.weight || product.content} · {formatPrice(product.price)}</span>
-                      </button>
-                    ))}
-                  </div>
+          ) : step === 'confirmation' ? (
+            /* Confirmation View */
+            <div className={styles.confirmationSection}>
+              <div className={styles.confirmSummaryBox}>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Kampagne</span>
+                  <span className={styles.confirmSummaryValue}>{selectedWave?.name}</span>
                 </div>
-              )}
-            </div>
-
-            {takeOutProducts.length > 0 && (
-              <div className={styles.productsList}>
-                {takeOutProducts.map(p => (
-                  <div key={p.product.id} className={styles.productRow}>
-                    <button className={styles.removeBtn} onClick={() => handleRemoveTakeOut(p.product.id)}>
-                      <X size={12} />
-                    </button>
-                    <div className={styles.productInfo}>
-                      <span className={styles.productName}>{p.product.name}</span>
-                      <span className={styles.productMeta}>{p.product.weight || p.product.content}</span>
-                    </div>
-                    <span className={styles.productPrice}>{formatPrice(p.product.price * p.quantity)}</span>
-                    <div className={styles.quantityControls}>
-                      <button className={styles.quantityBtn} onClick={() => handleUpdateTakeOutQty(p.product.id, -1)}>
-                        <Minus size={14} weight="bold" />
-                      </button>
-                      <span className={styles.quantityValue}>{p.quantity}</span>
-                      <button className={styles.quantityBtn} onClick={() => handleUpdateTakeOutQty(p.product.id, 1)}>
-                        <Plus size={14} weight="bold" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <div className={styles.productsTotal}>
-                  <span>Summe</span>
-                  <strong>{formatPrice(getTakeOutTotal())}</strong>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Markt</span>
+                  <span className={styles.confirmSummaryValue}>{selectedMarket?.name}</span>
+                </div>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Produkte</span>
+                  <span className={styles.confirmSummaryValue}>{selectedProducts.length}</span>
+                </div>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Gesamtwert</span>
+                  <span className={styles.confirmSummaryValue}>{formatPrice(totalValue)}</span>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Replace With Products */}
-          <div className={styles.field}>
-            <label>Ersetzen <span className={styles.labelHint}>(Was rein? Optional)</span></label>
-            <div className={styles.dropdown} ref={replaceDropdownRef}>
-              <button
-                className={styles.dropdownTrigger}
-                onClick={() => setIsReplaceDropdownOpen(!isReplaceDropdownOpen)}
-              >
-                <Plus size={14} />
-                <span>Ersatzprodukt hinzufügen</span>
-                <CaretDown size={14} className={isReplaceDropdownOpen ? styles.caretOpen : ''} />
-              </button>
-
-              {isReplaceDropdownOpen && (
-                <div className={styles.dropdownPanel}>
-                  <div className={styles.dropdownSearch}>
-                    <MagnifyingGlass size={14} />
-                    <input
-                      ref={replaceSearchRef}
-                      type="text"
-                      placeholder="Produkt suchen..."
-                      value={replaceSearchQuery}
-                      onChange={(e) => setReplaceSearchQuery(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+              <div className={styles.confirmProductsSection}>
+                <h3 className={styles.sectionTitle}>Produkte</h3>
+                {selectedProducts.map(p => (
+                  <div key={p.product.id} className={styles.confirmProductItem}>
+                    <div className={styles.confirmProductInfo}>
+                      <div className={styles.confirmProductName}>{p.product.name}</div>
+                      <div className={styles.confirmProductMeta}>
+                        {p.product.weight} • {useIndividualReasons ? p.reason : globalReason}
+                      </div>
+                    </div>
+                    <div className={styles.confirmProductQuantity}>{p.quantity}x</div>
+                    <div className={styles.confirmProductPrice}>{formatPrice(p.product.price * p.quantity)}</div>
                   </div>
-                  <div className={styles.dropdownList}>
-                    {filteredReplaceProducts.map((product) => (
+                ))}
+              </div>
+
+              {/* Market Confirmation Dropdown */}
+              <div className={styles.marketConfirmSection}>
+                <label className={styles.marketConfirmLabel}>Bist du in diesem Markt?</label>
+                <div className={`${styles.dropdownContainer} ${isMarketDropdownOpen ? styles.dropdownOpen : ''}`} ref={marketDropdownRef}>
+                  <button
+                    className={`${styles.dropdownButton} ${isMarketDropdownOpen ? styles.open : ''}`}
+                    onClick={() => setIsMarketDropdownOpen(!isMarketDropdownOpen)}
+                  >
+                    <Storefront size={16} weight="bold" />
+                    <span>{selectedMarket?.name}</span>
+                    <CaretDown size={16} className={styles.dropdownChevron} />
+                  </button>
+
+                  {isMarketDropdownOpen && (
+                    <div className={styles.dropdownMenu}>
+                      <div className={styles.searchContainer}>
+                        <MagnifyingGlass size={16} className={styles.searchIcon} />
+                        <input
+                          ref={marketSearchInputRef}
+                          type="text"
+                          className={styles.searchInput}
+                          placeholder="Markt suchen..."
+                          value={marketSearchQuery}
+                          onChange={(e) => setMarketSearchQuery(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      <div className={styles.dropdownScrollArea}>
+                        {filteredMarkets.map(market => (
+                          <button
+                            key={market.id}
+                            className={`${styles.dropdownItem} ${selectedMarketId === market.id ? styles.selected : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMarketId(market.id);
+                              setIsMarketDropdownOpen(false);
+                            }}
+                          >
+                            <div className={styles.productInfo}>
+                              <div className={styles.productName}>{market.name}</div>
+                              <div className={styles.productDetails}>{market.address}, {market.city}</div>
+                            </div>
+                            {selectedMarketId === market.id && (
+                              <div className={styles.productCheck}>
+                                <Check size={16} weight="bold" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Wave Selection View */
+            <div className={styles.wavesSection}>
+              {isLoadingWaves ? (
+                <div className={styles.loadingState}>Kampagnen laden...</div>
+              ) : waves.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <TrendUp size={48} weight="regular" />
+                  <p>Keine aktiven Vorverkauf-Kampagnen verfügbar.</p>
+                </div>
+              ) : (
+                <div className={styles.wavesList}>
+                  {waves.map(wave => {
+                    const statusConfig = getStatusConfig(wave.status);
+                    return (
                       <button
-                        key={product.id}
-                        className={styles.dropdownOption}
-                        onClick={() => handleAddReplace(product)}
+                        key={wave.id}
+                        className={`${styles.waveCard} ${selectedWaveId === wave.id ? styles.waveSelected : ''}`}
+                        onClick={() => handleSelectWave(wave.id)}
                       >
-                        <strong>{product.name}</strong>
-                        <span>{product.weight || product.content} · {formatPrice(product.price)}</span>
+                        {wave.image && (
+                          <div className={styles.waveImageContainer}>
+                            <img src={wave.image} alt={wave.name} className={styles.waveImage} />
+                          </div>
+                        )}
+                        <div className={styles.waveInfo}>
+                          <div className={styles.waveHeader}>
+                            <span className={styles.waveName}>{wave.name}</span>
+                            <span 
+                              className={styles.wavePill}
+                              style={{ 
+                                backgroundColor: statusConfig.bgColor,
+                                color: statusConfig.color
+                              }}
+                            >
+                              {wave.status === 'active' ? (
+                                <TrendUp size={12} weight="bold" />
+                              ) : (
+                                <Clock size={12} weight="bold" />
+                              )}
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                          <div className={styles.waveDateRange}>
+                            <CalendarBlank size={14} weight="regular" />
+                            <span>{formatDateRange(wave.startDate, wave.endDate)}</span>
+                          </div>
+                        </div>
+                        {selectedWaveId === wave.id && (
+                          <div className={styles.waveCheck}>
+                            <Check size={18} weight="bold" />
+                          </div>
+                        )}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
+          )}
+        </div>
 
-            {replaceWithProducts.length > 0 && (
-              <div className={`${styles.productsList} ${styles.replaceList}`}>
-                {replaceWithProducts.map(p => (
-                  <div key={p.product.id} className={styles.productRow}>
-                    <button className={styles.removeBtn} onClick={() => handleRemoveReplace(p.product.id)}>
-                      <X size={12} />
-                    </button>
-                    <div className={styles.productInfo}>
-                      <span className={styles.productName}>{p.product.name}</span>
-                      <span className={styles.productMeta}>{p.product.weight || p.product.content}</span>
-                    </div>
-                    <span className={styles.productPrice}>{formatPrice(p.product.price * p.quantity)}</span>
-                    <div className={styles.quantityControls}>
-                      <button className={styles.quantityBtn} onClick={() => handleUpdateReplaceQty(p.product.id, -1)}>
-                        <Minus size={14} weight="bold" />
-                      </button>
-                      <span className={styles.quantityValue}>{p.quantity}</span>
-                      <button className={styles.quantityBtn} onClick={() => handleUpdateReplaceQty(p.product.id, 1)}>
-                        <Plus size={14} weight="bold" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                <div className={styles.productsTotal}>
-                  <span>Summe</span>
-                  <strong>{formatPrice(getReplaceTotal())}</strong>
-                </div>
-              </div>
+        {/* Footer */}
+        {step !== 'success' && (
+          <div className={styles.footer}>
+            {step !== 'waves' && (
+              <button className={styles.btnSecondary} onClick={handleBack}>
+                Zurück
+              </button>
+            )}
+            <div className={styles.footerSpacer} />
+            {step === 'waves' && (
+              <button
+                className={`${styles.btnPrimary} ${!selectedWaveId ? styles.btnDisabled : ''}`}
+                onClick={handleWeiterToMarkets}
+                disabled={!selectedWaveId}
+              >
+                Weiter
+              </button>
+            )}
+            {step === 'markets' && (
+              <button
+                className={`${styles.btnPrimary} ${!selectedMarketId ? styles.btnDisabled : ''}`}
+                onClick={handleWeiterToProducts}
+                disabled={!selectedMarketId}
+              >
+                Weiter
+              </button>
+            )}
+            {step === 'products' && (
+              <button
+                className={`${styles.btnPrimary} ${selectedProducts.length === 0 || !allProductsHaveReasons ? styles.btnDisabled : ''}`}
+                onClick={handleWeiterToConfirmation}
+                disabled={selectedProducts.length === 0 || !allProductsHaveReasons}
+              >
+                Weiter
+              </button>
+            )}
+            {step === 'confirmation' && (
+              <button
+                className={`${styles.btnSuccess} ${isSubmitting ? styles.btnDisabled : ''}`}
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Speichern...' : 'Bestätigen'}
+              </button>
             )}
           </div>
-
-          {/* Reason Selection */}
-          <div className={styles.field}>
-            <label>Grund</label>
-            <div className={styles.reasonButtons}>
-              {reasons.map(r => (
-                <button
-                  key={r.value}
-                  className={`${styles.reasonBtn} ${selectedReason === r.value ? styles.reasonActive : ''}`}
-                  onClick={() => setSelectedReason(r.value)}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.footer}>
-          <button className={styles.btnSecondary} onClick={onClose}>
-            Abbrechen
-          </button>
-          <button
-            className={styles.btnPrimary}
-            onClick={handleSubmit}
-            disabled={takeOutProducts.length === 0 || !selectedReason || !selectedMarketId || isLoading}
-          >
-            Erfassen
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
