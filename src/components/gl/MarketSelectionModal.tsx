@@ -3,6 +3,7 @@ import { X, CaretDown, Check, MapPin, Path, MagnifyingGlass, ArrowDown, Car, Tra
 import type { Market, TourRoute } from '../../types/market-types';
 import { AnimatedListWrapper } from './AnimatedListWrapper';
 import { RingLoader } from 'react-spinners';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   DndContext,
   closestCenter,
@@ -114,6 +115,7 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
   onStartVisit,
   onStartTour,
 }) => {
+  const { user } = useAuth();
   const [mode, setMode] = useState<Mode>('single');
   const [tourStep, setTourStep] = useState<TourStep>('selection');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -166,6 +168,24 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
     return a.name.localeCompare(b.name);
   });
 
+  // Split into "Meine Märkte" and "Andere Märkte"
+  const myMarkets = useMemo(() => 
+    sortedMarkets.filter(m => m.gebietsleiter === user?.id),
+    [sortedMarkets, user?.id]
+  );
+  
+  const otherMarkets = useMemo(() => 
+    sortedMarkets.filter(m => m.gebietsleiter !== user?.id),
+    [sortedMarkets, user?.id]
+  );
+
+  // Further split by completed status
+  const myUncompletedMarkets = myMarkets.filter(m => !m.isCompleted);
+  const myCompletedMarkets = myMarkets.filter(m => m.isCompleted);
+  const otherUncompletedMarkets = otherMarkets.filter(m => !m.isCompleted);
+  const otherCompletedMarkets = otherMarkets.filter(m => m.isCompleted);
+
+  // Keep for backwards compatibility
   const uncompletedMarkets = sortedMarkets.filter(m => !m.isCompleted);
   const completedMarkets = sortedMarkets.filter(m => m.isCompleted);
 
@@ -431,14 +451,54 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
                   />
                 </div>
 
-                {/* Uncompleted Markets */}
-                {uncompletedMarkets.length > 0 && (
-                  <div className={styles.dropdownSection}>
-                    <div className={styles.sectionLabel}>Verfügbare Märkte</div>
-                    {uncompletedMarkets.map((market) => (
+                {/* Meine Märkte */}
+                {myMarkets.length > 0 && (
+                  <>
+                    <div className={styles.dropdownSection}>
+                      <div className={styles.sectionLabel}>Meine Märkte</div>
+                      {myUncompletedMarkets.map((market) => (
+                        <button
+                          key={market.id}
+                          className={styles.dropdownItem}
+                          onClick={() => handleMarketSelect(market.id)}
+                        >
+                          <div className={styles.itemInfo}>
+                            <div className={styles.itemName}>{market.chain}</div>
+                            <div className={styles.itemAddress}>
+                              {market.address}, {market.postalCode} {market.city}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {myCompletedMarkets.map((market) => (
+                        <button
+                          key={market.id}
+                          className={`${styles.dropdownItem} ${styles.completed}`}
+                          onClick={() => handleMarketSelect(market.id)}
+                        >
+                          <div className={styles.completedCheck}>
+                            <Check size={14} weight="bold" color="white" />
+                          </div>
+                          <div className={styles.itemInfo}>
+                            <div className={styles.itemName}>{market.chain}</div>
+                            <div className={styles.itemAddress}>
+                              {market.address}, {market.postalCode} {market.city}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Andere Märkte */}
+                {otherMarkets.length > 0 && (
+                  <div className={`${styles.dropdownSection} ${styles.otherMarketsSection}`}>
+                    <div className={styles.sectionLabel}>Andere Märkte</div>
+                    {otherUncompletedMarkets.map((market) => (
                       <button
                         key={market.id}
-                        className={styles.dropdownItem}
+                        className={`${styles.dropdownItem} ${styles.otherMarket}`}
                         onClick={() => handleMarketSelect(market.id)}
                       >
                         <div className={styles.itemInfo}>
@@ -449,17 +509,10 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
                         </div>
                       </button>
                     ))}
-                  </div>
-                )}
-
-                {/* Completed Markets */}
-                {completedMarkets.length > 0 && (
-                  <div className={styles.dropdownSection}>
-                    <div className={styles.sectionLabel}>Heute bereits besucht</div>
-                    {completedMarkets.map((market) => (
+                    {otherCompletedMarkets.map((market) => (
                       <button
                         key={market.id}
-                        className={`${styles.dropdownItem} ${styles.completed}`}
+                        className={`${styles.dropdownItem} ${styles.completed} ${styles.otherMarket}`}
                         onClick={() => handleMarketSelect(market.id)}
                       >
                         <div className={styles.completedCheck}>
@@ -527,11 +580,11 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
                       />
                     </div>
 
-                    {/* Uncompleted Markets */}
-                    {uncompletedMarkets.length > 0 && (
+                    {/* Meine Märkte */}
+                    {myMarkets.length > 0 && (
                       <div className={styles.dropdownSection}>
-                        <div className={styles.sectionLabel}>Verfügbare Märkte</div>
-                        {uncompletedMarkets.map((market) => (
+                        <div className={styles.sectionLabel}>Meine Märkte</div>
+                        {myUncompletedMarkets.map((market) => (
                           <button
                             key={market.id}
                             className={`${styles.dropdownItem} ${
@@ -552,17 +605,57 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
                             </div>
                           </button>
                         ))}
-                      </div>
-                    )}
-
-                    {/* Completed Markets */}
-                    {completedMarkets.length > 0 && (
-                      <div className={styles.dropdownSection}>
-                        <div className={styles.sectionLabel}>Heute bereits besucht</div>
-                        {completedMarkets.map((market) => (
+                        {myCompletedMarkets.map((market) => (
                           <button
                             key={market.id}
                             className={`${styles.dropdownItem} ${styles.completed} ${
+                              selectedMarkets.includes(market.id) ? styles.selected : ''
+                            }`}
+                            onClick={() => handleMarketSelect(market.id)}
+                          >
+                            <div className={styles.completedCheck}>
+                              <Check size={14} weight="bold" color="white" />
+                            </div>
+                            <div className={styles.itemInfo}>
+                              <div className={styles.itemName}>{market.chain}</div>
+                              <div className={styles.itemAddress}>
+                                {market.address}, {market.postalCode} {market.city}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Andere Märkte */}
+                    {otherMarkets.length > 0 && (
+                      <div className={`${styles.dropdownSection} ${styles.otherMarketsSection}`}>
+                        <div className={styles.sectionLabel}>Andere Märkte</div>
+                        {otherUncompletedMarkets.map((market) => (
+                          <button
+                            key={market.id}
+                            className={`${styles.dropdownItem} ${styles.otherMarket} ${
+                              selectedMarkets.includes(market.id) ? styles.selected : ''
+                            }`}
+                            onClick={() => handleMarketSelect(market.id)}
+                          >
+                            <div className={styles.itemCheck}>
+                              {selectedMarkets.includes(market.id) && (
+                                <Check size={14} weight="bold" color="white" />
+                              )}
+                            </div>
+                            <div className={styles.itemInfo}>
+                              <div className={styles.itemName}>{market.chain}</div>
+                              <div className={styles.itemAddress}>
+                                {market.address}, {market.postalCode} {market.city}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                        {otherCompletedMarkets.map((market) => (
+                          <button
+                            key={market.id}
+                            className={`${styles.dropdownItem} ${styles.completed} ${styles.otherMarket} ${
                               selectedMarkets.includes(market.id) ? styles.selected : ''
                             }`}
                             onClick={() => handleMarketSelect(market.id)}

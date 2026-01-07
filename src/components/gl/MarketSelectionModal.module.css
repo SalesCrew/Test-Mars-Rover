@@ -277,6 +277,26 @@
   border-bottom: 1px solid var(--color-stroke);
 }
 
+.otherMarketsSection {
+  opacity: 0.7;
+}
+
+.otherMarketsSection:hover {
+  opacity: 0.85;
+}
+
+.otherMarket {
+  opacity: 0.75;
+}
+
+.otherMarket:hover {
+  opacity: 1;
+}
+
+.otherMarket.selected {
+  opacity: 1;
+}
+
 .sectionLabel {
   padding: var(--space-sm) var(--space-lg);
   font-size: var(--font-size-xs);
