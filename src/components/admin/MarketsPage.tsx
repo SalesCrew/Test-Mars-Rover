@@ -184,7 +184,8 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
   const uniqueChains = [...new Set(markets.map(m => m.chain))].sort();
   const uniqueIDs = [...new Set(markets.map(m => m.internalId))].sort();
   const uniqueAddresses = [...new Set(markets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
-  const uniqueGLs = [...new Set([...markets.map(m => m.gebietsleiterName).filter(Boolean), ...glNames.filter(Boolean)])].sort() as string[];
+  // Only use GL names from the database to avoid duplicate entries from variant spellings in markets
+  const uniqueGLs = [...new Set(glNames.filter(Boolean))].sort() as string[];
   const uniqueSubgroups = [...new Set(markets.map(m => m.subgroup).filter(Boolean))].sort();
   const statusOptions = ['Aktiv', 'Inaktiv'];
 
