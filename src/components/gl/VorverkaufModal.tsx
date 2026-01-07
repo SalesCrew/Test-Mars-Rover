@@ -189,6 +189,17 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     );
   }, [marketSearchQuery, waveMarkets]);
 
+  // Split markets into "Meine Märkte" and "Andere Märkte"
+  const myMarkets = useMemo(() => 
+    filteredMarkets.filter(m => m.gebietsleiter === user?.id), 
+    [filteredMarkets, user?.id]
+  );
+  
+  const otherMarkets = useMemo(() => 
+    filteredMarkets.filter(m => m.gebietsleiter !== user?.id), 
+    [filteredMarkets, user?.id]
+  );
+
   // Filter and group products by category
   const filteredProducts = useMemo(() => {
     const query = productSearchQuery.toLowerCase().trim();
@@ -682,24 +693,55 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
                   </div>
 
                   <div className={styles.marketsList}>
-                    {filteredMarkets.map(market => (
-                      <button
-                        key={market.id}
-                        className={`${styles.marketItem} ${selectedMarketId === market.id ? styles.marketSelected : ''}`}
-                        onClick={() => handleSelectMarket(market.id)}
-                      >
-                        <div className={styles.marketInfo}>
-                          <div className={styles.marketName}>{market.name}</div>
-                          <div className={styles.marketAddress}>{market.address}, {market.city}</div>
-                        </div>
-                        <div className={styles.marketChain}>{market.chain}</div>
-                        {selectedMarketId === market.id && (
-                          <div className={styles.marketCheck}>
-                            <Check size={16} weight="bold" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
+                    {/* Meine Märkte (GL's assigned markets) */}
+                    {myMarkets.length > 0 && (
+                      <div className={styles.marketsGroup}>
+                        <div className={styles.marketsGroupLabel}>Meine Märkte</div>
+                        {myMarkets.map(market => (
+                          <button
+                            key={market.id}
+                            className={`${styles.marketItem} ${selectedMarketId === market.id ? styles.marketSelected : ''}`}
+                            onClick={() => handleSelectMarket(market.id)}
+                          >
+                            <div className={styles.marketInfo}>
+                              <div className={styles.marketName}>{market.name}</div>
+                              <div className={styles.marketAddress}>{market.address}, {market.city}</div>
+                            </div>
+                            <div className={styles.marketChain}>{market.chain}</div>
+                            {selectedMarketId === market.id && (
+                              <div className={styles.marketCheck}>
+                                <Check size={16} weight="bold" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Andere Märkte (other markets) */}
+                    {otherMarkets.length > 0 && (
+                      <div className={styles.marketsGroup}>
+                        <div className={styles.marketsGroupLabel}>Andere Märkte</div>
+                        {otherMarkets.map(market => (
+                          <button
+                            key={market.id}
+                            className={`${styles.marketItem} ${styles.marketOther} ${selectedMarketId === market.id ? styles.marketSelected : ''}`}
+                            onClick={() => handleSelectMarket(market.id)}
+                          >
+                            <div className={styles.marketInfo}>
+                              <div className={styles.marketName}>{market.name}</div>
+                              <div className={styles.marketAddress}>{market.address}, {market.city}</div>
+                            </div>
+                            <div className={styles.marketChain}>{market.chain}</div>
+                            {selectedMarketId === market.id && (
+                              <div className={styles.marketCheck}>
+                                <Check size={16} weight="bold" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

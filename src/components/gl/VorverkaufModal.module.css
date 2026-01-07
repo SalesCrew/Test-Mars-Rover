@@ -2440,6 +2440,41 @@
   justify-content: center;
 }
 
+/* Market Groups */
+.marketsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.marketsGroup:not(:first-child) {
+  margin-top: 16px;
+}
+
+.marketsGroupLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 4px 4px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  margin-bottom: 4px;
+}
+
+/* Andere Märkte - lower opacity */
+.marketOther {
+  opacity: 0.65;
+}
+
+.marketOther:hover {
+  opacity: 0.85;
+}
+
+.marketOther.marketSelected {
+  opacity: 1;
+}
+
 /* Product Selection */
 .productSection {
   display: flex;

@@ -78,7 +78,7 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
       try {
         setIsLoadingMarkets(true);
         const dbMarkets = await marketService.getAllMarkets();
-        // Transform AdminMarket to Market type
+        // Transform AdminMarket to Market type (include gebietsleiter for clustering)
         const markets: Market[] = dbMarkets.map(m => ({
           id: m.id,
           name: m.name,
@@ -90,6 +90,7 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
           currentVisits: 0,
           lastVisitDate: '',
           isCompleted: false,
+          gebietsleiter: m.gebietsleiter, // Include GL assignment
         }));
         setAllMarkets(markets);
       } catch (error) {
@@ -131,15 +132,34 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     );
   }, [searchQuery, selectedVorbesteller, allMarkets]);
 
-  // Sort: completed at bottom
-  const sortedMarkets = [...filteredMarkets].sort((a, b) => {
-    if (a.isCompleted && !b.isCompleted) return 1;
-    if (!a.isCompleted && b.isCompleted) return -1;
-    return a.name.localeCompare(b.name);
-  });
+  // Split markets into "Meine Märkte" and "Andere Märkte"
+  const myMarkets = useMemo(() => 
+    filteredMarkets
+      .filter(m => m.gebietsleiter === user?.id)
+      .sort((a, b) => {
+        if (a.isCompleted && !b.isCompleted) return 1;
+        if (!a.isCompleted && b.isCompleted) return -1;
+        return a.name.localeCompare(b.name);
+      }), 
+    [filteredMarkets, user?.id]
+  );
+  
+  const otherMarkets = useMemo(() => 
+    filteredMarkets
+      .filter(m => m.gebietsleiter !== user?.id)
+      .sort((a, b) => {
+        if (a.isCompleted && !b.isCompleted) return 1;
+        if (!a.isCompleted && b.isCompleted) return -1;
+        return a.name.localeCompare(b.name);
+      }), 
+    [filteredMarkets, user?.id]
+  );
 
-  const uncompletedMarkets = sortedMarkets.filter(m => !m.isCompleted);
-  const completedMarkets = sortedMarkets.filter(m => m.isCompleted);
+  // Keep for compatibility
+  const uncompletedMarkets = myMarkets.filter(m => !m.isCompleted);
+  const completedMarkets = myMarkets.filter(m => m.isCompleted);
+  const otherUncompletedMarkets = otherMarkets.filter(m => !m.isCompleted);
+  const otherCompletedMarkets = otherMarkets.filter(m => m.isCompleted);
 
   const handleSelectMarket = (market: Market) => {
     setSelectedMarket(market);
@@ -644,54 +664,119 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
 
               {/* Markets List */}
               <div className={styles.marketsList}>
-                {/* Uncompleted Markets */}
-                {uncompletedMarkets.length > 0 && (
-                  <div className={styles.marketsGroup}>
-                    <div className={styles.marketsGroupLabel}>Verfügbar</div>
-                    {uncompletedMarkets.map((market) => {
-                      const isSelected = selectedMarket?.id === market.id;
-                      return (
-                        <div
-                          key={market.id}
-                          className={`${styles.marketItem} ${isSelected ? styles.selected : ''}`}
-                          onClick={() => handleSelectMarket(market)}
-                        >
-                          <div className={styles.marketInfo}>
-                            <div className={styles.marketName}>{market.name}</div>
-                            <div className={styles.marketMeta}>
-                              {market.address}, {market.postalCode} {market.city}
+                {/* Meine Märkte Section */}
+                {myMarkets.length > 0 && (
+                  <div className={styles.marketsSection}>
+                    <div className={styles.marketsSectionLabel}>Meine Märkte</div>
+                    
+                    {/* Uncompleted */}
+                    {uncompletedMarkets.length > 0 && (
+                      <div className={styles.marketsGroup}>
+                        <div className={styles.marketsGroupLabel}>Verfügbar</div>
+                        {uncompletedMarkets.map((market) => {
+                          const isSelected = selectedMarket?.id === market.id;
+                          return (
+                            <div
+                              key={market.id}
+                              className={`${styles.marketItem} ${isSelected ? styles.selected : ''}`}
+                              onClick={() => handleSelectMarket(market)}
+                            >
+                              <div className={styles.marketInfo}>
+                                <div className={styles.marketName}>{market.name}</div>
+                                <div className={styles.marketMeta}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Completed */}
+                    {completedMarkets.length > 0 && (
+                      <div className={styles.marketsGroup}>
+                        <div className={styles.marketsGroupLabel}>Abgeschlossen</div>
+                        {completedMarkets.map((market) => {
+                          const isSelected = selectedMarket?.id === market.id;
+                          return (
+                            <div
+                              key={market.id}
+                              className={`${styles.marketItem} ${styles.completed} ${isSelected ? styles.selected : ''}`}
+                              onClick={() => handleSelectMarket(market)}
+                            >
+                              <div className={styles.completedCheck}>
+                                <Check size={12} weight="bold" />
+                              </div>
+                              <div className={styles.marketInfo}>
+                                <div className={styles.marketName}>{market.name}</div>
+                                <div className={styles.marketMeta}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Completed Markets */}
-                {completedMarkets.length > 0 && (
-                  <div className={styles.marketsGroup}>
-                    <div className={styles.marketsGroupLabel}>Abgeschlossen</div>
-                    {completedMarkets.map((market) => {
-                      const isSelected = selectedMarket?.id === market.id;
-                      return (
-                        <div
-                          key={market.id}
-                          className={`${styles.marketItem} ${styles.completed} ${isSelected ? styles.selected : ''}`}
-                          onClick={() => handleSelectMarket(market)}
-                        >
-                          <div className={styles.completedCheck}>
-                            <Check size={12} weight="bold" />
-                          </div>
-                          <div className={styles.marketInfo}>
-                            <div className={styles.marketName}>{market.name}</div>
-                            <div className={styles.marketMeta}>
-                              {market.address}, {market.postalCode} {market.city}
+                {/* Andere Märkte Section */}
+                {otherMarkets.length > 0 && (
+                  <div className={`${styles.marketsSection} ${styles.otherMarketsSection}`}>
+                    <div className={styles.marketsSectionLabel}>Andere Märkte</div>
+                    
+                    {/* Uncompleted */}
+                    {otherUncompletedMarkets.length > 0 && (
+                      <div className={styles.marketsGroup}>
+                        <div className={styles.marketsGroupLabel}>Verfügbar</div>
+                        {otherUncompletedMarkets.map((market) => {
+                          const isSelected = selectedMarket?.id === market.id;
+                          return (
+                            <div
+                              key={market.id}
+                              className={`${styles.marketItem} ${styles.otherMarket} ${isSelected ? styles.selected : ''}`}
+                              onClick={() => handleSelectMarket(market)}
+                            >
+                              <div className={styles.marketInfo}>
+                                <div className={styles.marketName}>{market.name}</div>
+                                <div className={styles.marketMeta}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Completed */}
+                    {otherCompletedMarkets.length > 0 && (
+                      <div className={styles.marketsGroup}>
+                        <div className={styles.marketsGroupLabel}>Abgeschlossen</div>
+                        {otherCompletedMarkets.map((market) => {
+                          const isSelected = selectedMarket?.id === market.id;
+                          return (
+                            <div
+                              key={market.id}
+                              className={`${styles.marketItem} ${styles.completed} ${styles.otherMarket} ${isSelected ? styles.selected : ''}`}
+                              onClick={() => handleSelectMarket(market)}
+                            >
+                              <div className={styles.completedCheck}>
+                                <Check size={12} weight="bold" />
+                              </div>
+                              <div className={styles.marketInfo}>
+                                <div className={styles.marketName}>{market.name}</div>
+                                <div className={styles.marketMeta}>
+                                  {market.address}, {market.postalCode} {market.city}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
