@@ -814,6 +814,12 @@
   padding: 4px 8px;
   background: rgba(59, 130, 246, 0.08);
   border-radius: 6px;
+  max-width: 140px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .historiePreviousGl {
@@ -823,6 +829,12 @@
   padding: 4px 8px;
   background: rgba(107, 114, 128, 0.08);
   border-radius: 6px;
+  max-width: 140px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .historieEmpty svg {
