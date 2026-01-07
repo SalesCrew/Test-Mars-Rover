@@ -419,15 +419,18 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
           {step === 'success' ? (
             /* Success Confirmation */
             <div className={styles.successContent}>
+              {/* Success Icon */}
               <div className={styles.successIconWrapper}>
                 <CheckCircle size={72} weight="fill" className={styles.successCheckIcon} />
               </div>
 
+              {/* Title */}
               <div className={styles.successHeader}>
-                <h2 className={styles.successTitle}>Erfolgreich erfasst!</h2>
-                <p className={styles.successSubtext}>Vorverkauf wurde dokumentiert</p>
+                <h2 className={styles.successTitle}>Hervorragende Leistung!</h2>
+                <p className={styles.successSubtext}>Vorverkauf erfolgreich dokumentiert</p>
               </div>
 
+              {/* Stats Grid - 2 columns */}
               <div className={styles.successStats}>
                 <div className={styles.successStat}>
                   <div className={styles.successStatIcon}>
@@ -435,7 +438,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
                   </div>
                   <div className={styles.successStatInfo}>
                     <div className={styles.successStatValue}>{totalQuantity}</div>
-                    <div className={styles.successStatLabel}>Produkte</div>
+                    <div className={styles.successStatLabel}>Einheiten</div>
                   </div>
                 </div>
 
@@ -445,48 +448,48 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
                   </div>
                   <div className={styles.successStatInfo}>
                     <div className={styles.successStatValue}>{formatPrice(totalValue)}</div>
-                    <div className={styles.successStatLabel}>Warenwert</div>
+                    <div className={styles.successStatLabel}>Gesamtwert</div>
                   </div>
                 </div>
               </div>
 
+              {/* Details Section */}
               <div className={styles.successDetailsSection}>
                 <h3 className={styles.successSectionTitle}>Details</h3>
                 <div className={styles.successDetailsList}>
-                  <div className={styles.successDetailRow}>
+                  <div className={styles.successDetailCard}>
                     <div className={styles.successDetailCheck}>
                       <Check size={14} weight="bold" />
                     </div>
                     <div className={styles.successDetailText}>{selectedMarket?.name}</div>
                   </div>
-                  {selectedProducts.slice(0, 3).map(p => (
-                    <div key={p.product.id} className={styles.successDetailRow}>
+                  <div className={styles.successDetailCard}>
+                    <div className={styles.successDetailCheck}>
+                      <Check size={14} weight="bold" />
+                    </div>
+                    <div className={styles.successDetailText}>{selectedWave?.name}</div>
+                  </div>
+                  {selectedProducts.slice(0, 2).map(p => (
+                    <div key={p.product.id} className={styles.successDetailCard}>
                       <div className={styles.successDetailCheck}>
                         <Check size={14} weight="bold" />
                       </div>
                       <div className={styles.successDetailText}>
-                        {p.product.name}: {p.quantity}x ({useIndividualReasons ? p.reason : globalReason})
+                        {p.product.name}: {p.quantity}x
                       </div>
                     </div>
                   ))}
-                  {selectedProducts.length > 3 && (
-                    <div className={styles.successDetailRow}>
+                  {selectedProducts.length > 2 && (
+                    <div className={styles.successDetailCard}>
                       <div className={styles.successDetailCheck}>
                         <Check size={14} weight="bold" />
                       </div>
                       <div className={styles.successDetailText}>
-                        +{selectedProducts.length - 3} weitere Produkte
+                        +{selectedProducts.length - 2} weitere Produkte
                       </div>
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className={styles.successFooter}>
-                <button className={styles.successBtn} onClick={handleClose}>
-                  <CheckCircle size={18} weight="bold" />
-                  <span>Fertig</span>
-                </button>
               </div>
             </div>
           ) : step === 'products' ? (
@@ -749,42 +752,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
           ) : step === 'confirmation' ? (
             /* Confirmation View */
             <div className={styles.confirmationSection}>
-              <div className={styles.confirmSummaryBox}>
-                <div className={styles.confirmSummaryRow}>
-                  <span className={styles.confirmSummaryLabel}>Kampagne</span>
-                  <span className={styles.confirmSummaryValue}>{selectedWave?.name}</span>
-                </div>
-                <div className={styles.confirmSummaryRow}>
-                  <span className={styles.confirmSummaryLabel}>Markt</span>
-                  <span className={styles.confirmSummaryValue}>{selectedMarket?.name}</span>
-                </div>
-                <div className={styles.confirmSummaryRow}>
-                  <span className={styles.confirmSummaryLabel}>Produkte</span>
-                  <span className={styles.confirmSummaryValue}>{selectedProducts.length}</span>
-                </div>
-                <div className={styles.confirmSummaryRow}>
-                  <span className={styles.confirmSummaryLabel}>Gesamtwert</span>
-                  <span className={styles.confirmSummaryValue}>{formatPrice(totalValue)}</span>
-                </div>
-              </div>
-
-              <div className={styles.confirmProductsSection}>
-                <h3 className={styles.sectionTitle}>Produkte</h3>
-                {selectedProducts.map(p => (
-                  <div key={p.product.id} className={styles.confirmProductItem}>
-                    <div className={styles.confirmProductInfo}>
-                      <div className={styles.confirmProductName}>{p.product.name}</div>
-                      <div className={styles.confirmProductMeta}>
-                        {p.product.weight} • {useIndividualReasons ? p.reason : globalReason}
-                      </div>
-                    </div>
-                    <div className={styles.confirmProductQuantity}>{p.quantity}x</div>
-                    <div className={styles.confirmProductPrice}>{formatPrice(p.product.price * p.quantity)}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Market Confirmation Dropdown */}
+              {/* Market Confirmation - ON TOP */}
               <div className={styles.marketConfirmSection}>
                 <label className={styles.marketConfirmLabel}>Bist du in diesem Markt?</label>
                 <div className={`${styles.dropdownContainer} ${isMarketDropdownOpen ? styles.dropdownOpen : ''}`} ref={marketDropdownRef}>
@@ -813,30 +781,102 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
                       </div>
 
                       <div className={styles.dropdownScrollArea}>
-                        {filteredMarkets.map(market => (
-                          <button
-                            key={market.id}
-                            className={`${styles.dropdownItem} ${selectedMarketId === market.id ? styles.selected : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedMarketId(market.id);
-                              setIsMarketDropdownOpen(false);
-                            }}
-                          >
-                            <div className={styles.productInfo}>
-                              <div className={styles.productName}>{market.name}</div>
-                              <div className={styles.productDetails}>{market.address}, {market.city}</div>
-                            </div>
-                            {selectedMarketId === market.id && (
-                              <div className={styles.productCheck}>
-                                <Check size={16} weight="bold" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
+                        {/* Meine Märkte */}
+                        {myMarkets.length > 0 && (
+                          <div className={styles.dropdownSection}>
+                            <div className={styles.categoryLabel}>Meine Märkte</div>
+                            {myMarkets.map(market => (
+                              <button
+                                key={market.id}
+                                className={`${styles.dropdownItem} ${selectedMarketId === market.id ? styles.selected : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMarketId(market.id);
+                                  setIsMarketDropdownOpen(false);
+                                }}
+                              >
+                                <div className={styles.productInfo}>
+                                  <div className={styles.productName}>{market.name}</div>
+                                  <div className={styles.productDetails}>{market.address}, {market.city}</div>
+                                </div>
+                                {selectedMarketId === market.id && (
+                                  <div className={styles.productCheck}>
+                                    <Check size={16} weight="bold" />
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Andere Märkte */}
+                        {otherMarkets.length > 0 && (
+                          <div className={styles.dropdownSection}>
+                            <div className={styles.categoryLabel}>Andere Märkte</div>
+                            {otherMarkets.map(market => (
+                              <button
+                                key={market.id}
+                                className={`${styles.dropdownItem} ${styles.dropdownItemOther} ${selectedMarketId === market.id ? styles.selected : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMarketId(market.id);
+                                  setIsMarketDropdownOpen(false);
+                                }}
+                              >
+                                <div className={styles.productInfo}>
+                                  <div className={styles.productName}>{market.name}</div>
+                                  <div className={styles.productDetails}>{market.address}, {market.city}</div>
+                                </div>
+                                {selectedMarketId === market.id && (
+                                  <div className={styles.productCheck}>
+                                    <Check size={16} weight="bold" />
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Summary Box */}
+              <div className={styles.confirmSummaryBox}>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Kampagne</span>
+                  <span className={styles.confirmSummaryValue}>{selectedWave?.name}</span>
+                </div>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Produkte</span>
+                  <span className={styles.confirmSummaryValue}>{totalQuantity} Stück</span>
+                </div>
+                <div className={styles.confirmSummaryRow}>
+                  <span className={styles.confirmSummaryLabel}>Gesamtwert</span>
+                  <span className={`${styles.confirmSummaryValue} ${styles.confirmSummaryValueHighlight}`}>{formatPrice(totalValue)}</span>
+                </div>
+              </div>
+
+              {/* Products List */}
+              <div className={styles.confirmProductsSection}>
+                <h3 className={styles.confirmProductsTitle}>Produkte</h3>
+                <div className={styles.confirmProductsList}>
+                  {selectedProducts.map(p => (
+                    <div key={p.product.id} className={styles.confirmProductCard}>
+                      <div className={styles.confirmProductLeft}>
+                        <span className={styles.confirmProductQty}>{p.quantity}x</span>
+                        <div className={styles.confirmProductDetails}>
+                          <div className={styles.confirmProductName}>{p.product.name}</div>
+                          <div className={styles.confirmProductMeta}>{p.product.weight}</div>
+                        </div>
+                      </div>
+                      <div className={styles.confirmProductRight}>
+                        <span className={styles.confirmProductReason}>{useIndividualReasons ? p.reason : globalReason}</span>
+                        <span className={styles.confirmProductPrice}>{formatPrice(p.product.price * p.quantity)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -903,52 +943,58 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Footer */}
-        {step !== 'success' && (
-          <div className={styles.footer}>
-            {step !== 'waves' && (
-              <button className={styles.btnSecondary} onClick={handleBack}>
-                Zurück
-              </button>
-            )}
-            <div className={styles.footerSpacer} />
-            {step === 'waves' && (
-              <button
-                className={`${styles.btnPrimary} ${!selectedWaveId ? styles.btnDisabled : ''}`}
-                onClick={handleWeiterToMarkets}
-                disabled={!selectedWaveId}
-              >
-                Weiter
-              </button>
-            )}
-            {step === 'markets' && (
-              <button
-                className={`${styles.btnPrimary} ${!selectedMarketId ? styles.btnDisabled : ''}`}
-                onClick={handleWeiterToProducts}
-                disabled={!selectedMarketId}
-              >
-                Weiter
-              </button>
-            )}
-            {step === 'products' && (
-              <button
-                className={`${styles.btnPrimary} ${selectedProducts.length === 0 || !allProductsHaveReasons ? styles.btnDisabled : ''}`}
-                onClick={handleWeiterToConfirmation}
-                disabled={selectedProducts.length === 0 || !allProductsHaveReasons}
-              >
-                Weiter
-              </button>
-            )}
-            {step === 'confirmation' && (
-              <button
-                className={`${styles.btnSuccess} ${isSubmitting ? styles.btnDisabled : ''}`}
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Speichern...' : 'Bestätigen'}
-              </button>
-            )}
-          </div>
-        )}
+        <div className={`${styles.footer} ${step === 'success' ? styles.successFooter : ''}`}>
+          {step === 'success' ? (
+            <button className={styles.primaryButton} onClick={handleClose}>
+              Zurück zum Dashboard
+            </button>
+          ) : (
+            <>
+              {step !== 'waves' && (
+                <button className={styles.btnSecondary} onClick={handleBack}>
+                  Zurück
+                </button>
+              )}
+              <div className={styles.footerSpacer} />
+              {step === 'waves' && (
+                <button
+                  className={`${styles.btnPrimary} ${!selectedWaveId ? styles.btnDisabled : ''}`}
+                  onClick={handleWeiterToMarkets}
+                  disabled={!selectedWaveId}
+                >
+                  Weiter
+                </button>
+              )}
+              {step === 'markets' && (
+                <button
+                  className={`${styles.btnPrimary} ${!selectedMarketId ? styles.btnDisabled : ''}`}
+                  onClick={handleWeiterToProducts}
+                  disabled={!selectedMarketId}
+                >
+                  Weiter
+                </button>
+              )}
+              {step === 'products' && (
+                <button
+                  className={`${styles.btnPrimary} ${selectedProducts.length === 0 || !allProductsHaveReasons ? styles.btnDisabled : ''}`}
+                  onClick={handleWeiterToConfirmation}
+                  disabled={selectedProducts.length === 0 || !allProductsHaveReasons}
+                >
+                  Weiter
+                </button>
+              )}
+              {step === 'confirmation' && (
+                <button
+                  className={`${styles.btnSuccess} ${isSubmitting ? styles.btnDisabled : ''}`}
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Speichern...' : 'Bestätigen'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
