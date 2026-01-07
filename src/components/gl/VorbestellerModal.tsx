@@ -316,12 +316,12 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
               <div>
                 <h2 className={styles.title}>
                   {showMarketSelection && selectedVorbesteller 
-                    ? `${selectedVorbesteller.kwDays?.[0]?.days.join('&')} ${selectedVorbesteller.kwDays?.[0]?.kw}` 
+                    ? selectedVorbesteller.name
                     : 'Vorbesteller'}
                 </h2>
                 <p className={styles.subtitle}>
                   {showMarketSelection && selectedVorbesteller
-                    ? `${selectedVorbesteller.name} · Lieferung ${selectedVorbesteller.startDate} - ${selectedVorbesteller.endDate}`
+                    ? `${selectedVorbesteller.kwDays?.[0]?.days.join(' & ')} ${selectedVorbesteller.kwDays?.[0]?.kw}`
                     : 'Wähle einen Vorbesteller aus'}
                 </p>
               </div>

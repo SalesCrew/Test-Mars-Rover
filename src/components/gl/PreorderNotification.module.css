@@ -117,6 +117,27 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
+/* Tablet adjustments */
+@media (max-width: 1024px) {
+  .notificationCard {
+    width: 300px;
+    height: 95px;
+  }
+
+  .imageSection {
+    width: 90px;
+  }
+
+  .title {
+    font-size: 14px;
+  }
+
+  .orderButton {
+    padding: 9px 14px;
+    font-size: 12px;
+  }
+}
+
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .notificationCard {
@@ -139,11 +160,44 @@
   }
 
   .title {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .orderButton {
     padding: 8px 12px;
+    font-size: 11px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .notificationCard {
+    width: calc(100vw - 32px);
+    max-width: 300px;
+    height: 85px;
+    right: -100vw;
+  }
+
+  .notificationCard.visible {
+    right: 16px;
+  }
+
+  .imageSection {
+    width: 70px;
+  }
+
+  .contentSection {
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .title {
     font-size: 12px;
+  }
+
+  .orderButton {
+    padding: 7px 10px;
+    font-size: 10px;
+    gap: 6px;
   }
 }
