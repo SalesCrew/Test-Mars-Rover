@@ -361,6 +361,14 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
         items: allItems
       });
       
+      // Record visit to update market frequency
+      try {
+        await marketService.recordVisit(selectedMarketId, user.id);
+      } catch (visitError) {
+        console.warn('Could not record market visit:', visitError);
+        // Don't fail the whole submission if visit recording fails
+      }
+      
       setShowMarketConfirmation(false);
       setShowConfirmation(true);
     } catch (error) {

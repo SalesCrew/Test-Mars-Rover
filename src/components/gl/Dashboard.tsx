@@ -191,8 +191,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     setIsMarketModalOpen(true);
   };
 
-  const handleStartSingleVisit = (marketId: string) => {
+  const handleStartSingleVisit = async (marketId: string) => {
     console.log('Start visit for market:', marketId);
+    
+    // Record visit to update market frequency
+    if (user?.id) {
+      try {
+        await marketService.recordVisit(marketId, user.id);
+      } catch (visitError) {
+        console.warn('Could not record market visit:', visitError);
+      }
+    }
+    
     // TODO: Navigate to visit workflow
   };
 
@@ -227,8 +237,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     }
   };
 
-  const handleStartMarketVisit = (marketId: string) => {
+  const handleStartMarketVisit = async (marketId: string) => {
     console.log('Start visit for market:', marketId);
+    
+    // Record visit to update market frequency
+    if (user?.id) {
+      try {
+        await marketService.recordVisit(marketId, user.id);
+      } catch (visitError) {
+        console.warn('Could not record market visit:', visitError);
+      }
+    }
+    
     setSelectedMarket(null);
     // TODO: Navigate to visit workflow
   };

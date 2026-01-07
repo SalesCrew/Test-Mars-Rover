@@ -259,6 +259,14 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
           items,
           photo_url: capturedPhoto || undefined
         });
+        
+        // Record visit to update market frequency
+        try {
+          await marketService.recordVisit(selectedMarket.id, user.id);
+        } catch (visitError) {
+          console.warn('Could not record market visit:', visitError);
+          // Don't fail the whole submission if visit recording fails
+        }
       }
 
       setIsSubmitting(false);

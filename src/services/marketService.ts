@@ -105,6 +105,28 @@ class MarketService {
   }
 
   /**
+   * Record a visit to a market (increments visit count if not already visited today)
+   */
+  async recordVisit(marketId: string, glId?: string): Promise<{ incremented: boolean; current_visits: number }> {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.markets.getById(marketId)}/visit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gl_id: glId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error recording visit for market ${marketId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Import multiple markets
    */
   async importMarkets(markets: AdminMarket[]): Promise<{ success: number; failed: number }> {
