@@ -426,6 +426,23 @@
   color: #B45309;
 }
 
+/* Replace items section */
+.replaceHeader {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.replaceRow .itemName {
+  color: #059669;
+}
+
+.replaceRow .itemQuantity {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .page {

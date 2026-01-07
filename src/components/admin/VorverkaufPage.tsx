@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlass, Package, User, Storefront, CaretDown, X, Calendar, Tag } from '@phosphor-icons/react';
-import { vorverkaufService, type VorverkaufEntry } from '../../services/vorverkaufService';
+import { MagnifyingGlass, User, Storefront, CaretDown, X, Calendar, Tag, ArrowsLeftRight } from '@phosphor-icons/react';
+import { produktersatzService, type ProduktErsatzEntry } from '../../services/produktersatzService';
 import { gebietsleiterService } from '../../services/gebietsleiterService';
 import styles from './VorverkaufPage.module.css';
 
@@ -12,17 +12,19 @@ interface GL {
 const reasonLabels: Record<string, string> = {
   'OOS': 'OOS (Out of Stock)',
   'Listungslücke': 'Listungslücke',
-  'Platzierung': 'Platzierung'
+  'Platzierung': 'Platzierung',
+  'Produkttausch': 'Produkttausch'
 };
 
 const reasonColors: Record<string, { bg: string; text: string }> = {
   'OOS': { bg: 'rgba(239, 68, 68, 0.1)', text: '#DC2626' },
   'Listungslücke': { bg: 'rgba(245, 158, 11, 0.1)', text: '#D97706' },
-  'Platzierung': { bg: 'rgba(59, 130, 246, 0.1)', text: '#2563EB' }
+  'Platzierung': { bg: 'rgba(59, 130, 246, 0.1)', text: '#2563EB' },
+  'Produkttausch': { bg: 'rgba(16, 185, 129, 0.1)', text: '#059669' }
 };
 
-export const VorverkaufPage: React.FC = () => {
-  const [entries, setEntries] = useState<VorverkaufEntry[]>([]);
+export const ProduktErsatzPage: React.FC = () => {
+  const [entries, setEntries] = useState<ProduktErsatzEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGLId, setSelectedGLId] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export const VorverkaufPage: React.FC = () => {
     const loadEntries = async () => {
       setIsLoading(true);
       try {
-        const data = await vorverkaufService.getAllEntries(
+        const data = await produktersatzService.getAllEntries(
           selectedGLId || undefined,
           searchQuery || undefined
         );
@@ -96,7 +98,7 @@ export const VorverkaufPage: React.FC = () => {
     <div className={styles.page}>
       {/* Header with filters */}
       <div className={styles.header}>
-        <h1 className={styles.title}>Vorverkauf Erfassungen</h1>
+        <h1 className={styles.title}>Produktersatz</h1>
         
         <div className={styles.filters}>
           {/* Search */}
@@ -172,6 +174,10 @@ export const VorverkaufPage: React.FC = () => {
           <span className={styles.statValue}>{entries.filter(e => e.reason === 'Platzierung').length}</span>
           <span className={styles.statLabel}>Platzierung</span>
         </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue}>{entries.filter(e => e.reason === 'Produkttausch').length}</span>
+          <span className={styles.statLabel}>Produkttausch</span>
+        </div>
       </div>
 
       {/* Entries list */}
@@ -183,8 +189,8 @@ export const VorverkaufPage: React.FC = () => {
           </div>
         ) : entries.length === 0 ? (
           <div className={styles.empty}>
-            <Package size={48} weight="thin" />
-            <span>Keine Vorverkauf-Einträge gefunden</span>
+            <ArrowsLeftRight size={48} weight="thin" />
+            <span>Keine Produktersatz-Einträge gefunden</span>
           </div>
         ) : (
           <div className={styles.list}>
@@ -232,21 +238,46 @@ export const VorverkaufPage: React.FC = () => {
                 {/* Expanded items list */}
                 {expandedEntryId === entry.id && (
                   <div className={styles.entryItems}>
-                    <div className={styles.itemsHeader}>
-                      <span>Produkt</span>
-                      <span>Menge</span>
-                    </div>
-                    {entry.items.map(item => (
-                      <div key={item.id} className={styles.itemRow}>
-                        <div className={styles.itemInfo}>
-                          <span className={styles.itemName}>{item.productName}</span>
-                          <span className={styles.itemDetails}>
-                            {item.productBrand} {item.productSize && `· ${item.productSize}`}
-                          </span>
+                    {/* Take out items */}
+                    {entry.items.filter(i => i.itemType === 'take_out').length > 0 && (
+                      <>
+                        <div className={styles.itemsHeader}>
+                          <span>Entnommen</span>
+                          <span>Menge</span>
                         </div>
-                        <span className={styles.itemQuantity}>{item.quantity}x</span>
-                      </div>
-                    ))}
+                        {entry.items.filter(i => i.itemType === 'take_out').map(item => (
+                          <div key={item.id} className={styles.itemRow}>
+                            <div className={styles.itemInfo}>
+                              <span className={styles.itemName}>{item.productName}</span>
+                              <span className={styles.itemDetails}>
+                                {item.productBrand} {item.productSize && `· ${item.productSize}`}
+                              </span>
+                            </div>
+                            <span className={styles.itemQuantity}>{item.quantity}x</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {/* Replace items */}
+                    {entry.items.filter(i => i.itemType === 'replace').length > 0 && (
+                      <>
+                        <div className={`${styles.itemsHeader} ${styles.replaceHeader}`}>
+                          <span>Ersetzt durch</span>
+                          <span>Menge</span>
+                        </div>
+                        {entry.items.filter(i => i.itemType === 'replace').map(item => (
+                          <div key={item.id} className={`${styles.itemRow} ${styles.replaceRow}`}>
+                            <div className={styles.itemInfo}>
+                              <span className={styles.itemName}>{item.productName}</span>
+                              <span className={styles.itemDetails}>
+                                {item.productBrand} {item.productSize && `· ${item.productSize}`}
+                              </span>
+                            </div>
+                            <span className={styles.itemQuantity}>{item.quantity}x</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
                     {entry.notes && (
                       <div className={styles.entryNotes}>
                         <strong>Notiz:</strong> {entry.notes}

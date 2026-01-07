@@ -309,7 +309,8 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
     const byReason = {
       OOS: entries?.filter(e => e.reason === 'OOS').length || 0,
       Listungslücke: entries?.filter(e => e.reason === 'Listungslücke').length || 0,
-      Platzierung: entries?.filter(e => e.reason === 'Platzierung').length || 0
+      Platzierung: entries?.filter(e => e.reason === 'Platzierung').length || 0,
+      Produkttausch: entries?.filter(e => e.reason === 'Produkttausch').length || 0
     };
 
     res.json({

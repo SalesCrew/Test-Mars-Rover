@@ -5,7 +5,7 @@ import { AdminDashboard } from './AdminDashboard';
 import { MarketsPage } from './MarketsPage';
 import { GebietsleiterPage } from './GebietsleiterPage';
 import { VorbestellerPage } from './VorbestellerPage';
-import { VorverkaufPage } from './VorverkaufPage';
+import { ProduktErsatzPage } from './VorverkaufPage';
 import { FragebogenPage } from './FragebogenPage';
 import { ProductsPage } from './ProductsPage';
 import { CreateDisplayModal } from './CreateDisplayModal';
@@ -21,7 +21,7 @@ interface AdminPanelProps {
   onClose?: () => void;
 }
 
-type AdminPage = 'dashboard' | 'markets' | 'gebietsleiter' | 'vorbesteller' | 'vorverkauf' | 'fragebogen' | 'produkte';
+type AdminPage = 'dashboard' | 'markets' | 'gebietsleiter' | 'vorbesteller' | 'produktersatz' | 'fragebogen' | 'produkte';
 
 interface MenuItem {
   id: AdminPage;
@@ -137,7 +137,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
     { id: 'markets', label: 'Märkte', icon: <MapPin size={20} weight="regular" /> },
     { id: 'gebietsleiter', label: 'Gebietsleiter', icon: <Users size={20} weight="regular" /> },
     { id: 'vorbesteller', label: 'Vorbesteller', icon: <CalendarCheck size={20} weight="regular" /> },
-    { id: 'vorverkauf', label: 'Vorverkauf', icon: <Receipt size={20} weight="regular" /> },
+    { id: 'produktersatz', label: 'Produktersatz', icon: <Receipt size={20} weight="regular" /> },
     { id: 'fragebogen', label: 'Fragebogen', icon: <ClipboardText size={20} weight="regular" /> },
     { id: 'produkte', label: 'Produkte', icon: <Package size={20} weight="regular" /> },
   ];
@@ -423,7 +423,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           {selectedPage === 'markets' && <MarketsPage importedMarkets={importedMarkets} />}
           {selectedPage === 'gebietsleiter' && <GebietsleiterPage isCreateModalOpen={isCreateGLModalOpen} onCloseCreateModal={() => setIsCreateGLModalOpen(false)} allMarkets={allMarkets} />}
           {selectedPage === 'vorbesteller' && <VorbestellerPage isCreateWelleModalOpen={isCreateWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateWelleModalOpen(true)} waveIdToEdit={waveIdToEdit} onClearWaveIdToEdit={() => setWaveIdToEdit(null)} />}
-          {selectedPage === 'vorverkauf' && <VorverkaufPage />}
+          {selectedPage === 'produktersatz' && <ProduktErsatzPage />}
           {selectedPage === 'fragebogen' && <FragebogenPage isCreateModuleModalOpen={isCreateModuleModalOpen} onCloseCreateModuleModal={() => setIsCreateModuleModalOpen(false)} isCreateFragebogenModalOpen={isCreateFragebogenModalOpen} onCloseCreateFragebogenModal={() => setIsCreateFragebogenModalOpen(false)} />}
           {selectedPage === 'produkte' && <ProductsPage />}
         </div>

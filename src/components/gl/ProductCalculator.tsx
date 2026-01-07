@@ -4,6 +4,7 @@ import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../
 import type { Market } from '../../types/market-types';
 import { getAllProducts } from '../../data/productsData';
 import { marketService } from '../../services/marketService';
+import { produktersatzService } from '../../services/produktersatzService';
 import { useAuth } from '../../contexts/AuthContext';
 import { RingLoader } from 'react-spinners';
 import { ExchangeSuccessModal } from './ExchangeSuccessModal';
@@ -31,6 +32,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
   const [marketSearchQuery, setMarketSearchQuery] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const marketDropdownRef = useRef<HTMLDivElement>(null);
   const marketSearchInputRef = useRef<HTMLInputElement>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -1291,20 +1293,53 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
               </button>
               <button
                 className={`${styles.button} ${styles.buttonSuccess}`}
-                onClick={() => {
-                  // Log the exchange (in real app would send to backend)
-                  console.log('Exchange confirmed:', {
-                    marketId: selectedMarketId,
-                    removed: removedProducts,
-                    replacement: selectedSuggestion,
-                  });
-                  // Close confirmation modal and show success modal
-                  setShowConfirmation(false);
-                  setShowSuccessModal(true);
+                disabled={isSubmitting}
+                onClick={async () => {
+                  if (!selectedMarketId || !selectedSuggestion || !user?.id) return;
+                  
+                  setIsSubmitting(true);
+                  try {
+                    // Prepare data for backend
+                    const takeOutItems = removedProducts.map(p => ({
+                      product_id: p.product.id,
+                      quantity: p.quantity
+                    }));
+                    
+                    const replaceItems = selectedSuggestion.products.map(p => ({
+                      product_id: p.product.id,
+                      quantity: p.quantity
+                    }));
+                    
+                    await produktersatzService.createEntry({
+                      gebietsleiter_id: user.id,
+                      market_id: selectedMarketId,
+                      reason: 'Produkttausch',
+                      notes: `Warenwert: €${getTotalRemovedValue().toFixed(2)} → €${selectedSuggestion.totalValue.toFixed(2)}`,
+                      total_value: selectedSuggestion.totalValue,
+                      take_out_items: takeOutItems,
+                      replace_items: replaceItems
+                    });
+                    
+                    // Record visit to update market frequency
+                    try {
+                      await marketService.recordVisit(selectedMarketId, user.id);
+                    } catch (visitError) {
+                      console.warn('Could not record market visit:', visitError);
+                    }
+                    
+                    // Close confirmation modal and show success modal
+                    setShowConfirmation(false);
+                    setShowSuccessModal(true);
+                  } catch (error) {
+                    console.error('Error submitting produktersatz:', error);
+                    alert('Fehler beim Speichern. Bitte versuche es erneut.');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
                 }}
               >
                 <Check size={18} weight="bold" />
-                Tausch bestätigen
+                {isSubmitting ? 'Speichern...' : 'Tausch bestätigen'}
               </button>
             </div>
           </div>
