@@ -169,14 +169,17 @@ export const MarketSelectionModal: React.FC<MarketSelectionModalProps> = ({
   });
 
   // Split into "Meine Märkte" and "Andere Märkte"
+  // Use gebietsleiter_id (GL table ID) NOT user.id (Supabase Auth ID)
+  const glId = user?.gebietsleiter_id;
+  
   const myMarkets = useMemo(() => 
-    sortedMarkets.filter(m => m.gebietsleiter === user?.id),
-    [sortedMarkets, user?.id]
+    sortedMarkets.filter(m => m.gebietsleiter === glId),
+    [sortedMarkets, glId]
   );
   
   const otherMarkets = useMemo(() => 
-    sortedMarkets.filter(m => m.gebietsleiter !== user?.id),
-    [sortedMarkets, user?.id]
+    sortedMarkets.filter(m => m.gebietsleiter !== glId),
+    [sortedMarkets, glId]
   );
 
   // Further split by completed status

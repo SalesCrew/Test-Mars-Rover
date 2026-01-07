@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { supabase } from '../config/supabase';
+import { supabase, createFreshClient } from '../config/supabase';
 
 const router = Router();
 
@@ -8,6 +8,9 @@ const router = Router();
 // ============================================================================
 router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
   try {
+    // Use fresh client to avoid caching issues with wellen queries
+    const freshClient = createFreshClient();
+    
     // Get filters from query params
     const glIdsParam = req.query.glIds as string | undefined;
     const startDate = req.query.startDate as string | undefined;
@@ -50,7 +53,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         // Get all markets of this chain type
-        const { data: markets, error: marketsError } = await supabase
+        const { data: markets, error: marketsError } = await freshClient
           .from('markets')
           .select('id')
           .in('chain', chainTypes);
@@ -73,7 +76,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         // Get all wellen assigned to these markets (optionally filtered by date)
-        let wellenQuery = supabase
+        let wellenQuery = freshClient
           .from('wellen')
           .select('id, start_date, end_date');
         
@@ -99,7 +102,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: welleMarkets } = await supabase
+        const { data: welleMarkets } = await freshClient
           .from('wellen_markets')
           .select('welle_id, market_id')
           .in('market_id', marketIds)
@@ -124,7 +127,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonware: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          const { data } = await supabase
+          const { data } = await freshClient
             .from('wellen_displays')
             .select('id, target_number, welle_id')
             .in('welle_id', welleIds);
@@ -132,7 +135,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         if (!itemType || itemType === 'kartonware') {
-          const { data } = await supabase
+          const { data } = await freshClient
             .from('wellen_kartonware')
             .select('id, target_number, welle_id')
             .in('welle_id', welleIds);
@@ -144,7 +147,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonwareProgress: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          let query = supabase
+          let query = freshClient
             .from('wellen_gl_progress')
             .select('current_number, item_id, gebietsleiter_id')
             .eq('item_type', 'display')
@@ -159,7 +162,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         if (!itemType || itemType === 'kartonware') {
-          let query = supabase
+          let query = freshClient
             .from('wellen_gl_progress')
             .select('current_number, item_id, gebietsleiter_id')
             .eq('item_type', 'kartonware')
@@ -229,7 +232,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: markets, error: marketsError } = await supabase
+        const { data: markets, error: marketsError } = await freshClient
           .from('markets')
           .select('id')
           .in('chain', chainTypes);
@@ -252,7 +255,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         // Get wellen filtered by date range
-        let wellenQuery = supabase.from('wellen').select('id');
+        let wellenQuery = freshClient.from('wellen').select('id');
         if (startDate) wellenQuery = wellenQuery.gte('end_date', startDate);
         if (endDate) wellenQuery = wellenQuery.lte('start_date', endDate);
         const { data: filteredWellen } = await wellenQuery;
@@ -270,7 +273,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: welleMarkets } = await supabase
+        const { data: welleMarkets } = await freshClient
           .from('wellen_markets')
           .select('welle_id, market_id')
           .in('market_id', marketIds)
@@ -295,11 +298,11 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonware: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          const { data } = await supabase.from('wellen_displays').select('id, target_number, welle_id').in('welle_id', welleIds);
+          const { data } = await freshClient.from('wellen_displays').select('id, target_number, welle_id').in('welle_id', welleIds);
           displays = data || [];
         }
         if (!itemType || itemType === 'kartonware') {
-          const { data } = await supabase.from('wellen_kartonware').select('id, target_number, welle_id').in('welle_id', welleIds);
+          const { data } = await freshClient.from('wellen_kartonware').select('id, target_number, welle_id').in('welle_id', welleIds);
           kartonware = data || [];
         }
         
@@ -308,13 +311,13 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonwareProgress: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          let query = supabase.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'display').in('welle_id', welleIds);
+          let query = freshClient.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'display').in('welle_id', welleIds);
           if (glFilter.length > 0) query = query.in('gebietsleiter_id', glFilter);
           const { data } = await query;
           displayProgress = data || [];
         }
         if (!itemType || itemType === 'kartonware') {
-          let query = supabase.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'kartonware').in('welle_id', welleIds);
+          let query = freshClient.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'kartonware').in('welle_id', welleIds);
           if (glFilter.length > 0) query = query.in('gebietsleiter_id', glFilter);
           const { data } = await query;
           kartonwareProgress = data || [];
@@ -364,7 +367,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: markets, error: marketsError } = await supabase
+        const { data: markets, error: marketsError } = await freshClient
           .from('markets')
           .select('id')
           .in('chain', chainTypes);
@@ -388,7 +391,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         // Get wellen filtered by date range
-        let wellenQuery = supabase.from('wellen').select('id, goal_value, goal_type');
+        let wellenQuery = freshClient.from('wellen').select('id, goal_value, goal_type');
         if (startDate) wellenQuery = wellenQuery.gte('end_date', startDate);
         if (endDate) wellenQuery = wellenQuery.lte('start_date', endDate);
         const { data: filteredWellen } = await wellenQuery;
@@ -407,7 +410,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: welleMarkets } = await supabase
+        const { data: welleMarkets } = await freshClient
           .from('wellen_markets')
           .select('welle_id, market_id')
           .in('market_id', marketIds)
@@ -438,11 +441,11 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonware: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          const { data } = await supabase.from('wellen_displays').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
+          const { data } = await freshClient.from('wellen_displays').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
           displays = data || [];
         }
         if (!itemType || itemType === 'kartonware') {
-          const { data } = await supabase.from('wellen_kartonware').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
+          const { data } = await freshClient.from('wellen_kartonware').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
           kartonware = data || [];
         }
         
@@ -451,13 +454,13 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonwareProgress: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          let query = supabase.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'display').in('welle_id', welleIds);
+          let query = freshClient.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'display').in('welle_id', welleIds);
           if (glFilter.length > 0) query = query.in('gebietsleiter_id', glFilter);
           const { data } = await query;
           displayProgress = data || [];
         }
         if (!itemType || itemType === 'kartonware') {
-          let query = supabase.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'kartonware').in('welle_id', welleIds);
+          let query = freshClient.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'kartonware').in('welle_id', welleIds);
           if (glFilter.length > 0) query = query.in('gebietsleiter_id', glFilter);
           const { data } = await query;
           kartonwareProgress = data || [];
@@ -519,7 +522,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: markets, error: marketsError } = await supabase
+        const { data: markets, error: marketsError } = await freshClient
           .from('markets')
           .select('id')
           .in('chain', chainTypes);
@@ -543,7 +546,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         }
         
         // Get wellen filtered by date range
-        let wellenQuery = supabase.from('wellen').select('id, goal_value, goal_type');
+        let wellenQuery = freshClient.from('wellen').select('id, goal_value, goal_type');
         if (startDate) wellenQuery = wellenQuery.gte('end_date', startDate);
         if (endDate) wellenQuery = wellenQuery.lte('start_date', endDate);
         const { data: filteredWellen } = await wellenQuery;
@@ -562,7 +565,7 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
           };
         }
         
-        const { data: welleMarkets } = await supabase
+        const { data: welleMarkets } = await freshClient
           .from('wellen_markets')
           .select('welle_id, market_id')
           .in('market_id', marketIds)
@@ -592,11 +595,11 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonware: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          const { data } = await supabase.from('wellen_displays').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
+          const { data } = await freshClient.from('wellen_displays').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
           displays = data || [];
         }
         if (!itemType || itemType === 'kartonware') {
-          const { data } = await supabase.from('wellen_kartonware').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
+          const { data } = await freshClient.from('wellen_kartonware').select('id, target_number, item_value, welle_id').in('welle_id', welleIds);
           kartonware = data || [];
         }
         
@@ -605,13 +608,13 @@ router.get('/dashboard/chain-averages', async (req: Request, res: Response) => {
         let kartonwareProgress: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          let query = supabase.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'display').in('welle_id', welleIds);
+          let query = freshClient.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'display').in('welle_id', welleIds);
           if (glFilter.length > 0) query = query.in('gebietsleiter_id', glFilter);
           const { data } = await query;
           displayProgress = data || [];
         }
         if (!itemType || itemType === 'kartonware') {
-          let query = supabase.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'kartonware').in('welle_id', welleIds);
+          let query = freshClient.from('wellen_gl_progress').select('current_number, item_id, gebietsleiter_id').eq('item_type', 'kartonware').in('welle_id', welleIds);
           if (glFilter.length > 0) query = query.in('gebietsleiter_id', glFilter);
           const { data } = await query;
           kartonwareProgress = data || [];
@@ -688,48 +691,52 @@ router.get('/dashboard/waves', async (req: Request, res: Response) => {
     const today = new Date();
     const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
 
-    // Fetch active and recently finished waves
-    const { data: wellen, error: wellenError } = await supabase
+    // Use fresh client to avoid caching issues
+    const freshClient = createFreshClient();
+
+    // Fetch active, upcoming, and recently finished waves
+    const { data: wellen, error: wellenError } = await freshClient
       .from('wellen')
       .select('*')
-      .or(`status.eq.active,and(status.eq.past,end_date.gte.${threeDaysAgo.toISOString().split('T')[0]})`)
+      .or(`status.eq.active,status.eq.upcoming,and(status.eq.past,end_date.gte.${threeDaysAgo.toISOString().split('T')[0]})`)
       .order('start_date', { ascending: false });
+
 
     if (wellenError) throw wellenError;
 
     const wavesProgress = await Promise.all(
       (wellen || []).map(async (welle) => {
-        // Fetch displays (conditionally based on item type filter)
+        // Fetch displays (conditionally based on item type filter) - use fresh client
         let displays: any[] = [];
         if (!itemType || itemType === 'displays') {
-          const { data } = await supabase
+          const { data } = await freshClient
             .from('wellen_displays')
             .select('id, target_number, item_value')
             .eq('welle_id', welle.id);
           displays = data || [];
         }
 
-        // Fetch kartonware (conditionally based on item type filter)
+        // Fetch kartonware (conditionally based on item type filter) - use fresh client
         let kartonware: any[] = [];
         if (!itemType || itemType === 'kartonware') {
-          const { data } = await supabase
+          const { data } = await freshClient
             .from('wellen_kartonware')
             .select('id, target_number, item_value')
             .eq('welle_id', welle.id);
           kartonware = data || [];
         }
 
-        // Fetch assigned markets count
-        const { data: welleMarkets } = await supabase
+        // Fetch assigned markets count - use fresh client
+        const { data: welleMarkets } = await freshClient
           .from('wellen_markets')
           .select('market_id')
           .eq('welle_id', welle.id);
 
-        // Fetch progress (optionally filtered by GL and item type)
+        // Fetch progress (optionally filtered by GL and item type) - use fresh client
         let progressData: any[] = [];
         
         if (!itemType || itemType === 'displays') {
-          let query = supabase
+          let query = freshClient
             .from('wellen_gl_progress')
             .select('current_number, item_type, item_id, gebietsleiter_id')
             .eq('welle_id', welle.id)
@@ -744,7 +751,7 @@ router.get('/dashboard/waves', async (req: Request, res: Response) => {
         }
         
         if (!itemType || itemType === 'kartonware') {
-          let query = supabase
+          let query = freshClient
             .from('wellen_gl_progress')
             .select('current_number, item_type, item_id, gebietsleiter_id')
             .eq('welle_id', welle.id)
@@ -836,68 +843,55 @@ router.get('/dashboard/waves', async (req: Request, res: Response) => {
 // GET ALL WELLEN
 // ============================================================================
 router.get('/', async (req: Request, res: Response) => {
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const startTime = Date.now();
-  
   try {
-    console.log(`📋 [${requestId}] Fetching all wellen...`);
-    console.log(`🔗 [${requestId}] Supabase URL: ${process.env.SUPABASE_URL?.substring(0, 30)}...`);
-    console.log(`⏱️ [${requestId}] Request started at: ${new Date().toISOString()}`);
+    // Use a fresh client to avoid any potential caching issues
+    const freshClient = createFreshClient();
     
     // Fetch all wellen
-    const { data: wellen, error: wellenError } = await supabase
+    const { data: wellen, error: wellenError } = await freshClient
       .from('wellen')
       .select('*')
       .order('created_at', { ascending: false });
 
-    const queryDuration = Date.now() - startTime;
-    console.log(`⏱️ [${requestId}] Supabase query took: ${queryDuration}ms`);
-
     if (wellenError) {
-      console.error(`❌ [${requestId}] Wellen query error:`, wellenError);
-      console.error(`❌ [${requestId}] Error code: ${wellenError.code}, message: ${wellenError.message}`);
+      console.error('❌ Wellen query error:', wellenError);
       throw wellenError;
     }
     
-    console.log(`📊 [${requestId}] Raw wellen count from DB: ${wellen?.length || 0}`);
-    
-    if (!wellen || wellen.length === 0) {
-      console.warn(`⚠️ [${requestId}] WARNING: No wellen found in database!`);
-      console.warn(`⚠️ [${requestId}] Returning empty array - this may indicate a connection issue`);
-    }
+    console.log(`✅ Fetched ${wellen?.length || 0} wellen`);
 
-    // For each welle, fetch related data
+    // For each welle, fetch related data (all using fresh client)
     const wellenWithDetails = await Promise.all(
       (wellen || []).map(async (welle) => {
         // Fetch displays
-        const { data: displays } = await supabase
+        const { data: displays } = await freshClient
           .from('wellen_displays')
           .select('*')
           .eq('welle_id', welle.id)
           .order('display_order', { ascending: true });
 
         // Fetch kartonware
-        const { data: kartonware } = await supabase
+        const { data: kartonware } = await freshClient
           .from('wellen_kartonware')
           .select('*')
           .eq('welle_id', welle.id)
           .order('kartonware_order', { ascending: true });
 
         // Fetch KW days
-        const { data: kwDays } = await supabase
+        const { data: kwDays } = await freshClient
           .from('wellen_kw_days')
           .select('*')
           .eq('welle_id', welle.id)
           .order('kw_order', { ascending: true });
 
         // Fetch assigned market IDs
-        const { data: welleMarkets } = await supabase
+        const { data: welleMarkets } = await freshClient
           .from('wellen_markets')
           .select('market_id')
           .eq('welle_id', welle.id);
 
         // Calculate progress aggregates
-        const { data: progressData } = await supabase
+        const { data: progressData } = await freshClient
           .from('wellen_gl_progress')
           .select('current_number, item_type, item_id, gebietsleiter_id')
           .eq('welle_id', welle.id);
@@ -953,14 +947,9 @@ router.get('/', async (req: Request, res: Response) => {
       })
     );
 
-    const totalDuration = Date.now() - startTime;
-    console.log(`✅ [${requestId}] Fetched ${wellenWithDetails.length} wellen in ${totalDuration}ms`);
-    console.log(`✅ [${requestId}] Wellen names: ${wellenWithDetails.map((w: any) => w.name).join(', ') || 'NONE'}`);
     res.json(wellenWithDetails);
   } catch (error: any) {
-    const totalDuration = Date.now() - startTime;
-    console.error(`❌ [${requestId}] Error fetching wellen after ${totalDuration}ms:`, error);
-    console.error(`❌ [${requestId}] Error stack:`, error.stack);
+    console.error('❌ Error fetching wellen:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });

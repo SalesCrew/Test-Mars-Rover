@@ -133,36 +133,29 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
   }, [searchQuery, selectedVorbesteller, allMarkets]);
 
   // Split markets into "Meine Märkte" and "Andere Märkte"
-  // Debug: log the user ID and sample market gebietsleiter IDs
-  useEffect(() => {
-    if (allMarkets.length > 0 && user?.id) {
-      console.log('🔍 DEBUG Market Clustering:');
-      console.log('  User ID:', user.id);
-      console.log('  Sample market gebietsleiter IDs:', allMarkets.slice(0, 5).map(m => ({ name: m.name, gl: m.gebietsleiter })));
-      console.log('  Markets matching user:', allMarkets.filter(m => m.gebietsleiter === user.id).length);
-    }
-  }, [allMarkets, user?.id]);
+  // Use gebietsleiter_id (GL table ID) NOT user.id (Supabase Auth ID)
+  const glId = user?.gebietsleiter_id;
 
   const myMarkets = useMemo(() => 
     filteredMarkets
-      .filter(m => m.gebietsleiter === user?.id)
+      .filter(m => m.gebietsleiter === glId)
       .sort((a, b) => {
         if (a.isCompleted && !b.isCompleted) return 1;
         if (!a.isCompleted && b.isCompleted) return -1;
         return a.name.localeCompare(b.name);
       }), 
-    [filteredMarkets, user?.id]
+    [filteredMarkets, glId]
   );
   
   const otherMarkets = useMemo(() => 
     filteredMarkets
-      .filter(m => m.gebietsleiter !== user?.id)
+      .filter(m => m.gebietsleiter !== glId)
       .sort((a, b) => {
         if (a.isCompleted && !b.isCompleted) return 1;
         if (!a.isCompleted && b.isCompleted) return -1;
         return a.name.localeCompare(b.name);
       }), 
-    [filteredMarkets, user?.id]
+    [filteredMarkets, glId]
   );
 
   // Keep for compatibility

@@ -145,15 +145,18 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   }, [marketSearchQuery, allMarkets]);
 
   // Split markets into GL's markets and other markets
+  // Use gebietsleiter_id (GL table ID) NOT user.id (Supabase Auth ID)
+  const glId = user?.gebietsleiter_id;
+  
   const glMarkets = useMemo(() => {
-    if (!user?.id) return [];
-    return filteredMarkets.filter(m => m.gebietsleiter === user.id);
-  }, [filteredMarkets, user?.id]);
+    if (!glId) return [];
+    return filteredMarkets.filter(m => m.gebietsleiter === glId);
+  }, [filteredMarkets, glId]);
 
   const otherMarkets = useMemo(() => {
-    if (!user?.id) return filteredMarkets;
-    return filteredMarkets.filter(m => m.gebietsleiter !== user.id);
-  }, [filteredMarkets, user?.id]);
+    if (!glId) return filteredMarkets;
+    return filteredMarkets.filter(m => m.gebietsleiter !== glId);
+  }, [filteredMarkets, glId]);
 
   const sortedGLMarkets = [...glMarkets].sort((a, b) => {
     if (a.isCompleted && !b.isCompleted) return 1;

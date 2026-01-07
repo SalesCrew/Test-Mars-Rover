@@ -190,14 +190,17 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
   }, [marketSearchQuery, waveMarkets]);
 
   // Split markets into "Meine Märkte" and "Andere Märkte"
+  // Use gebietsleiter_id (GL table ID) NOT user.id (Supabase Auth ID)
+  const glId = user?.gebietsleiter_id;
+  
   const myMarkets = useMemo(() => 
-    filteredMarkets.filter(m => m.gebietsleiter === user?.id), 
-    [filteredMarkets, user?.id]
+    filteredMarkets.filter(m => m.gebietsleiter === glId), 
+    [filteredMarkets, glId]
   );
   
   const otherMarkets = useMemo(() => 
-    filteredMarkets.filter(m => m.gebietsleiter !== user?.id), 
-    [filteredMarkets, user?.id]
+    filteredMarkets.filter(m => m.gebietsleiter !== glId), 
+    [filteredMarkets, glId]
   );
 
   // Filter and group products by category
