@@ -23,13 +23,18 @@ const getCurrentDayAbbr = (): string => {
   return days[new Date().getDay()];
 };
 
-// Get current calendar week
-const getCurrentKW = (): string => {
+// Get current calendar week number
+const getCurrentKWNumber = (): number => {
   const now = new Date();
-  const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
-  const pastDaysOfYear = (now.getTime() - firstDayOfYear.getTime()) / 86400000;
-  const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  return `KW${weekNumber}`;
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+  return Math.ceil((days + startOfYear.getDay() + 1) / 7);
+};
+
+// Extract just the number from a KW string (handles "KW2", "KW 2", "2", etc.)
+const extractKWNumber = (kwString: string): number => {
+  const match = kwString.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : -1;
 };
 
 // Check if a wave is sellable today
@@ -37,10 +42,11 @@ const isWaveSellableToday = (welle: Welle): boolean => {
   if (!welle.kwDays || welle.kwDays.length === 0) return false;
   
   const currentDay = getCurrentDayAbbr();
-  const currentKW = getCurrentKW();
+  const currentKWNum = getCurrentKWNumber();
   
   return welle.kwDays.some(kwDay => {
-    const matchesKW = kwDay.kw.toUpperCase() === currentKW.toUpperCase();
+    const kwNum = extractKWNumber(kwDay.kw);
+    const matchesKW = kwNum === currentKWNum;
     const matchesDay = kwDay.days.some(day => day.toUpperCase() === currentDay);
     return matchesKW && matchesDay;
   });
