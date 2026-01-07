@@ -121,12 +121,21 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
 
   // Load wellen from database
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VorbestellerPage.tsx:useEffect:mount',message:'useEffect triggered for wellen load',data:{timestamp:new Date().toISOString()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const loadWellen = async () => {
       try {
         setIsLoadingWellen(true);
         const fetchedWellen = await wellenService.getAllWellen();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VorbestellerPage.tsx:loadWellen:success',message:'Wellen loaded successfully',data:{count:fetchedWellen?.length||0,names:fetchedWellen?.map((w:any)=>w.name)||[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+        // #endregion
         setWellenList(fetchedWellen);
       } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VorbestellerPage.tsx:loadWellen:error',message:'Error loading wellen',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D'})}).catch(()=>{});
+        // #endregion
         console.error('Error loading wellen:', error);
       } finally {
         setIsLoadingWellen(false);

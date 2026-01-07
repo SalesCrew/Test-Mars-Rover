@@ -56,12 +56,21 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
 
   // Fetch wellen on mount
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VorbestellerModal.tsx:useEffect:trigger',message:'useEffect triggered',data:{isOpen,timestamp:new Date().toISOString()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const loadWellen = async () => {
       try {
         setIsLoadingWellen(true);
         const fetchedWellen = await wellenService.getAllWellen();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VorbestellerModal.tsx:loadWellen:success',message:'GL Wellen loaded',data:{count:fetchedWellen?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B'})}).catch(()=>{});
+        // #endregion
         setWellen(fetchedWellen);
       } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VorbestellerModal.tsx:loadWellen:error',message:'GL Error loading wellen',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D'})}).catch(()=>{});
+        // #endregion
         console.error('Error loading wellen:', error);
       } finally {
         setIsLoadingWellen(false);
