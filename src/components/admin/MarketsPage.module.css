@@ -136,6 +136,47 @@
   gap: 8px;
 }
 
+.statsWrapper .backfillButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 10px;
+  color: #3b82f6;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.statsWrapper .backfillButton:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.statsWrapper .backfillButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.statsWrapper .backfillResult {
+  font-size: 12px;
+  color: #22c55e;
+  font-weight: 500;
+  padding: 6px 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 6px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .statsWrapper .clearFiltersButton {
   display: flex;
   align-items: center;

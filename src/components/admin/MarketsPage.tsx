@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MapPin, FunnelSimple, X, CaretDown, CaretUp, WarningCircle, SortAscending, SortDescending } from '@phosphor-icons/react';
+import { MapPin, FunnelSimple, X, CaretDown, CaretUp, WarningCircle, SortAscending, SortDescending, LinkSimple } from '@phosphor-icons/react';
 import VirtualizedAnimatedList from '../gl/VirtualizedAnimatedList';
 import { MarketListItem } from './MarketListItem';
 import { MarketListSkeleton } from './MarketListSkeleton';
@@ -37,6 +37,8 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [processingType, setProcessingType] = useState<'assign' | 'swap' | 'remove' | undefined>(undefined);
   const [showCheckmark, setShowCheckmark] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ updated: number; notMatched: number } | null>(null);
   const [searchTerms, setSearchTerms] = useState<Record<FilterType, string>>({
     chain: '',
     id: '',
@@ -654,6 +656,33 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     Object.values(selectedFilters).some(arr => arr.length > 0) ||
     sortField !== 'name' || sortDirection !== 'asc';
 
+  // Handler for backfilling GL IDs based on name matching
+  const handleBackfillGLIds = async () => {
+    setIsBackfilling(true);
+    setBackfillResult(null);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://marsrover-ba-production.up.railway.app'}/api/markets/backfill-gl-ids`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      setBackfillResult({ updated: data.updated, notMatched: data.notMatched });
+      
+      // Reload markets to reflect the changes
+      if (data.updated > 0) {
+        const updatedMarkets = await marketService.getAllMarkets();
+        setMarkets(updatedMarkets);
+      }
+      
+      // Hide result after 5 seconds
+      setTimeout(() => setBackfillResult(null), 5000);
+    } catch (error) {
+      console.error('Error backfilling GL IDs:', error);
+      alert('Fehler beim Verknüpfen der GL IDs');
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
   return (
     <div className={styles.pageContainer}>
       {/* GL Filter Card */}
@@ -713,6 +742,21 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
             )}
           </div>
           <div className={styles.statsWrapper}>
+            <button
+              className={styles.backfillButton}
+              onClick={handleBackfillGLIds}
+              disabled={isBackfilling}
+              title="GL IDs anhand von Namen verknüpfen"
+            >
+              <LinkSimple size={16} weight="bold" />
+              <span>{isBackfilling ? 'Verknüpfe...' : 'IDs verknüpfen'}</span>
+            </button>
+            {backfillResult && (
+              <span className={styles.backfillResult}>
+                ✓ {backfillResult.updated} aktualisiert
+                {backfillResult.notMatched > 0 && `, ${backfillResult.notMatched} nicht gefunden`}
+              </span>
+            )}
             <div className={styles.marketStats}>
               <MapPin size={18} weight="regular" />
               <span>{filteredMarkets.length} Märkte</span>
