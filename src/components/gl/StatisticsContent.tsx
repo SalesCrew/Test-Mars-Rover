@@ -31,8 +31,6 @@ interface WaveProgress {
   kartonwareTarget: number;
 }
 
-const TOTAL_GLS = 8; // Total number of GLs for goal division
-
 export const StatisticsContent: React.FC = () => {
   const { user } = useAuth();
   const [chainAverages, setChainAverages] = useState<ChainAverage[]>([]);
@@ -77,14 +75,10 @@ export const StatisticsContent: React.FC = () => {
         if (!wavesRes.ok) throw new Error('Fehler beim Laden der Wellen-Daten');
         const wavesData = await wavesRes.json();
         
-        // Filter for active waves and adjust targets
+        // Filter for active waves - backend now returns proportional targets
+        // based on formula: GL Target = Total Target × (GL's Markets in Wave / Total Markets in Wave)
         const active = wavesData
-          .filter((w: WaveProgress) => w.status === 'active')
-          .map((wave: WaveProgress) => ({
-            ...wave,
-            displayTarget: Math.ceil(wave.displayTarget / TOTAL_GLS),
-            kartonwareTarget: Math.ceil(wave.kartonwareTarget / TOTAL_GLS),
-          }));
+          .filter((w: WaveProgress) => w.status === 'active');
         setActiveWaves(active);
 
       } catch (err: any) {
