@@ -31,7 +31,11 @@ interface MenuItem {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
-  const [selectedPage, setSelectedPage] = useState<AdminPage>('dashboard');
+  // Persist selected page to localStorage so it survives refresh
+  const [selectedPage, setSelectedPage] = useState<AdminPage>(() => {
+    const saved = localStorage.getItem('admin-selected-page');
+    return (saved as AdminPage) || 'dashboard';
+  });
   const [isExpanded, setIsExpanded] = useState(true);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isHistorieModalOpen, setIsHistorieModalOpen] = useState(false);
@@ -59,6 +63,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [productImportResult, setProductImportResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
   const [waveIdToEdit, setWaveIdToEdit] = useState<string | null>(null);
   const { logout } = useAuth();
+
+  // Save selected page to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('admin-selected-page', selectedPage);
+  }, [selectedPage]);
 
   // Handler for editing a wave from dashboard
   const handleEditWaveFromDashboard = (waveId: string) => {
