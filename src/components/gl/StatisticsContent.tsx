@@ -54,22 +54,19 @@ export const StatisticsContent: React.FC = () => {
         if (!chainRes.ok) throw new Error('Fehler beim Laden der Ketten-Daten');
         const chainData = await chainRes.json();
         
-        // Goal percentages (80%, 60%) stay the same - only target numbers/values get divided
-        // For value-based goals (Zoofachhandel, Hagebau), divide goalValue AND totalValue by 8
+        // Goal percentages (80%, 60%) stay the same for Billa/Spar
+        // For value-based goals (Zoofachhandel, Hagebau), backend now returns GL-proportional goals
+        // based on formula: GL Goal = Total Goal × (GL's Markets / Total Markets)
+        // So no division needed here - backend handles the proportional calculation
         const adjustedChainData = chainData.map((chain: any) => {
-          const isValueBased = chain.goalType === 'value';
           return {
             ...chain,
             // goalPercentage stays the same (80% for Billa, 60% for Spar, etc.)
-            // For value-based goals, divide the goalValue and totalValue by 8
-            goalValue: isValueBased && chain.goalValue 
-              ? Math.ceil(chain.goalValue / TOTAL_GLS) 
-              : chain.goalValue,
-            totalValue: isValueBased && chain.totalValue 
-              ? Math.ceil(chain.totalValue / TOTAL_GLS) 
-              : chain.totalValue,
-            // Divide totalMarkets by 8 to show GL's share
-            totalMarkets: Math.ceil((chain.totalMarkets || 0) / TOTAL_GLS),
+            // goalValue for value-based chains is already GL-proportional from backend
+            goalValue: chain.goalValue,
+            totalValue: chain.totalValue,
+            // totalMarkets is already GL-specific from backend for value-based chains
+            totalMarkets: chain.totalMarkets || 0,
             marketsWithProgress: chain.marketsWithProgress || 0,
           };
         });
