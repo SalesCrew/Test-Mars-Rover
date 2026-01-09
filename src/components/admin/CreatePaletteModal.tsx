@@ -248,11 +248,6 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
                     <Plus size={16} weight="bold" />
                     <span>Weitere hinzufügen</span>
                   </button>
-                  {currentPalette.products.length > 0 && (
-                    <div className={styles.totalValue}>
-                      Gesamtwert: <strong>€{getTotalValue(currentPalette.products).toFixed(2)}</strong>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -306,12 +301,6 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Größe:</span>
                         <span className={styles.detailValue}>{palette.size}</span>
-                      </div>
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Gesamtwert:</span>
-                        <span className={styles.detailValue} style={{ color: departmentColor, fontWeight: 700 }}>
-                          €{getTotalValue(palette.products).toFixed(2)}
-                        </span>
                       </div>
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Produkte:</span>
