@@ -268,9 +268,10 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     try {
       // Prepare items array with only items that have quantities > 0
       const items: Array<{
-        item_type: 'display' | 'kartonware';
+        item_type: 'display' | 'kartonware' | 'palette' | 'schuette';
         item_id: string;
         current_number: number;
+        value_per_unit?: number; // For palette/schuette to track value
       }> = [];
 
       // Add displays with quantities
@@ -295,6 +296,38 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
             current_number: qty
           });
         }
+      });
+
+      // Add palette products with quantities (store product ID and value)
+      selectedVorbesteller?.paletteItems?.forEach(palette => {
+        palette.products.forEach(product => {
+          const productKey = `palette-${palette.id}-${product.id}`;
+          const qty = itemQuantities[productKey] || 0;
+          if (qty > 0) {
+            items.push({
+              item_type: 'palette',
+              item_id: product.id,
+              current_number: qty,
+              value_per_unit: product.valuePerVE
+            });
+          }
+        });
+      });
+
+      // Add schuette products with quantities (store product ID and value)
+      selectedVorbesteller?.schutteItems?.forEach(schuette => {
+        schuette.products.forEach(product => {
+          const productKey = `schutte-${schuette.id}-${product.id}`;
+          const qty = itemQuantities[productKey] || 0;
+          if (qty > 0) {
+            items.push({
+              item_type: 'schuette',
+              item_id: product.id,
+              current_number: qty,
+              value_per_unit: product.valuePerVE
+            });
+          }
+        });
       });
 
       // Save to database
