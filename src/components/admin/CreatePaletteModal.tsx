@@ -13,6 +13,7 @@ interface CreatePaletteModalProps {
 interface PaletteProductItem {
   name: string;
   value: number;
+  ve: number; // Verkaufseinheit
   ean: string;
 }
 
@@ -33,7 +34,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
   const [currentPalette, setCurrentPalette] = useState<PaletteItem>({
     name: '',
     subname: '',
-    products: [{ name: '', value: 0, ean: '' }],
+    products: [{ name: '', value: 0, ve: 0, ean: '' }],
     size: ''
   });
   const [createdPalettes, setCreatedPalettes] = useState<PaletteItem[]>([]);
@@ -43,7 +44,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
   const handleAddProduct = () => {
     setCurrentPalette(prev => ({
       ...prev,
-      products: [...prev.products, { name: '', value: 0, ean: '' }]
+      products: [...prev.products, { name: '', value: 0, ve: 0, ean: '' }]
     }));
   };
 
@@ -56,7 +57,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
     }
   };
 
-  const handleProductChange = (index: number, field: 'name' | 'value' | 'ean', value: string | number) => {
+  const handleProductChange = (index: number, field: 'name' | 'value' | 've' | 'ean', value: string | number) => {
     setCurrentPalette(prev => ({
       ...prev,
       products: prev.products.map((product, i) => 
@@ -89,7 +90,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
       department: department,
       productType: 'palette' as const,
       weight: palette.size,
-      content: palette.products.map(p => `${p.name} (€${p.value.toFixed(2)}${p.ean ? `, EAN: ${p.ean}` : ''})`).join(', '),
+      content: palette.products.map(p => `${p.name} (€${p.value.toFixed(2)}/VE, VE: ${p.ve}${p.ean ? `, EAN: ${p.ean}` : ''})`).join(', '),
       palletSize: palette.products.length,
       price: getTotalValue(palette.products), // Store total value in price field
       sku: undefined
@@ -104,7 +105,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
     setCurrentPalette({
       name: '',
       subname: '',
-      products: [{ name: '', value: 0, ean: '' }],
+      products: [{ name: '', value: 0, ve: 0, ean: '' }],
       size: ''
     });
   };
@@ -129,7 +130,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
     return (
       currentPalette.name.trim() !== '' &&
       currentPalette.size.trim() !== '' &&
-      currentPalette.products.every(p => p.name.trim() !== '' && p.value > 0)
+      currentPalette.products.every(p => p.name.trim() !== '' && p.value > 0 && p.ve > 0)
     );
   };
 
@@ -223,7 +224,15 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
                         className={styles.inputProductValue}
                         value={product.value || ''}
                         onChange={(e) => handleProductChange(index, 'value', parseFloat(e.target.value) || 0)}
-                        placeholder="Wert (€)"
+                        placeholder="Preis (€)"
+                        min="0"
+                      />
+                      <input
+                        type="number"
+                        className={styles.inputProductVE}
+                        value={product.ve || ''}
+                        onChange={(e) => handleProductChange(index, 've', parseInt(e.target.value) || 0)}
+                        placeholder="VE"
                         min="0"
                       />
                       <input
@@ -308,7 +317,7 @@ export const CreatePaletteModal: React.FC<CreatePaletteModalProps> = ({
                           {palette.products.map((p, i) => (
                             <div key={i} className={styles.contentItem}>
                               <span className={styles.productItemName}>{p.name}</span>
-                              <span className={styles.productItemValue}>€{p.value.toFixed(2)}</span>
+                              <span className={styles.productItemValue}>€{p.value.toFixed(2)}/VE · VE: {p.ve}</span>
                               {p.ean && <span className={styles.productItemEAN}>EAN: {p.ean}</span>}
                             </div>
                           ))}
