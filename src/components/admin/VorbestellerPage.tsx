@@ -182,29 +182,32 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     }
   }, [waveIdToEdit, wellenList]);
 
-  // Load product displays (displays from products table)
+  // Load products from products table (displays, palettes, schuetten)
   useEffect(() => {
-    const loadProductDisplays = async () => {
+    const loadProducts = async () => {
       try {
         const products = await getAllProducts();
-        // Filter only displays (productType === 'display')
-        const displays = products.filter(p => p.productType === 'display');
-        setProductDisplays(displays);
+        // Filter by productType
+        setProductDisplays(products.filter(p => p.productType === 'display'));
+        setProductPalettes(products.filter(p => p.productType === 'palette'));
+        setProductSchuetten(products.filter(p => p.productType === 'schuette'));
       } catch (error) {
-        console.error('Error loading product displays:', error);
+        console.error('Error loading products:', error);
       }
     };
-    loadProductDisplays();
+    loadProducts();
   }, []);
 
   const [selectedWelle, setSelectedWelle] = useState<Welle | null>(null);
 
   const [editingWelle, setEditingWelle] = useState<Welle | null>(null);
   const [isPastItemsModalOpen, setIsPastItemsModalOpen] = useState<boolean>(false);
-  const [pastItemType, setPastItemType] = useState<'display' | 'kartonware' | null>(null);
+  const [pastItemType, setPastItemType] = useState<'display' | 'kartonware' | 'palette' | 'schuette' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTypes, setSelectedTypes] = useState<('display' | 'kartonware' | 'palette' | 'schuette')[]>([]);
   const [productDisplays, setProductDisplays] = useState<Product[]>([]);
+  const [productPalettes, setProductPalettes] = useState<Product[]>([]);
+  const [productSchuetten, setProductSchuetten] = useState<Product[]>([]);
   
   // Wave details
   const [waveName, setWaveName] = useState('');
@@ -573,7 +576,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     return pastWellen.flatMap(w => w.kartonwareItems || []);
   };
 
-  const handleOpenPastItems = (type: 'display' | 'kartonware') => {
+  const handleOpenPastItems = (type: 'display' | 'kartonware' | 'palette' | 'schuette') => {
     setPastItemType(type);
     setIsPastItemsModalOpen(true);
   };
@@ -616,6 +619,44 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
       itemValue: product.price?.toString()
     };
     setDisplays(prev => [...prev, newDisplay]);
+    handleClosePastItems();
+  };
+
+  // Handle selecting a palette product (from products table)
+  const handleSelectProductPalette = (product: Product) => {
+    const newPalette: PaletteItem = {
+      id: `palette-${Date.now()}`,
+      name: product.name,
+      size: product.weight || '',
+      picture: null,
+      products: product.paletteProducts?.map((p, idx) => ({
+        id: `product-${Date.now()}-${idx}`,
+        name: p.name,
+        value: p.value?.toString() || '',
+        ve: p.ve?.toString() || '',
+        ean: p.ean || ''
+      })) || [{ id: `product-${Date.now()}`, name: '', value: '', ve: '', ean: '' }]
+    };
+    setPaletteItems(prev => [...prev, newPalette]);
+    handleClosePastItems();
+  };
+
+  // Handle selecting a schuette product (from products table)
+  const handleSelectProductSchuette = (product: Product) => {
+    const newSchutte: SchutteItem = {
+      id: `schutte-${Date.now()}`,
+      name: product.name,
+      size: product.weight || '',
+      picture: null,
+      products: product.paletteProducts?.map((p, idx) => ({
+        id: `product-${Date.now()}-${idx}`,
+        name: p.name,
+        value: p.value?.toString() || '',
+        ve: p.ve?.toString() || '',
+        ean: p.ean || ''
+      })) || [{ id: `product-${Date.now()}`, name: '', value: '', ve: '', ean: '' }]
+    };
+    setSchutteItems(prev => [...prev, newSchutte]);
     handleClosePastItems();
   };
 
@@ -1001,22 +1042,38 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                     ))}
                   </div>
                   {/* Add from Past Button */}
-                  {((currentStep === 3 && selectedTypes[0] === 'display') || 
-                    (currentStep === 4 && selectedTypes.includes('display') && selectedTypes[0] === 'kartonware')) && (
+                  {getTypeForStep(currentStep) === 'display' && (
                     <button 
                       className={styles.addFromPastButton}
                       onClick={() => handleOpenPastItems('display')}
+                      title="Aus Produktliste hinzufügen"
+                    >
+                      <Plus size={14} weight="bold" />
+                    </button>
+                  )}
+                  {getTypeForStep(currentStep) === 'kartonware' && (
+                    <button 
+                      className={styles.addFromPastButton}
+                      onClick={() => handleOpenPastItems('kartonware')}
                       title="Aus vergangenen Wellen hinzufügen"
                     >
                       <Plus size={14} weight="bold" />
                     </button>
                   )}
-                  {((currentStep === 3 && selectedTypes[0] === 'kartonware') || 
-                    (currentStep === 4 && selectedTypes.includes('kartonware') && selectedTypes[0] === 'display')) && (
+                  {getTypeForStep(currentStep) === 'palette' && (
                     <button 
                       className={styles.addFromPastButton}
-                      onClick={() => handleOpenPastItems('kartonware')}
-                      title="Aus vergangenen Wellen hinzufügen"
+                      onClick={() => handleOpenPastItems('palette')}
+                      title="Aus Produktliste hinzufügen"
+                    >
+                      <Plus size={14} weight="bold" />
+                    </button>
+                  )}
+                  {getTypeForStep(currentStep) === 'schuette' && (
+                    <button 
+                      className={styles.addFromPastButton}
+                      onClick={() => handleOpenPastItems('schuette')}
+                      title="Aus Produktliste hinzufügen"
                     >
                       <Plus size={14} weight="bold" />
                     </button>
@@ -1918,7 +1975,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
           <div className={styles.pastItemsModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                {pastItemType === 'display' ? 'Display hinzufügen' : 'Kartonware aus vergangenen Wellen'}
+                {pastItemType === 'display' && 'Display hinzufügen'}
+                {pastItemType === 'kartonware' && 'Kartonware aus vergangenen Wellen'}
+                {pastItemType === 'palette' && 'Palette hinzufügen'}
+                {pastItemType === 'schuette' && 'Schütte hinzufügen'}
               </h3>
               <button 
                 className={styles.modalClose}
@@ -2004,6 +2064,58 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                 </div>
               )}
 
+              {/* Product Palettes Section */}
+              {pastItemType === 'palette' && productPalettes.length > 0 && (
+                <div className={styles.pastItemsSection}>
+                  <h4 className={styles.pastItemsSectionTitle}>Aus Produktliste</h4>
+                  <div className={styles.pastItemsGrid}>
+                    {productPalettes.map((product) => (
+                      <button
+                        key={product.id}
+                        className={styles.pastItemCard}
+                        onClick={() => handleSelectProductPalette(product)}
+                      >
+                        <div className={styles.pastItemImage}>
+                          <div className={styles.pastItemImagePlaceholder}>
+                            <Stack size={32} weight="regular" />
+                          </div>
+                        </div>
+                        <div className={styles.pastItemName}>{product.name}</div>
+                        <div className={styles.pastItemPrice}>
+                          {product.paletteProducts?.length || 0} Produkte
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Product Schütten Section */}
+              {pastItemType === 'schuette' && productSchuetten.length > 0 && (
+                <div className={styles.pastItemsSection}>
+                  <h4 className={styles.pastItemsSectionTitle}>Aus Produktliste</h4>
+                  <div className={styles.pastItemsGrid}>
+                    {productSchuetten.map((product) => (
+                      <button
+                        key={product.id}
+                        className={styles.pastItemCard}
+                        onClick={() => handleSelectProductSchuette(product)}
+                      >
+                        <div className={styles.pastItemImage}>
+                          <div className={styles.pastItemImagePlaceholder}>
+                            <ShoppingBag size={32} weight="regular" />
+                          </div>
+                        </div>
+                        <div className={styles.pastItemName}>{product.name}</div>
+                        <div className={styles.pastItemPrice}>
+                          {product.paletteProducts?.length || 0} Produkte
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Empty state */}
               {pastItemType === 'display' && getAllPastDisplays().length === 0 && productDisplays.length === 0 && (
                 <div className={styles.emptyPastItems}>
@@ -2013,6 +2125,16 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
               {pastItemType === 'kartonware' && getAllPastKartonware().length === 0 && (
                 <div className={styles.emptyPastItems}>
                   <p>Keine vergangenen Kartonware gefunden</p>
+                </div>
+              )}
+              {pastItemType === 'palette' && productPalettes.length === 0 && (
+                <div className={styles.emptyPastItems}>
+                  <p>Keine Paletten gefunden</p>
+                </div>
+              )}
+              {pastItemType === 'schuette' && productSchuetten.length === 0 && (
+                <div className={styles.emptyPastItems}>
+                  <p>Keine Schütten gefunden</p>
                 </div>
               )}
             </div>
