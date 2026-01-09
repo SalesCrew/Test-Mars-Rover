@@ -11,6 +11,7 @@ import { FragebogenPage } from './FragebogenPage';
 import { ProductsPage } from './ProductsPage';
 import { CreateDisplayModal } from './CreateDisplayModal';
 import { CreatePaletteModal } from './CreatePaletteModal';
+import { CreateSchutteModal } from './CreateSchutteModal';
 import { parseMarketFile, validateImportFile } from '../../utils/marketImporter';
 import { actionHistoryService, type ActionHistoryEntry } from '../../services/actionHistoryService';
 import { marketService } from '../../services/marketService';
@@ -48,8 +49,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [isProductImportModalOpen, setIsProductImportModalOpen] = useState(false);
   const [isCreateDisplayModalOpen, setIsCreateDisplayModalOpen] = useState(false);
   const [isCreatePaletteModalOpen, setIsCreatePaletteModalOpen] = useState(false);
+  const [isCreateSchutteModalOpen, setIsCreateSchutteModalOpen] = useState(false);
   const [displayDepartment, setDisplayDepartment] = useState<'pets' | 'food'>('pets');
   const [paletteDepartment, setPaletteDepartment] = useState<'pets' | 'food'>('pets');
+  const [schutteDepartment, setSchutteDepartment] = useState<'pets' | 'food'>('pets');
   const [selectedProductImportType, setSelectedProductImportType] = useState<'pets-standard' | 'pets-display' | 'food-standard' | 'food-display' | null>(null);
   const [historyEntries, setHistoryEntries] = useState<ActionHistoryEntry[]>([]);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
@@ -580,9 +583,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
                       Palette
                     </button>
                     <button
-                      className={styles.importTypeButtonDisabled}
-                      disabled
-                      title="Schütten - kommt bald"
+                      className={styles.importTypeButton}
+                      onClick={() => {
+                        setSchutteDepartment('pets');
+                        setIsProductImportModalOpen(false);
+                        setIsCreateSchutteModalOpen(true);
+                      }}
                     >
                       Schütten
                     </button>
@@ -627,9 +633,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
                       Palette
                     </button>
                     <button
-                      className={styles.importTypeButtonDisabled}
-                      disabled
-                      title="Schütten - kommt bald"
+                      className={styles.importTypeButton}
+                      onClick={() => {
+                        setSchutteDepartment('food');
+                        setIsProductImportModalOpen(false);
+                        setIsCreateSchutteModalOpen(true);
+                      }}
                     >
                       Schütten
                     </button>
@@ -865,6 +874,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           }
         }}
         department={paletteDepartment}
+      />
+
+      {/* Create Schütte Modal */}
+      <CreateSchutteModal
+        isOpen={isCreateSchutteModalOpen}
+        onClose={() => {
+          setIsCreateSchutteModalOpen(false);
+          setIsProductImportModalOpen(true); // Return to product import modal
+        }}
+        onSave={async (schuetten) => {
+          try {
+            // Update the products in the data store and WAIT
+            const { addProducts } = await import('../../data/productsData');
+            await addProducts(schuetten);
+            
+            // Trigger update event for ProductsPage AFTER products are saved
+            window.dispatchEvent(new Event('productsUpdated'));
+            
+            console.log('Created schuetten:', schuetten);
+            
+            setIsCreateSchutteModalOpen(false);
+            setIsProductImportModalOpen(false);
+          } catch (error) {
+            console.error('Failed to save schuetten:', error);
+            alert('Fehler beim Speichern der Schütten');
+          }
+        }}
+        department={schutteDepartment}
       />
     </div>
   );

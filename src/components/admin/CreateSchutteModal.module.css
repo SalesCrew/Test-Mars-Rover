@@ -1,0 +1,542 @@
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100002;
+  padding: 20px;
+  animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal Container */
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 95%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(249, 250, 251, 0.5));
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.departmentBadge {
+  padding: 6px 14px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modalTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.closeButton:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+}
+
+/* Content */
+.modalContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+.modalContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 4px;
+}
+
+.modalContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.6);
+}
+
+/* Input Form */
+.inputForm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.labelHint {
+  font-size: 13px;
+  color: #64748B;
+  margin: -4px 0 4px 0;
+}
+
+.input {
+  padding: 12px 16px;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+  background: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input::placeholder {
+  color: #9CA3AF;
+}
+
+/* Products */
+.productsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.productInputRow {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px 140px auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.inputProductName {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+  background: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inputProductValue {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+  background: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inputProductVE {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+  background: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inputProductEAN {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+  background: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inputProductName:focus,
+.inputProductValue:focus,
+.inputProductVE:focus,
+.inputProductEAN:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.inputProductName::placeholder,
+.inputProductValue::placeholder,
+.inputProductVE::placeholder,
+.inputProductEAN::placeholder {
+  color: #9CA3AF;
+}
+
+.removeProductButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: white;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 8px;
+  color: #EF4444;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.removeProductButton:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.addProductButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: white;
+  border: 1.5px dashed rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.addProductButton:hover {
+  background: rgba(59, 130, 246, 0.04);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3B82F6;
+}
+
+/* Created Count */
+.createdCount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #10B981;
+}
+
+/* Summary View */
+.summaryView {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.summaryTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.summarySubtitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: -12px 0 0 0;
+}
+
+.palettesList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.paletteCard {
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.5), rgba(255, 255, 255, 0.3));
+  border: 1.5px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.paletteCard:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.paletteCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.paletteCardTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.paletteName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+  display: block;
+}
+
+.paletteSubname {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+  display: block;
+  margin-top: 2px;
+}
+
+.paletteCardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editButton,
+.deleteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: white;
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.editButton {
+  color: #3B82F6;
+}
+
+.editButton:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.deleteButton {
+  color: #EF4444;
+}
+
+.deleteButton:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.paletteCardDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detailRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.detailLabel {
+  font-weight: 600;
+  color: #64748B;
+  min-width: 90px;
+}
+
+.detailValue {
+  font-weight: 500;
+  color: #1E293B;
+}
+
+.contentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contentItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 500;
+  color: #1E293B;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.productItemName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.productItemValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: #10B981;
+}
+
+.productItemEAN {
+  font-size: 12px;
+  color: #64748B;
+}
+
+/* Footer */
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  background: linear-gradient(to top, rgba(249, 250, 251, 0.5), rgba(255, 255, 255, 1));
+  gap: 12px;
+}
+
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cancelButton,
+.secondaryButton,
+.primaryButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid;
+}
+
+.cancelButton {
+  background: white;
+  border-color: rgba(226, 232, 240, 0.8);
+  color: #64748B;
+}
+
+.cancelButton:hover {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(226, 232, 240, 1);
+}
+
+.secondaryButton {
+  background: white;
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3B82F6;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.04);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.secondaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primaryButton {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: white;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: #2563EB;
+  border-color: #2563EB;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

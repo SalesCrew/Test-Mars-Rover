@@ -886,8 +886,8 @@ export const ProductsPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Content / Palette Products */}
-                {editedProduct.productType === 'palette' && editedProduct.paletteProducts ? (
+                {/* Content / Palette or Schütte Products */}
+                {(editedProduct.productType === 'palette' || editedProduct.productType === 'schuette') && editedProduct.paletteProducts ? (
                   <div className={styles.detailItemFull}>
                     <label className={styles.detailLabel}>Produkte ({editedProduct.paletteProducts.length})</label>
                     <div className={styles.paletteProductsList}>
