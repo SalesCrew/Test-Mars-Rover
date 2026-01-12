@@ -182,6 +182,15 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .statsWrapper .clearFiltersButton {
   display: flex;
   align-items: center;

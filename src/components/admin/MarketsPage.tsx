@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MapPin, FunnelSimple, X, CaretDown, CaretUp, WarningCircle, SortAscending, SortDescending, LinkSimple, CheckCircle } from '@phosphor-icons/react';
+import { MapPin, FunnelSimple, X, CaretDown, CaretUp, WarningCircle, SortAscending, SortDescending, LinkSimple, CheckCircle, ArrowsClockwise } from '@phosphor-icons/react';
 import VirtualizedAnimatedList from '../gl/VirtualizedAnimatedList';
 import { MarketListItem } from './MarketListItem';
 import { MarketListSkeleton } from './MarketListSkeleton';
@@ -40,6 +40,8 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [backfillResult, setBackfillResult] = useState<{ updated: number; notMatched: number } | null>(null);
+  const [isSyncingVisits, setIsSyncingVisits] = useState(false);
+  const [syncVisitsResult, setSyncVisitsResult] = useState<{ marketsUpdated: number; totalUniqueVisits: number } | null>(null);
   const [unmatchedMarketsModal, setUnmatchedMarketsModal] = useState<{
     isOpen: boolean;
     markets: Array<{ id: string; name: string; glName: string | null; glEmail: string | null }>;
@@ -699,6 +701,31 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     }
   };
 
+  // Handler for syncing market visits from historical data
+  const handleSyncVisits = async () => {
+    setIsSyncingVisits(true);
+    setSyncVisitsResult(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/markets/sync-visits`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      setSyncVisitsResult({ marketsUpdated: data.marketsUpdated, totalUniqueVisits: data.totalUniqueVisits });
+      
+      // Reload markets to get updated visit counts
+      const updatedMarkets = await marketService.getAllMarkets();
+      setMarkets(updatedMarkets);
+      
+      // Hide result after 5 seconds
+      setTimeout(() => setSyncVisitsResult(null), 5000);
+    } catch (error) {
+      console.error('Error syncing visits:', error);
+      alert('Fehler beim Synchronisieren der Besuche');
+    } finally {
+      setIsSyncingVisits(false);
+    }
+  };
+
   // Handler for manually assigning GL to a market
   const handleManualGLAssign = async (marketId: string, glId: string) => {
     try {
@@ -801,6 +828,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
               <span className={styles.backfillResult}>
                 ✓ {backfillResult.updated} aktualisiert
                 {backfillResult.notMatched > 0 && `, ${backfillResult.notMatched} nicht gefunden`}
+              </span>
+            )}
+            <button
+              className={styles.backfillButton}
+              onClick={handleSyncVisits}
+              disabled={isSyncingVisits}
+              title="Besuche aus historischen Daten synchronisieren"
+            >
+              <ArrowsClockwise size={16} weight="bold" className={isSyncingVisits ? styles.spinning : ''} />
+              <span>{isSyncingVisits ? 'Sync...' : 'Besuche sync'}</span>
+            </button>
+            {syncVisitsResult && (
+              <span className={styles.backfillResult}>
+                ✓ {syncVisitsResult.marketsUpdated} Märkte, {syncVisitsResult.totalUniqueVisits} Besuche
               </span>
             )}
             <div className={styles.marketStats}>
