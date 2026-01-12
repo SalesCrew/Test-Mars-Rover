@@ -67,46 +67,42 @@ const processImportData = (rawData: any[][]): AdminMarket[] => {
 };
 
 const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
-  // CORRECTED Excel Column Mapping (0-indexed) - January 2026:
-  // A=0: ID
+  // Excel Column Mapping (0-indexed) - Updated January 2026:
+  // A=0: Market ID
   // B=1: IGNORE
-  // C=2: IGNORE
-  // D=3: Channel (no UI)
+  // C=2: Channel
+  // D=3: IGNORE
   // E=4: Banner
   // F=5: Handelskette (Chain)
-  // G=6: IGNORE
-  // H=7: Name (Market Name)
+  // G=6: Fil (Filiale number)
+  // H=7: Market Name
   // I=8: PLZ (Postal Code)
   // J=9: Stadt (City)
   // K=10: Straße (Street)
-  // L=11: IGNORE
-  // M=12: GL Name
-  // N=13: GL Email (for GL ID matching)
-  // O=14: Status (Aktiv/Inaktiv)
-  // P=15: IGNORE
-  // Q=16: Frequenz
-  // R=17: IGNORE
-  // S=18: IGNORE
-  // T=19: IGNORE
-  // U=20: Market Tel
-  // V=21: Market Email
-  // W=22: IGNORE (Maingroup)
-  // X=23: IGNORE (Subgroup)
+  // L=11: GL Name
+  // M=12: GL Email
+  // N=13: Status (Aktiv/Inaktiv)
+  // O=14: IGNORE
+  // P=15: Frequenz
+  // Q=16: IGNORE
+  // R=17: Market Tel
+  // S=18: Market Email
 
-  const id = row[0] ? String(row[0]).trim() : '';                    // A=0: ID
-  const channel = row[3] ? String(row[3]).trim() : '';               // D=3: Channel
+  const id = row[0] ? String(row[0]).trim() : '';                    // A=0: Market ID
+  const channel = row[2] ? String(row[2]).trim() : '';               // C=2: Channel
   const banner = row[4] ? String(row[4]).trim() : '';                // E=4: Banner
   const handelskette = row[5] ? String(row[5]).trim() : '';          // F=5: Handelskette
-  const name = row[7] ? String(row[7]).trim() : '';                  // H=7: Name
+  // G=6: Fil (available in row[6] but not stored)
+  const name = row[7] ? String(row[7]).trim() : '';                  // H=7: Market Name
   const plz = row[8] ? String(row[8]).trim() : '';                   // I=8: PLZ
   const stadt = row[9] ? String(row[9]).trim() : '';                 // J=9: Stadt (City)
   const strasse = row[10] ? String(row[10]).trim() : '';             // K=10: Straße (Street)
-  const gebietsleiterName = row[12] ? String(row[12]).trim() : '';   // M=12: GL Name
-  const gebietsleiterEmail = row[13] ? String(row[13]).trim() : '';  // N=13: GL Email
-  const status = row[14] ? String(row[14]).trim() : '';              // O=14: Status
-  const frequenz = row[16] ? parseFloat(String(row[16])) : 12;       // Q=16: Frequenz
-  const marketTel = row[20] ? String(row[20]).trim() : '';           // U=20: Market Tel
-  const marketEmail = row[21] ? String(row[21]).trim() : '';         // V=21: Market Email
+  const gebietsleiterName = row[11] ? String(row[11]).trim() : '';   // L=11: GL Name
+  const gebietsleiterEmail = row[12] ? String(row[12]).trim() : '';  // M=12: GL Email
+  const status = row[13] ? String(row[13]).trim() : '';              // N=13: Status
+  const frequenz = row[15] ? parseFloat(String(row[15])) : 12;       // P=15: Frequenz
+  const marketTel = row[17] ? String(row[17]).trim() : '';           // R=17: Market Tel
+  const marketEmail = row[18] ? String(row[18]).trim() : '';         // S=18: Market Email
 
   // Validate required fields
   if (!id || !name) {
