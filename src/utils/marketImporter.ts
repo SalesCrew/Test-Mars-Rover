@@ -70,8 +70,8 @@ const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
   // Excel Column Mapping (0-indexed) - Updated January 2026:
   // A=0: Market ID
   // B=1: IGNORE
-  // C=2: Channel
-  // D=3: IGNORE
+  // C=2: IGNORE
+  // D=3: Channel
   // E=4: Banner
   // F=5: Handelskette (Chain)
   // G=6: Fil (Filiale number)
@@ -89,7 +89,7 @@ const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
   // S=18: Market Email
 
   const id = row[0] ? String(row[0]).trim() : '';                    // A=0: Market ID
-  const channel = row[2] ? String(row[2]).trim() : '';               // C=2: Channel
+  const channel = row[3] ? String(row[3]).trim() : '';               // D=3: Channel
   const banner = row[4] ? String(row[4]).trim() : '';                // E=4: Banner
   const handelskette = row[5] ? String(row[5]).trim() : '';          // F=5: Handelskette
   // G=6: Fil (available in row[6] but not stored)
