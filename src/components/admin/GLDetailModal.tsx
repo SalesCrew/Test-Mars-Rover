@@ -51,7 +51,7 @@ interface GLDetailModalProps {
   allMarkets?: AdminMarket[];
 }
 
-type TabType = 'details' | 'billa' | 'spar' | 'zoofachhandel' | 'hagebau' | 'spt' | 'markets' | 'statistics';
+type TabType = 'details' | 'billa' | 'spar' | 'zoofachhandel' | 'hagebau' | 'markets' | 'statistics';
 
 // Separate LineChart component to properly use hooks
 interface LineChartProps {
@@ -499,7 +499,6 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, onDel
     { id: 'spar', label: 'Spar' },
     { id: 'zoofachhandel', label: 'Zoofachhandel' },
     { id: 'hagebau', label: 'Hagebau' },
-    { id: 'spt', label: 'SPT' },
     { id: 'markets', label: 'Märkte' },
     { id: 'statistics', label: 'Statistiken' },
   ];
@@ -909,12 +908,6 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, onDel
                   </div>
                 </>
               )}
-            </div>
-          )}
-
-          {activeTab === 'spt' && (
-            <div className={styles.emptyState}>
-              <span>Noch keine SPT Daten vorhanden</span>
             </div>
           )}
 
