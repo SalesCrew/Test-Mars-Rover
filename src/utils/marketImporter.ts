@@ -67,7 +67,7 @@ const processImportData = (rawData: any[][]): AdminMarket[] => {
 };
 
 const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
-  // UPDATED Excel Column Mapping (0-indexed) - January 2026:
+  // CORRECTED Excel Column Mapping (0-indexed) - January 2026:
   // A=0: ID
   // B=1: IGNORE
   // C=2: IGNORE
@@ -77,8 +77,8 @@ const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
   // G=6: IGNORE
   // H=7: Name (Market Name)
   // I=8: PLZ (Postal Code)
-  // J=9: Straße (Street)
-  // K=10: Stadt (City)
+  // J=9: Stadt (City)
+  // K=10: Straße (Street)
   // L=11: IGNORE
   // M=12: GL Name
   // N=13: GL Email (for GL ID matching)
@@ -99,14 +99,14 @@ const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
   const handelskette = row[5] ? String(row[5]).trim() : '';          // F=5: Handelskette
   const name = row[7] ? String(row[7]).trim() : '';                  // H=7: Name
   const plz = row[8] ? String(row[8]).trim() : '';                   // I=8: PLZ
-  const strasse = row[9] ? String(row[9]).trim() : '';               // J=9: Straße (was Stadt)
-  const stadt = row[10] ? String(row[10]).trim() : '';               // K=10: Stadt (was Straße)
-  const gebietsleiterName = row[12] ? String(row[12]).trim() : '';   // M=12: GL Name (was L=11)
-  const gebietsleiterEmail = row[13] ? String(row[13]).trim() : '';  // N=13: GL Email (was M=12)
-  const status = row[14] ? String(row[14]).trim() : '';              // O=14: Status (was N=13)
-  const frequenz = row[16] ? parseFloat(String(row[16])) : 12;       // Q=16: Frequenz (was P=15)
-  const marketTel = row[20] ? String(row[20]).trim() : '';           // U=20: Market Tel (NEW)
-  const marketEmail = row[21] ? String(row[21]).trim() : '';         // V=21: Market Email (NEW)
+  const stadt = row[9] ? String(row[9]).trim() : '';                 // J=9: Stadt (City)
+  const strasse = row[10] ? String(row[10]).trim() : '';             // K=10: Straße (Street)
+  const gebietsleiterName = row[12] ? String(row[12]).trim() : '';   // M=12: GL Name
+  const gebietsleiterEmail = row[13] ? String(row[13]).trim() : '';  // N=13: GL Email
+  const status = row[14] ? String(row[14]).trim() : '';              // O=14: Status
+  const frequenz = row[16] ? parseFloat(String(row[16])) : 12;       // Q=16: Frequenz
+  const marketTel = row[20] ? String(row[20]).trim() : '';           // U=20: Market Tel
+  const marketEmail = row[21] ? String(row[21]).trim() : '';         // V=21: Market Email
 
   // Validate required fields
   if (!id || !name) {

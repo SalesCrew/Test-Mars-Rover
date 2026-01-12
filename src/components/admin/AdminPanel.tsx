@@ -226,9 +226,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
       }, 2000);
 
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/35f7e71b-d3fc-4c62-8097-9c7adee771ff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AdminPanel.tsx:handleFileSelect:error',message:'Error caught',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       console.error('Import error:', error);
       setImportResult({
         success: false,

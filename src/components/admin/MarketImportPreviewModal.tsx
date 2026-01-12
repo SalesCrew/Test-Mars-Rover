@@ -92,12 +92,14 @@ export const MarketImportPreviewModal: React.FC<MarketImportPreviewModalProps> =
   }, []);
   
   // Create a map of existing markets by internalId for O(1) lookup
+  // Normalize IDs to strings for consistent comparison
   const existingMarketsMap = useMemo(() => {
     const map = new Map<string, AdminMarket>();
     for (let i = 0; i < existingMarkets.length; i++) {
       const market = existingMarkets[i];
       if (market.internalId) {
-        map.set(market.internalId, market);
+        // Normalize to string and trim for consistent comparison
+        map.set(String(market.internalId).trim(), market);
       }
     }
     return map;
@@ -117,7 +119,9 @@ export const MarketImportPreviewModal: React.FC<MarketImportPreviewModalProps> =
       
       // Use edited version if available
       const actualMarket = editedMarkets.get(market.id) || market;
-      const existing = existingMarketsMap.get(actualMarket.internalId);
+      // Normalize internalId for consistent lookup
+      const normalizedId = String(actualMarket.internalId || '').trim();
+      const existing = normalizedId ? existingMarketsMap.get(normalizedId) : undefined;
       
       if (!existing) {
         newArr.push(actualMarket);
