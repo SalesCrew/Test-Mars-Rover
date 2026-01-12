@@ -158,30 +158,20 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
     };
   }, [openFilter]);
 
-  // Handle imported markets
+  // Refresh markets list when import completes (import is now handled in AdminPanel via preview modal)
   useEffect(() => {
     if (importedMarkets.length > 0) {
-      const importNewMarkets = async () => {
+      // Reload markets from database to get the latest data after import
+      const refreshMarkets = async () => {
         try {
-          // Import to database
-          await marketService.importMarkets(importedMarkets);
-          
-          // Reload markets from database to get the latest data
           const updatedMarkets = await marketService.getAllMarkets();
           setMarkets(updatedMarkets);
         } catch (error) {
-          console.error('Failed to import markets to database:', error);
-          
-          // Fallback: Add to local state
-          setMarkets(prev => {
-            const existingIds = new Set(prev.map(m => m.id));
-            const newMarkets = importedMarkets.filter(m => !existingIds.has(m.id));
-            return [...prev, ...newMarkets];
-          });
+          console.error('Failed to refresh markets after import:', error);
         }
       };
 
-      importNewMarkets();
+      refreshMarkets();
     }
   }, [importedMarkets]);
 

@@ -12,6 +12,7 @@ import { ProductsPage } from './ProductsPage';
 import { CreateDisplayModal } from './CreateDisplayModal';
 import { CreatePaletteModal } from './CreatePaletteModal';
 import { CreateSchutteModal } from './CreateSchutteModal';
+import { MarketImportPreviewModal } from './MarketImportPreviewModal';
 import { parseMarketFile, validateImportFile } from '../../utils/marketImporter';
 import { actionHistoryService, type ActionHistoryEntry } from '../../services/actionHistoryService';
 import { marketService } from '../../services/marketService';
@@ -68,6 +69,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [isProductProcessing, setIsProductProcessing] = useState(false);
   const [productImportResult, setProductImportResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
   const [waveIdToEdit, setWaveIdToEdit] = useState<string | null>(null);
+  const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
+  const [pendingImportMarkets, setPendingImportMarkets] = useState<AdminMarket[]>([]);
   const { logout } = useAuth();
 
   // Save selected page to localStorage whenever it changes
@@ -197,7 +200,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
         return;
       }
 
-      // Store imported markets
+      // If there are existing markets, show preview modal for comparison
+      if (allMarkets.length > 0) {
+        setPendingImportMarkets(markets);
+        setIsImportModalOpen(false);
+        setIsProcessing(false);
+        setIsImportPreviewOpen(true);
+        return;
+      }
+
+      // No existing markets - import directly
       setImportedMarkets(markets);
       
       setImportResult({
@@ -247,6 +259,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
     if (file) {
       handleFileSelect(file);
     }
+  };
+
+  // Import preview handlers
+  const handleImportPreviewConfirm = async (markets: AdminMarket[]) => {
+    setIsImportPreviewOpen(false);
+    setPendingImportMarkets([]);
+    
+    if (markets.length > 0) {
+      try {
+        // Import confirmed markets
+        await marketService.importMarkets(markets);
+        
+        // Reload markets to refresh the list
+        const updatedMarkets = await marketService.getAllMarkets();
+        setAllMarkets(updatedMarkets);
+        setImportedMarkets(markets); // Trigger MarketsPage refresh
+        
+        setImportResult({
+          success: true,
+          message: `${markets.length} Märkte erfolgreich importiert`,
+          count: markets.length,
+        });
+        setTimeout(() => setImportResult(null), 3000);
+      } catch (error) {
+        console.error('Import error:', error);
+        setImportResult({
+          success: false,
+          message: error instanceof Error ? error.message : 'Fehler beim Importieren',
+        });
+        setTimeout(() => setImportResult(null), 5000);
+      }
+    }
+  };
+
+  const handleImportPreviewCancel = () => {
+    setIsImportPreviewOpen(false);
+    setPendingImportMarkets([]);
   };
 
   // Product import handlers
@@ -903,6 +952,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
         }}
         department={schutteDepartment}
       />
+
+      {/* Market Import Preview Modal */}
+      {isImportPreviewOpen && (
+        <MarketImportPreviewModal
+          importedMarkets={pendingImportMarkets}
+          existingMarkets={allMarkets}
+          onConfirm={handleImportPreviewConfirm}
+          onCancel={handleImportPreviewCancel}
+        />
+      )}
     </div>
   );
 };
