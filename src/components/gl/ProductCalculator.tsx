@@ -344,13 +344,13 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     if (customProducts.length === 0) return;
     
     const totalValue = customProducts.reduce((sum, p) => sum + (p.product.price * p.quantity), 0);
-    const targetValue = getCustomCardTargetValue(); // 10% of removed value
+    const targetValue = getCustomCardTargetValue(); // 1:1 replacement value
     
     const newCustomSuggestion: ReplacementSuggestion = {
       id: 'custom',
       products: customProducts,
       totalValue,
-      valueDifference: totalValue - targetValue, // Difference from 10% target
+      valueDifference: totalValue - targetValue, // Difference from target
       matchScore: 100,
       categoryMatch: false,
       brandMatch: false
@@ -385,8 +385,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         0
       );
 
-      // Target is only 10% of removed value
-      const targetReplacementValue = totalRemovedValue * 0.1;
+      // Target is 1:1 replacement value
+      const targetReplacementValue = totalRemovedValue * 1.0;
 
       // Get the department(s) of removed products - only replace with same department
       const removedDepartments = new Set(removedProducts.map(p => p.product.department));
@@ -429,7 +429,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       const totalValue = p.product.price * quantity;
       const valueDiff = Math.abs(totalValue - targetValue);
       
-      // Allow wider tolerance (50%) since we're only replacing 10% of value
+      // Allow tolerance (50%) for 1:1 replacement
       if (valueDiff <= targetValue * 0.5 || totalValue >= targetValue * 0.8) {
         singleProductSuggestions.push({
           id: `single-${p.product.id}`,
@@ -449,7 +449,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         const p1 = products[i];
         const p2 = products[j];
         
-        // Try different quantity combinations (smaller quantities since 10% target)
+        // Try different quantity combinations for 1:1 replacement
         for (let q1 = 1; q1 <= 3; q1++) {
           for (let q2 = 1; q2 <= 3; q2++) {
             const totalValue = p1.product.price * q1 + p2.product.price * q2;
@@ -530,7 +530,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       score += 15;
     }
     
-    // Value accuracy (how close to 10% target)
+    // Value accuracy (how close to target)
     if (targetValue > 0) {
       const valueAccuracy = Math.max(0, 1 - (valueDiff / targetValue));
       score += valueAccuracy * 20;
@@ -550,7 +550,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   };
 
   const getCustomCardTargetValue = () => {
-    return getTotalRemovedValue() * 0.1; // 10% of removed value
+    return getTotalRemovedValue() * 1.0; // 1:1 replacement value
   };
 
   const getCustomCardProgress = () => {
