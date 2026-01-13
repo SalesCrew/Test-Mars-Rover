@@ -792,6 +792,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
                 </>
               ) : (
                 <>
+                  {/* Product Display for Produkttausch */}
+                  {editingActivity.details?.replaceProducts && editingActivity.details?.replaceProducts.length > 0 && (
+                    <>
+                      <div className={styles.editFieldGroup}>
+                        <label className={styles.editFieldLabel}>Ersetzt durch</label>
+                        <div className={styles.productExchangeList}>
+                          {editingActivity.details.replaceProducts.map((p: any) => (
+                            <div key={p.id} className={styles.productExchangeItem}>
+                              <span className={styles.productQuantity}>{p.quantity}×</span>
+                              <span className={styles.productName}>{p.name}</span>
+                              <span className={styles.productPrice}>€{(p.price * p.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className={styles.exchangeTotalReplace}>
+                          Gesamt: <span className={styles.totalValueGreen}>€{(editingActivity.details.replaceValue || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.editFieldGroup}>
+                        <label className={styles.editFieldLabel}>Entnommen</label>
+                        <div className={`${styles.productExchangeList} ${styles.productListDimmed}`}>
+                          {editingActivity.details.takeOutProducts.map((p: any) => (
+                            <div key={p.id} className={styles.productExchangeItem}>
+                              <span className={styles.productQuantity}>{p.quantity}×</span>
+                              <span className={styles.productName}>{p.name}</span>
+                              <span className={styles.productPrice}>€{(p.price * p.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className={styles.exchangeTotal}>
+                          Gesamt: €{(editingActivity.details.takeOutValue || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   {/* Reason Dropdown */}
                   <div className={styles.editFieldGroup}>
                     <label className={styles.editFieldLabel}>Grund</label>

@@ -973,6 +973,54 @@
   overflow-y: auto;
 }
 
+.productExchangeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(249, 250, 251, 0.5);
+  border-radius: 8px;
+}
+
+.productListDimmed {
+  opacity: 0.6;
+}
+
+.productExchangeItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.productQuantity {
+  font-weight: 600;
+  color: #F97316;
+  min-width: 35px;
+}
+
+.exchangeTotal {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px dashed rgba(226, 232, 240, 0.8);
+}
+
+.exchangeTotalReplace {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px dashed rgba(226, 232, 240, 0.8);
+}
+
+.totalValueGreen {
+  color: #10B981;
+}
+
 .productRow {
   display: flex;
   align-items: center;
