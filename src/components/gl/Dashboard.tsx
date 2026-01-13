@@ -16,7 +16,9 @@ import { StatisticsContent } from './StatisticsContent';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from '../admin/AdminPanel';
 import { BugReportModal } from './BugReportModal';
+import { VorgemerktModal } from './VorgemerktModal';
 import Aurora from './Aurora';
+import { produktersatzService } from '../../services/produktersatzService';
 import type { GLDashboard, NavigationTab, GLProfile, Bonuses, MarketFrequencyAlert } from '../../types/gl-types';
 import type { TourRoute, Market } from '../../types/market-types';
 import { allMarkets as mockMarkets } from '../../data/marketsData';
@@ -39,6 +41,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [isVorverkaufOpen, setIsVorverkaufOpen] = useState(false);
   const [isVorbestellerOpen, setIsVorbestellerOpen] = useState(false);
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
+  const [isVorgemerktOpen, setIsVorgemerktOpen] = useState(false);
+  const [pendingProdukttauschCount, setPendingProdukttauschCount] = useState(0);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [activeTour, setActiveTour] = useState<TourRoute | null>(null);
   const [notificationTrigger, setNotificationTrigger] = useState(0);
@@ -63,6 +67,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       }
     };
     fetchGLProfile();
+  }, [user?.id]);
+
+  // Fetch pending Produkttausch count
+  const fetchPendingCount = async () => {
+    if (user?.id) {
+      try {
+        const entries = await produktersatzService.getPendingEntries(user.id);
+        setPendingProdukttauschCount(entries.length);
+      } catch (error) {
+        console.error('Error fetching pending count:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingCount();
   }, [user?.id]);
 
   // Fetch real markets from database
@@ -343,10 +363,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
               <section className={styles.section}>
                 <QuickActionsBar
                   openVisitsToday={data.quickActions.openVisitsToday}
+                  pendingProdukttauschCount={pendingProdukttauschCount}
                   onStartVisit={handleStartVisit}
                   onVorverkauf={handleVorverkauf}
                   onVorbestellung={handleVorbestellung}
                   onCalculator={handleCalculator}
+                  onPendingClick={() => setIsVorgemerktOpen(true)}
                 />
               </section>
 
@@ -425,6 +447,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       <BugReportModal
         isOpen={isBugReportOpen}
         onClose={() => setIsBugReportOpen(false)}
+      />
+
+      {/* Vorgemerkte Produkttausch Modal */}
+      <VorgemerktModal
+        isOpen={isVorgemerktOpen}
+        glId={user?.id || ''}
+        onClose={() => setIsVorgemerktOpen(false)}
+        onFulfill={() => {
+          fetchPendingCount();
+        }}
       />
 
       {/* Chat Bubble */}

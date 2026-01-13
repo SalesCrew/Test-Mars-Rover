@@ -152,6 +152,45 @@
   z-index: 2;
 }
 
+.actionButtonWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.pendingBadge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  color: white;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  animation: pendingPulse 2s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.pendingBadge:hover {
+  transform: scale(1.1);
+}
+
+@keyframes pendingPulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(249, 115, 22, 0.6);
+  }
+}
+
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .quickActions {

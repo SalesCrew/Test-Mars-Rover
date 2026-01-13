@@ -1,5 +1,5 @@
 import React from 'react';
-import { Storefront, Receipt, CalendarCheck, Calculator } from '@phosphor-icons/react';
+import { Storefront, Receipt, CalendarCheck, Calculator, Warning } from '@phosphor-icons/react';
 import { useResponsive } from '../../hooks/useResponsive';
 import SpotlightCard from './SpotlightCard';
 import StarBorder from './StarBorder';
@@ -11,22 +11,28 @@ interface QuickAction {
   icon: React.ReactNode;
   badge?: string | number;
   onClick: () => void;
+  pendingCount?: number;
+  onPendingClick?: () => void;
 }
 
 interface QuickActionsBarProps {
   openVisitsToday: number;
+  pendingProdukttauschCount?: number;
   onStartVisit: () => void;
   onVorverkauf: () => void;
   onVorbestellung: () => void;
   onCalculator: () => void;
+  onPendingClick?: () => void;
 }
 
 export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
   openVisitsToday,
+  pendingProdukttauschCount = 0,
   onStartVisit,
   onVorverkauf,
   onVorbestellung,
   onCalculator,
+  onPendingClick,
 }) => {
   const { isMobile } = useResponsive();
 
@@ -55,6 +61,8 @@ export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
       label: 'Produktrechner',
       icon: <Calculator size={32} weight="regular" />,
       onClick: onCalculator,
+      pendingCount: pendingProdukttauschCount,
+      onPendingClick: onPendingClick,
     },
   ];
 
@@ -99,16 +107,30 @@ export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
               className={styles.spotlightInner}
               spotlightColor="rgba(59, 130, 246, 0.2)"
             >
-              <button
-                className={styles.actionButton}
-                onClick={action.onClick}
-                aria-label={action.label}
-              >
-                <div className={styles.iconContainer}>
-                  {action.icon}
-                </div>
-                <span className={styles.label}>{action.label}</span>
-              </button>
+              <div className={styles.actionButtonWrapper}>
+                <button
+                  className={styles.actionButton}
+                  onClick={action.onClick}
+                  aria-label={action.label}
+                >
+                  <div className={styles.iconContainer}>
+                    {action.icon}
+                  </div>
+                  <span className={styles.label}>{action.label}</span>
+                </button>
+                {action.pendingCount && action.pendingCount > 0 && (
+                  <button
+                    className={styles.pendingBadge}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      action.onPendingClick?.();
+                    }}
+                    aria-label="Vorgemerkte Produkttausch anzeigen"
+                  >
+                    <Warning size={14} weight="bold" />
+                  </button>
+                )}
+              </div>
             </SpotlightCard>
           </StarBorder>
         );

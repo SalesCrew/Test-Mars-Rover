@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS vorverkauf_entries (
     market_id TEXT NOT NULL REFERENCES markets(id) ON DELETE CASCADE,
     reason VARCHAR(50) NOT NULL CHECK (reason IN ('Produkttausch')),
     notes TEXT,
+    status VARCHAR(20) DEFAULT 'completed' CHECK (status IN ('pending', 'completed')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -30,6 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_vorverkauf_entries_gl ON vorverkauf_entries(gebie
 CREATE INDEX IF NOT EXISTS idx_vorverkauf_entries_market ON vorverkauf_entries(market_id);
 CREATE INDEX IF NOT EXISTS idx_vorverkauf_entries_created ON vorverkauf_entries(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_vorverkauf_entries_reason ON vorverkauf_entries(reason);
+CREATE INDEX IF NOT EXISTS idx_vorverkauf_entries_status ON vorverkauf_entries(status);
 CREATE INDEX IF NOT EXISTS idx_vorverkauf_items_entry ON vorverkauf_items(vorverkauf_entry_id);
 
 -- Enable RLS (Row Level Security)
@@ -49,3 +51,11 @@ CREATE POLICY "Service role has full access to vorverkauf_items" ON vorverkauf_i
 -- ALTER TABLE vorverkauf_entries DROP CONSTRAINT IF EXISTS vorverkauf_entries_reason_check;
 -- ALTER TABLE vorverkauf_entries ADD CONSTRAINT vorverkauf_entries_reason_check 
 --     CHECK (reason IN ('Produkttausch'));
+
+-- ============================================================================
+-- MIGRATION: Add status column for Vorgemerkte Produkttausch (run this if table already exists)
+-- ============================================================================
+-- ALTER TABLE vorverkauf_entries ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed';
+-- ALTER TABLE vorverkauf_entries ADD CONSTRAINT vorverkauf_entries_status_check 
+--     CHECK (status IN ('pending', 'completed'));
+-- CREATE INDEX IF NOT EXISTS idx_vorverkauf_entries_status ON vorverkauf_entries(status);

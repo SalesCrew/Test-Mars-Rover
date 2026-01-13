@@ -33,6 +33,7 @@ export interface CreateProduktErsatzDTO {
   reason: 'Produkttausch';
   notes?: string;
   total_value?: number;
+  status?: 'pending' | 'completed';
   take_out_items: Array<{
     product_id: string;
     quantity: number;
@@ -41,6 +42,33 @@ export interface CreateProduktErsatzDTO {
     product_id: string;
     quantity: number;
   }>;
+}
+
+export interface PendingEntry {
+  id: string;
+  marketId: string;
+  marketName: string;
+  marketChain: string;
+  takeOutCount: number;
+  replaceCount: number;
+  takeOutProducts: Array<{
+    id: string;
+    productId: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  replaceProducts: Array<{
+    id: string;
+    productId: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  takeOutValue: number;
+  replaceValue: number;
+  notes: string | null;
+  createdAt: string;
 }
 
 class ProduktErsatzService {
@@ -113,6 +141,40 @@ class ProduktErsatzService {
       }
     } catch (error) {
       console.error('Error deleting produktersatz entry:', error);
+      throw error;
+    }
+  }
+
+  async getPendingEntries(glId: string): Promise<PendingEntry[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/pending/${glId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pending entries: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching pending entries:', error);
+      throw error;
+    }
+  }
+
+  async fulfillEntry(id: string): Promise<{ id: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${id}/fulfill`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fulfill entry');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fulfilling entry:', error);
       throw error;
     }
   }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, Sparkle, Check, ArrowsLeftRight, Storefront } from '@phosphor-icons/react';
+import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, Sparkle, Check, ArrowsLeftRight, Storefront, Clock } from '@phosphor-icons/react';
 import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../types/product-types';
 import type { Market } from '../../types/market-types';
 import { getAllProducts } from '../../data/productsData';
@@ -1632,6 +1632,64 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                 onClick={() => setShowConfirmation(false)}
               >
                 Abbrechen
+              </button>
+              <button
+                className={`${styles.button} ${styles.buttonWarning}`}
+                disabled={isSubmitting}
+                onClick={async () => {
+                  if (!selectedMarketId || !selectedSuggestion || !user?.id) return;
+                  
+                  setIsSubmitting(true);
+                  try {
+                    // Prepare data for backend with pending status
+                    const takeOutItems = removedProducts.map(p => ({
+                      product_id: p.product.id,
+                      quantity: p.quantity
+                    }));
+                    
+                    const replaceItems = selectedSuggestion.products.map(p => ({
+                      product_id: p.product.id,
+                      quantity: p.quantity
+                    }));
+                    
+                    await produktersatzService.createEntry({
+                      gebietsleiter_id: user.id,
+                      market_id: selectedMarketId,
+                      reason: 'Produkttausch',
+                      notes: `Warenwert: €${getTotalRemovedValue().toFixed(2)} → €${selectedSuggestion.totalValue.toFixed(2)}`,
+                      total_value: selectedSuggestion.totalValue,
+                      status: 'pending',
+                      take_out_items: takeOutItems,
+                      replace_items: replaceItems
+                    });
+                    
+                    // Record visit to update market frequency (same day rule)
+                    try {
+                      await marketService.recordVisit(selectedMarketId, user.id);
+                    } catch (visitError) {
+                      console.warn('Could not record market visit:', visitError);
+                    }
+                    
+                    // Reset and close with pending-specific message
+                    setShowConfirmation(false);
+                    setShowCalculation(false);
+                    setRemovedProducts([]);
+                    setAvailableProducts([]);
+                    setSuggestions([]);
+                    setSelectedSuggestion(null);
+                    setSelectedMarketId(null);
+                    alert('Produkttausch wurde vorgemerkt! Sie können ihn später erfüllen.');
+                    onClose();
+                  } catch (error) {
+                    console.error('Error saving pending produktersatz:', error);
+                    alert('Fehler beim Vormerken. Bitte versuche es erneut.');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+              >
+                <Clock size={18} weight="bold" />
+                Vormerken
               </button>
               <button
                 className={`${styles.button} ${styles.buttonSuccess}`}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Storefront, Sparkle, ClockCounterClockwise, X, ShoppingCart, ArrowsLeftRight } from '@phosphor-icons/react';
+import { Package, Storefront, Sparkle, ClockCounterClockwise, X, ShoppingCart, ArrowsLeftRight, Clock } from '@phosphor-icons/react';
 import { ChainAverageCard } from './ChainAverageCard';
 import { WaveProgressCard } from './WaveProgressCard';
 import { DashboardFilters } from './DashboardFilters';
@@ -9,7 +9,7 @@ import styles from './AdminDashboard.module.css';
 
 interface Activity {
   id: string;
-  type: 'vorbestellung' | 'vorverkauf';
+  type: 'vorbestellung' | 'vorverkauf' | 'produkttausch_pending';
   glId: string;
   glName: string;
   marketId: string;
@@ -19,6 +19,7 @@ interface Activity {
   action: string;
   details: any;
   createdAt: string;
+  status?: 'pending' | 'completed';
 }
 
 interface ChainAverage {
@@ -526,14 +527,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
                 <div className={styles.activityAction}>
                   {activity.type === 'vorbestellung' ? (
                     <Package size={14} weight="fill" />
+                  ) : activity.type === 'produkttausch_pending' ? (
+                    <Clock size={14} weight="fill" />
                   ) : (
                     <ArrowsLeftRight size={14} weight="fill" />
                   )}
                   <span>{activity.action}</span>
+                  {activity.type === 'produkttausch_pending' && (
+                    <span className={styles.pendingBadge}>Vorgemerkt</span>
+                  )}
                 </div>
                 <div className={styles.activityMeta}>
                   {activity.type === 'vorbestellung' ? (
                     <ShoppingCart size={16} weight="fill" className={styles.typeIconVorbestellung} />
+                  ) : activity.type === 'produkttausch_pending' ? (
+                    <Clock size={16} weight="fill" className={styles.typeIconPending} />
                   ) : (
                     <ArrowsLeftRight size={16} weight="fill" className={styles.typeIconVorverkauf} />
                   )}
@@ -604,10 +612,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
                   <div className={styles.historyAction}>
                     {activity.type === 'vorbestellung' ? (
                       <Package size={14} weight="fill" />
+                    ) : activity.type === 'produkttausch_pending' ? (
+                      <Clock size={14} weight="fill" />
                     ) : (
                       <ArrowsLeftRight size={14} weight="fill" />
                     )}
                     <span>{activity.action}</span>
+                    {activity.type === 'produkttausch_pending' && (
+                      <span className={styles.pendingBadge}>Vorgemerkt</span>
+                    )}
                   </div>
                 </div>
                 <div className={styles.historyRowMeta}>
@@ -652,8 +665,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
               </div>
               <div className={styles.editInfoRow}>
                 <span className={styles.editInfoLabel}>Typ</span>
-                <span className={`${styles.typeBadge} ${editingActivity.type === 'vorbestellung' ? styles.typeBadgeBlue : styles.typeBadgeOrange}`}>
-                  {editingActivity.type === 'vorbestellung' ? 'Vorbestellung' : 'Vorverkauf'}
+                <span className={`${styles.typeBadge} ${editingActivity.type === 'vorbestellung' ? styles.typeBadgeBlue : editingActivity.type === 'produkttausch_pending' ? styles.typeBadgePending : styles.typeBadgeOrange}`}>
+                  {editingActivity.type === 'vorbestellung' ? 'Vorbestellung' : editingActivity.type === 'produkttausch_pending' ? 'Vorgemerkt' : 'Vorverkauf'}
                 </span>
               </div>
             </div>
