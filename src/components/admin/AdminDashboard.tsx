@@ -466,7 +466,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
                     {activity.marketChain}
                   </span>
                   <Storefront size={14} weight="regular" className={styles.activityMarketIcon} />
-                  <span className={styles.activityMarket}>{activity.marketCity || activity.marketAddress}</span>
+                  <span className={styles.activityMarket}>{activity.details?.marketName || activity.marketCity || activity.marketAddress}</span>
                 </div>
                 <div className={styles.activityAction}>
                   {activity.type === 'vorbestellung' ? (
@@ -558,7 +558,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
                 <div className={styles.historyRowMeta}>
                   <span className={styles.historyMarket}>
                     <Storefront size={12} weight="regular" />
-                    {activity.marketCity || activity.marketAddress}
+                    {activity.details?.marketName || activity.marketCity || activity.marketAddress}
                   </span>
                   <span className={styles.historyTime}>{formatTimeAgo(activity.createdAt)}</span>
                 </div>
@@ -592,7 +592,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
                   <span className={styles.chainBadgeSmall} style={{ background: getChainColor(editingActivity.marketChain) }}>
                     {editingActivity.marketChain}
                   </span>
-                  {editingActivity.marketCity || editingActivity.marketAddress}
+                  {editingActivity.details?.marketName || editingActivity.marketCity || editingActivity.marketAddress}
                 </span>
               </div>
               <div className={styles.editInfoRow}>
