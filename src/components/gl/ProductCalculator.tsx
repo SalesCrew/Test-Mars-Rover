@@ -29,6 +29,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const [showMarketConfirmation, setShowMarketConfirmation] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showPendingSuccessModal, setShowPendingSuccessModal] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [isMarketDropdownOpen, setIsMarketDropdownOpen] = useState(false);
   const [marketSearchQuery, setMarketSearchQuery] = useState('');
@@ -1670,16 +1671,9 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                       console.warn('Could not record market visit:', visitError);
                     }
                     
-                    // Reset and close with pending-specific message
+                    // Reset and show pending success modal
                     setShowConfirmation(false);
-                    setShowCalculation(false);
-                    setRemovedProducts([]);
-                    setAvailableProducts([]);
-                    setSuggestions([]);
-                    setSelectedSuggestion(null);
-                    setSelectedMarketId(null);
-                    alert('Produkttausch wurde vorgemerkt! Sie können ihn später erfüllen.');
-                    onClose();
+                    setShowPendingSuccessModal(true);
                   } catch (error) {
                     console.error('Error saving pending produktersatz:', error);
                     alert('Fehler beim Vormerken. Bitte versuche es erneut.');
@@ -1765,6 +1759,28 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         replacementProductsCount={selectedSuggestion?.products.length || 0}
         totalValue={selectedSuggestion?.totalValue || 0}
         userName={userName}
+      />
+
+      {/* Pending Success Modal */}
+      <ExchangeSuccessModal
+        isOpen={showPendingSuccessModal}
+        onClose={() => {
+          // Reset everything and close
+          setShowPendingSuccessModal(false);
+          setShowCalculation(false);
+          setRemovedProducts([]);
+          setAvailableProducts([]);
+          setSuggestions([]);
+          setSelectedSuggestion(null);
+          setSelectedMarketId(null);
+          onClose(); // Close the main ProductCalculator modal
+        }}
+        marketName={selectedMarketId ? (allMarkets.find(m => m.id === selectedMarketId)?.name || '') : ''}
+        removedProductsCount={removedProducts.length}
+        replacementProductsCount={selectedSuggestion?.products.length || 0}
+        totalValue={selectedSuggestion?.totalValue || 0}
+        userName={userName}
+        isPending={true}
       />
     </div>
   );

@@ -1064,17 +1064,17 @@
 
 .button {
   flex: 1;
-  padding: var(--space-md) var(--space-xl);
+  padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-md);
   font-family: var(--font-family);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   border: none;
 }
 
@@ -1552,10 +1552,10 @@
 }
 
 .confirmationFooter {
-  padding: var(--space-2xl);
+  padding: var(--space-lg);
   border-top: 1px solid var(--color-stroke);
   display: flex;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   background: var(--color-bg-secondary);
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }

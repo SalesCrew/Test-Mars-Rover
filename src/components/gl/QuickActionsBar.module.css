@@ -160,10 +160,10 @@
 
 .pendingBadge {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 24px;
-  height: 24px;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
   color: white;

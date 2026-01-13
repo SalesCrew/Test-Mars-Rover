@@ -63,6 +63,11 @@
   filter: drop-shadow(0 8px 24px rgba(16, 185, 129, 0.25));
 }
 
+.pendingIcon {
+  color: #F97316;
+  filter: drop-shadow(0 8px 24px rgba(249, 115, 22, 0.25));
+}
+
 .titleSection {
   text-align: center;
   padding: 0 var(--space-2xl) var(--space-xl);
@@ -187,6 +192,16 @@
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
   color: #047857;
   border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.marketBadgePending {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1));
+  color: #C2410C;
+  border: 1px solid rgba(249, 115, 22, 0.3);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
