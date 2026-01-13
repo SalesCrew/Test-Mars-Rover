@@ -75,11 +75,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
     reason: string;
     notes: string;
     isReasonDropdownOpen: boolean;
+    products: Array<{ submissionId: string; productName: string; quantity: number; valuePerUnit: number }>;
   }>({
     quantity: 0,
     reason: '',
     notes: '',
-    isReasonDropdownOpen: false
+    isReasonDropdownOpen: false,
+    products: []
   });
 
   // Filter states
@@ -144,21 +146,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
     if (!editingActivity) return;
     
     try {
-      const url = editingActivity.type === 'vorbestellung'
-        ? `${API_BASE_URL}/activities/vorbestellung/${editingActivity.id}`
-        : `${API_BASE_URL}/activities/vorverkauf/${editingActivity.id}`;
+      // Check if this is a grouped palette/schuette activity
+      const isGroupedItem = (editingActivity.details?.itemType === 'palette' || editingActivity.details?.itemType === 'schuette') 
+        && editForm.products.length > 0;
       
-      const body = editingActivity.type === 'vorbestellung'
-        ? { current_number: editForm.quantity }
-        : { reason: editForm.reason, notes: editForm.notes };
-      
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      
-      if (!response.ok) throw new Error('Failed to update');
+      if (isGroupedItem) {
+        // Update each product individually
+        for (const product of editForm.products) {
+          const response = await fetch(`${API_BASE_URL}/activities/vorbestellung/product/${product.submissionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: product.quantity })
+          });
+          if (!response.ok) {
+            console.error('Failed to update product:', product.submissionId);
+          }
+        }
+      } else {
+        // Standard update for display/kartonware
+        const url = editingActivity.type === 'vorbestellung'
+          ? `${API_BASE_URL}/activities/vorbestellung/${editingActivity.id}`
+          : `${API_BASE_URL}/activities/vorverkauf/${editingActivity.id}`;
+        
+        const body = editingActivity.type === 'vorbestellung'
+          ? { current_number: editForm.quantity }
+          : { reason: editForm.reason, notes: editForm.notes };
+        
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        if (!response.ok) throw new Error('Failed to update');
+      }
       
       // Refresh activities
       const refreshRes = await fetch(`${API_BASE_URL}/activities?limit=100`);
@@ -168,20 +189,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
       }
       
       setEditingActivity(null);
-      setEditForm({ quantity: 0, reason: '', notes: '', isReasonDropdownOpen: false });
+      resetEditForm();
     } catch (error) {
       console.error('Error updating activity:', error);
     }
   };
 
+  const resetEditForm = () => {
+    setEditForm({ quantity: 0, reason: '', notes: '', isReasonDropdownOpen: false, products: [] });
+  };
+
+  // Update product quantity in edit form
+  const updateProductQuantity = (submissionId: string, newQuantity: number) => {
+    setEditForm(f => ({
+      ...f,
+      products: f.products.map(p => 
+        p.submissionId === submissionId 
+          ? { ...p, quantity: Math.max(0, newQuantity) }
+          : p
+      )
+    }));
+  };
+
+  // Calculate total value for grouped items
+  const calculateTotalValue = () => {
+    return editForm.products.reduce((sum, p) => sum + (p.quantity * p.valuePerUnit), 0);
+  };
+
   // Initialize edit form when activity is selected
   const openEditModal = (activity: Activity) => {
     setEditingActivity(activity);
+    
+    // Check if this is a grouped palette/schuette activity with products
+    const isGroupedItem = (activity.details?.itemType === 'palette' || activity.details?.itemType === 'schuette') 
+      && activity.details?.products;
+    
     setEditForm({
       quantity: activity.details?.quantity || 0,
       reason: activity.details?.reason || 'OOS',
       notes: activity.details?.notes || '',
-      isReasonDropdownOpen: false
+      isReasonDropdownOpen: false,
+      products: isGroupedItem 
+        ? activity.details.products.map((p: any) => ({
+            submissionId: p.submissionId,
+            productName: p.productName,
+            quantity: p.quantity,
+            valuePerUnit: p.valuePerUnit
+          }))
+        : []
     });
   };
 
@@ -607,43 +662,110 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onEditWave }) =>
             <div className={styles.editFieldsSection}>
               {editingActivity.type === 'vorbestellung' ? (
                 <>
-                  {/* Item Info */}
-                  <div className={styles.editFieldGroup}>
-                    <label className={styles.editFieldLabel}>Artikel</label>
-                    <div className={styles.itemDisplay}>
-                      <Package size={16} weight="fill" className={styles.itemIcon} />
-                      <span>{editingActivity.details?.itemName || 'Display/Kartonware'}</span>
-                      <span className={styles.itemTypeBadge}>
-                        {editingActivity.details?.itemType === 'display' ? 'Display' : 'Kartonware'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Quantity */}
-                  <div className={styles.editFieldGroup}>
-                    <label className={styles.editFieldLabel}>Anzahl</label>
-                    <div className={styles.quantityControl}>
-                      <button 
-                        className={styles.quantityBtn}
-                        onClick={() => setEditForm(f => ({ ...f, quantity: Math.max(0, f.quantity - 1) }))}
-                      >
-                        −
-                      </button>
-                      <input 
-                        type="number" 
-                        className={styles.quantityInput}
-                        value={editForm.quantity}
-                        onChange={(e) => setEditForm(f => ({ ...f, quantity: Math.max(0, parseInt(e.target.value) || 0) }))}
-                        min="0"
-                      />
-                      <button 
-                        className={styles.quantityBtn}
-                        onClick={() => setEditForm(f => ({ ...f, quantity: f.quantity + 1 }))}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
+                  {/* Check if this is a grouped palette/schuette with products */}
+                  {editForm.products.length > 0 ? (
+                    <>
+                      {/* Parent Name Header */}
+                      <div className={styles.editFieldGroup}>
+                        <div className={styles.parentHeader}>
+                          <Package size={18} weight="fill" className={styles.itemIcon} />
+                          <span className={styles.parentTitle}>{editingActivity.details?.parentName || 'Palette/Schütte'}</span>
+                          <span className={styles.itemTypeBadge}>
+                            {editingActivity.details?.itemTypeLabel || 'Palette'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Products List */}
+                      <div className={styles.editFieldGroup}>
+                        <label className={styles.editFieldLabel}>Produkte</label>
+                        <div className={styles.productsList}>
+                          {editForm.products.map((product) => (
+                            <div key={product.submissionId} className={styles.productRow}>
+                              <span className={styles.productName}>{product.productName}</span>
+                              <div className={styles.productControls}>
+                                <div className={styles.quantityControlSmall}>
+                                  <button 
+                                    className={styles.quantityBtnSmall}
+                                    onClick={() => updateProductQuantity(product.submissionId, product.quantity - 1)}
+                                  >
+                                    −
+                                  </button>
+                                  <input 
+                                    type="number" 
+                                    className={styles.quantityInputSmall}
+                                    value={product.quantity}
+                                    onChange={(e) => updateProductQuantity(product.submissionId, parseInt(e.target.value) || 0)}
+                                    min="0"
+                                  />
+                                  <button 
+                                    className={styles.quantityBtnSmall}
+                                    onClick={() => updateProductQuantity(product.submissionId, product.quantity + 1)}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <span className={styles.productValue}>
+                                  €{(product.quantity * product.valuePerUnit).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Total Value */}
+                      <div className={styles.editFieldGroup}>
+                        <div className={styles.totalValueRow}>
+                          <span className={styles.totalLabel}>Gesamtwert</span>
+                          <span className={styles.totalValue}>€{calculateTotalValue().toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Standard display for display/kartonware */}
+                      <div className={styles.editFieldGroup}>
+                        <label className={styles.editFieldLabel}>Artikel</label>
+                        <div className={styles.itemDisplay}>
+                          <Package size={16} weight="fill" className={styles.itemIcon} />
+                          <span>{editingActivity.details?.itemName || 'Artikel'}</span>
+                          <span className={styles.itemTypeBadge}>
+                            {editingActivity.details?.itemTypeLabel || (
+                              editingActivity.details?.itemType === 'display' ? 'Display' : 
+                              editingActivity.details?.itemType === 'kartonware' ? 'Kartonware' : 'Artikel'
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Quantity */}
+                      <div className={styles.editFieldGroup}>
+                        <label className={styles.editFieldLabel}>Anzahl</label>
+                        <div className={styles.quantityControl}>
+                          <button 
+                            className={styles.quantityBtn}
+                            onClick={() => setEditForm(f => ({ ...f, quantity: Math.max(0, f.quantity - 1) }))}
+                          >
+                            −
+                          </button>
+                          <input 
+                            type="number" 
+                            className={styles.quantityInput}
+                            value={editForm.quantity}
+                            onChange={(e) => setEditForm(f => ({ ...f, quantity: Math.max(0, parseInt(e.target.value) || 0) }))}
+                            min="0"
+                          />
+                          <button 
+                            className={styles.quantityBtn}
+                            onClick={() => setEditForm(f => ({ ...f, quantity: f.quantity + 1 }))}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Welle Info */}
                   {editingActivity.details?.welleName && (

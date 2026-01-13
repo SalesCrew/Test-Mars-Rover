@@ -900,6 +900,21 @@
   color: #3B82F6;
 }
 
+.itemDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.parentName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .itemTypeBadge {
   margin-left: auto;
   padding: 3px 8px;
@@ -908,6 +923,136 @@
   font-size: 11px;
   font-weight: 600;
   color: #6B7280;
+}
+
+/* Parent Header for Palette/Schütte */
+.parentHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.03));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 10px;
+}
+
+.parentTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1F2937;
+  flex: 1;
+}
+
+/* Products List */
+.productsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.productRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.productName {
+  font-size: 13px;
+  color: #374151;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quantityControlSmall {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.quantityBtnSmall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: white;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quantityBtnSmall:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+.quantityInputSmall {
+  width: 40px;
+  height: 28px;
+  border: none;
+  border-left: 1px solid rgba(226, 232, 240, 0.8);
+  border-right: 1px solid rgba(226, 232, 240, 0.8);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1F2937;
+  background: white;
+}
+
+.quantityInputSmall:focus {
+  outline: none;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.productValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Total Value Row */
+.totalValueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.03));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+}
+
+.totalLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.totalValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #10B981;
 }
 
 /* Quantity Control */
