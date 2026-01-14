@@ -125,6 +125,16 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
     return progresses.reduce((sum, p) => sum + p.value, 0);
   };
 
+  // Calculate total count for a GL's progress
+  const calculateGLCount = (progresses: GLProgress[]) => {
+    return progresses.reduce((sum, p) => sum + p.quantity, 0);
+  };
+
+  // Check if GL has any value-based entries
+  const hasValueEntries = (progresses: GLProgress[]) => {
+    return progresses.some(p => p.value > 0);
+  };
+
   return ReactDOM.createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -181,7 +191,10 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
                     <div className={styles.glTotal}>
                       <span className={styles.glTotalLabel}>Gesamt:</span>
                       <span className={styles.glTotalValue}>
-                        €{calculateGLTotal(progresses).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {hasValueEntries(progresses) 
+                          ? `€${calculateGLTotal(progresses).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `${calculateGLCount(progresses)}x`
+                        }
                       </span>
                     </div>
                   </div>
@@ -231,9 +244,11 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
                             <div className={styles.entryQuantity}>
                               <span className={styles.quantityValue}>{progress.quantity}x</span>
                             </div>
-                            <div className={styles.entryValue}>
-                              €{progress.value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
+                            {progress.value > 0 && (
+                              <div className={styles.entryValue}>
+                                €{progress.value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            )}
                             <div className={styles.entryTimestamp}>
                               <Clock size={14} weight="regular" />
                               <span>{formatTimestamp(progress.timestamp)}</span>
