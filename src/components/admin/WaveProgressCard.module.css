@@ -59,6 +59,8 @@
   align-items: flex-start;
   gap: 12px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .iconWrapper {
@@ -79,6 +81,7 @@
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  min-width: 0;
 }
 
 .waveName {
@@ -91,6 +94,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+}
+
+/* On header hover: show full name and hide status badge (only if truncated) */
+.headerTruncated:hover .waveName {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.headerTruncated:hover .statusBadge {
+  opacity: 0;
+  width: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .dateRangePill {
@@ -115,6 +133,7 @@
   font-weight: 600;
   letter-spacing: 0.2px;
   flex-shrink: 0;
+  transition: opacity 0.2s ease, width 0.2s ease, padding 0.2s ease;
 }
 
 .statusActive {

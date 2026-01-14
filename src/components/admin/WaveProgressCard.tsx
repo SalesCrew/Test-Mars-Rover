@@ -33,7 +33,21 @@ interface WaveProgressCardProps {
 
 export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFinished = false, onClick, onEdit }) => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const waveNameRef = useRef<HTMLHeadingElement>(null);
+
+  // Check if wave name is truncated
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (waveNameRef.current) {
+        setIsTruncated(waveNameRef.current.scrollWidth > waveNameRef.current.clientWidth);
+      }
+    };
+    checkTruncation();
+    window.addEventListener('resize', checkTruncation);
+    return () => window.removeEventListener('resize', checkTruncation);
+  }, [wave.name]);
 
   // Format date from "2026-01-05" to "5.1"
   const formatCompactDate = (dateStr: string): string => {
@@ -114,13 +128,13 @@ export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFini
       onContextMenu={handleContextMenu}
     >
       {/* Header */}
-      <div className={styles.header}>
+      <div className={`${styles.header} ${isTruncated ? styles.headerTruncated : ''}`}>
         <div className={styles.headerLeft}>
           <div className={styles.iconWrapper}>
             <CalendarBlank size={20} weight="duotone" />
           </div>
           <div className={styles.headerInfo}>
-            <h3 className={styles.waveName}>{name}</h3>
+            <h3 ref={waveNameRef} className={styles.waveName}>{name}</h3>
             <span className={styles.dateRangePill}>
               {formatCompactDate(startDate)} - {formatCompactDate(endDate)}
             </span>
