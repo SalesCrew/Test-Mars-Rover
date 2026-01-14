@@ -172,7 +172,7 @@
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.6), rgba(250, 251, 252, 0.4));
   border: 1px solid rgba(226, 232, 240, 0.6);
   border-radius: 14px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
