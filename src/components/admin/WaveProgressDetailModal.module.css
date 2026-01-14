@@ -240,10 +240,29 @@
 .progressEntries {
   display: flex;
   flex-direction: column;
-  max-height: 1000px;
-  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
   opacity: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.progressEntries::-webkit-scrollbar {
+  width: 6px;
+}
+
+.progressEntries::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.progressEntries::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.progressEntries::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .entriesCollapsed {

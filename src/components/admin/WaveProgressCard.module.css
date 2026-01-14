@@ -295,6 +295,16 @@
   border-color: rgba(59, 130, 246, 0.15);
 }
 
+.footerMetricClickable {
+  cursor: pointer;
+}
+
+.footerMetricClickable:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.05));
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
 .footerMetric svg {
   color: #3B82F6;
   flex-shrink: 0;

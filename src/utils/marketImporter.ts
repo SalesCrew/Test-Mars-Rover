@@ -119,6 +119,7 @@ const parseMarketRow = (row: any[], rowIndex: number): AdminMarket | null => {
     internalId: id,
     name: name,
     address: strasse || '',
+    
     city: stadt || '',
     postalCode: plz || '',
     chain: normalizeChainName(handelskette),

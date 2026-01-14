@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CalendarBlank, Package, Users, Storefront, CheckCircle, PencilSimple } from '@phosphor-icons/react';
 import styles from './WaveProgressCard.module.css';
+import { WaveMarketsModal } from './WaveMarketsModal';
 
 interface WaveProgressData {
   id: string;
@@ -34,6 +35,7 @@ interface WaveProgressCardProps {
 export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFinished = false, onClick, onEdit }) => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isTruncated, setIsTruncated] = useState(false);
+  const [showMarketsModal, setShowMarketsModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const waveNameRef = useRef<HTMLHeadingElement>(null);
 
@@ -190,7 +192,13 @@ export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFini
 
       {/* Metrics Footer */}
       <div className={styles.footer}>
-        <div className={styles.footerMetric}>
+        <div 
+          className={`${styles.footerMetric} ${styles.footerMetricClickable}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMarketsModal(true);
+          }}
+        >
           <Storefront size={16} weight="fill" />
           <div className={styles.footerMetricInfo}>
             <div className={styles.footerMetricValue}>
@@ -232,6 +240,14 @@ export const WaveProgressCard: React.FC<WaveProgressCardProps> = ({ wave, isFini
           <span>Bearbeiten</span>
         </button>
       </div>
+    )}
+
+    {/* Markets Modal */}
+    {showMarketsModal && (
+      <WaveMarketsModal
+        welle={{ id: wave.id, name: wave.name }}
+        onClose={() => setShowMarketsModal(false)}
+      />
     )}
     </>
   );

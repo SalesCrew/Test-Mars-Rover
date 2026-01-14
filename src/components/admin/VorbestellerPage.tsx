@@ -505,42 +505,58 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
       }));
 
       // Process palette items - filter out empty palettes
+      // IMPORTANT: Include id for existing items to preserve them on update
       const validPalettes = paletteItems.filter(p => p.name.trim() && p.products.length > 0);
       const processedPalettes = await Promise.all(validPalettes.map(async (p) => {
         let pictureUrl: string | null = null;
         if (p.picture) {
           pictureUrl = await uploadImageToStorage(p.picture, 'palettes');
         }
+        // Only include id if it's a real database UUID (not a temp frontend id like "palette-123")
+        const isRealId = p.id && !p.id.startsWith('palette-') && !p.id.startsWith('product-');
         return {
+          ...(isRealId ? { id: p.id } : {}),
           name: p.name,
           size: p.size || null,
           picture: pictureUrl,
-          products: p.products.filter(prod => prod.name.trim()).map(prod => ({
-            name: prod.name,
-            value: prod.value,
-            ve: prod.ve,
-            ean: prod.ean
-          }))
+          products: p.products.filter(prod => prod.name.trim()).map(prod => {
+            const isProdRealId = prod.id && !prod.id.startsWith('product-');
+            return {
+              ...(isProdRealId ? { id: prod.id } : {}),
+              name: prod.name,
+              value: prod.value,
+              ve: prod.ve,
+              ean: prod.ean
+            };
+          })
         };
       }));
 
       // Process schuette items - filter out empty schütten
+      // IMPORTANT: Include id for existing items to preserve them on update
       const validSchuetten = schutteItems.filter(s => s.name.trim() && s.products.length > 0);
       const processedSchuetten = await Promise.all(validSchuetten.map(async (s) => {
         let pictureUrl: string | null = null;
         if (s.picture) {
           pictureUrl = await uploadImageToStorage(s.picture, 'schuetten');
         }
+        // Only include id if it's a real database UUID (not a temp frontend id like "schutte-123")
+        const isRealId = s.id && !s.id.startsWith('schutte-') && !s.id.startsWith('product-');
         return {
+          ...(isRealId ? { id: s.id } : {}),
           name: s.name,
           size: s.size || null,
           picture: pictureUrl,
-          products: s.products.filter(prod => prod.name.trim()).map(prod => ({
-            name: prod.name,
-            value: prod.value,
-            ve: prod.ve,
-            ean: prod.ean
-          }))
+          products: s.products.filter(prod => prod.name.trim()).map(prod => {
+            const isProdRealId = prod.id && !prod.id.startsWith('product-');
+            return {
+              ...(isProdRealId ? { id: prod.id } : {}),
+              name: prod.name,
+              value: prod.value,
+              ve: prod.ve,
+              ean: prod.ean
+            };
+          })
         };
       }));
 
@@ -620,6 +636,40 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         targetNumber: (k.targetNumber || 0).toString(),
         picture: null,
         itemValue: k.itemValue?.toString()
+      })));
+    }
+    
+    // Load palettes with real database IDs preserved
+    if (welle.paletteItems) {
+      setPaletteItems(welle.paletteItems.map(p => ({
+        id: p.id, // IMPORTANT: Keep the real database UUID
+        name: p.name,
+        size: p.size || '',
+        picture: null,
+        products: (p.products || []).map(prod => ({
+          id: prod.id, // IMPORTANT: Keep the real database UUID
+          name: prod.name,
+          value: prod.valuePerVE?.toString() || '',
+          ve: prod.ve?.toString() || '',
+          ean: prod.ean || ''
+        }))
+      })));
+    }
+    
+    // Load schütten with real database IDs preserved
+    if (welle.schutteItems) {
+      setSchutteItems(welle.schutteItems.map(s => ({
+        id: s.id, // IMPORTANT: Keep the real database UUID
+        name: s.name,
+        size: s.size || '',
+        picture: null,
+        products: (s.products || []).map(prod => ({
+          id: prod.id, // IMPORTANT: Keep the real database UUID
+          name: prod.name,
+          value: prod.valuePerVE?.toString() || '',
+          ve: prod.ve?.toString() || '',
+          ean: prod.ean || ''
+        }))
       })));
     }
     
