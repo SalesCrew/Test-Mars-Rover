@@ -182,13 +182,12 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
   const uniqueIDs = [...new Set(markets.map(m => m.internalId))].sort();
   const uniqueAddresses = [...new Set(markets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
   
-  // Normalize GL name: remove special chars, sort words alphabetically for deduplication
+  // Normalize GL name: remove ALL non-letter characters for deduplication
+  // This handles "Eva-Maria Feichtinger" vs "Eva - MariaFeichtinger" -> both become "evamariafeichtinger"
   const normalizeGLName = (name: string): string => {
     if (!name) return '';
-    // Remove all characters except letters and spaces, normalize whitespace
-    const cleaned = name.replace(/[^a-zA-ZäöüÄÖÜß\s]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-    // Sort words alphabetically so "Kilian Sternath" and "Sternath Kilian" become the same
-    return cleaned.split(' ').filter(Boolean).sort().join(' ');
+    // Remove ALL characters except letters (including spaces), lowercase
+    return name.replace(/[^a-zA-ZäöüÄÖÜß]/g, '').toLowerCase();
   };
   
   // Collect GL names from database AND from markets (for deleted GLs still assigned)
