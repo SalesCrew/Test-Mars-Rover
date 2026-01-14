@@ -181,8 +181,32 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
   const uniqueChains = [...new Set(markets.map(m => m.chain))].sort();
   const uniqueIDs = [...new Set(markets.map(m => m.internalId))].sort();
   const uniqueAddresses = [...new Set(markets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
-  // Use ALL GL names from the database (not limited to 8 display slots)
-  const uniqueGLs = [...new Set(glsData.map(gl => gl.name).filter(Boolean))].sort() as string[];
+  
+  // Normalize GL name: remove special chars, sort words alphabetically for deduplication
+  const normalizeGLName = (name: string): string => {
+    if (!name) return '';
+    // Remove all characters except letters and spaces, normalize whitespace
+    const cleaned = name.replace(/[^a-zA-ZäöüÄÖÜß\s]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    // Sort words alphabetically so "Kilian Sternath" and "Sternath Kilian" become the same
+    return cleaned.split(' ').filter(Boolean).sort().join(' ');
+  };
+  
+  // Collect GL names from database AND from markets (for deleted GLs still assigned)
+  const allGLNames = [
+    ...glsData.map(gl => gl.name),
+    ...markets.map(m => m.gebietsleiterName)
+  ].filter(Boolean) as string[];
+  
+  // Deduplicate by normalized form, keeping the first occurrence as display name
+  const glNameMap = new Map<string, string>();
+  allGLNames.forEach(name => {
+    const normalized = normalizeGLName(name);
+    if (normalized && !glNameMap.has(normalized)) {
+      glNameMap.set(normalized, name);
+    }
+  });
+  const uniqueGLs = [...glNameMap.values()].sort();
+  
   const uniqueSubgroups = [...new Set(markets.map(m => m.subgroup).filter(Boolean))].sort();
   const statusOptions = ['Aktiv', 'Inaktiv'];
 
@@ -232,10 +256,14 @@ export const MarketsPage: React.FC<MarketsPageProps> = ({ importedMarkets = [] }
         return false;
       }
 
-      // Check Gebietsleiter filter (applies even in assign mode)
-      if (selectedFilters.gebietsleiter.length > 0 && 
-          (!market.gebietsleiterName || !selectedFilters.gebietsleiter.includes(market.gebietsleiterName))) {
-        return false;
+      // Check Gebietsleiter filter (applies even in assign mode) - use normalized comparison
+      if (selectedFilters.gebietsleiter.length > 0) {
+        if (!market.gebietsleiterName) return false;
+        const marketGLNormalized = normalizeGLName(market.gebietsleiterName);
+        const selectedNormalized = selectedFilters.gebietsleiter.map(normalizeGLName);
+        if (!selectedNormalized.includes(marketGLNormalized)) {
+          return false;
+        }
       }
 
       // Check Subgroup filter
