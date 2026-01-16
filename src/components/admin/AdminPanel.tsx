@@ -13,6 +13,7 @@ import { CreateDisplayModal } from './CreateDisplayModal';
 import { CreatePaletteModal } from './CreatePaletteModal';
 import { CreateSchutteModal } from './CreateSchutteModal';
 import { MarketImportPreviewModal } from './MarketImportPreviewModal';
+import { AdminAccountsModal } from './AdminAccountsModal';
 import { parseMarketFile, validateImportFile } from '../../utils/marketImporter';
 import { actionHistoryService, type ActionHistoryEntry } from '../../services/actionHistoryService';
 import { marketService } from '../../services/marketService';
@@ -40,6 +41,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
     return (saved as AdminPage) || 'dashboard';
   });
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAdminAccountsModalOpen, setIsAdminAccountsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isHistorieModalOpen, setIsHistorieModalOpen] = useState(false);
   const [isCreateGLModalOpen, setIsCreateGLModalOpen] = useState(false);
@@ -373,7 +375,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
-        <div className={styles.logoContainer}>
+        <div 
+          className={styles.logoContainer}
+          onClick={() => setIsAdminAccountsModalOpen(true)}
+          style={{ cursor: 'pointer' }}
+        >
           <span className={styles.logoText}>
             {isExpanded ? 'Mars Rover Admin' : 'MR'}
           </span>
@@ -949,6 +955,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           onCancel={handleImportPreviewCancel}
         />
       )}
+
+      {/* Admin Accounts Modal */}
+      <AdminAccountsModal
+        isOpen={isAdminAccountsModalOpen}
+        onClose={() => setIsAdminAccountsModalOpen(false)}
+      />
     </div>
   );
 };

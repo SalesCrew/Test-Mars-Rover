@@ -59,6 +59,96 @@ class AuthService {
   async isAuthenticated(): Promise<boolean> {
     return !!localStorage.getItem('token');
   }
+
+  // ============================================================================
+  // ADMIN MANAGEMENT METHODS
+  // ============================================================================
+
+  /**
+   * Get all admin accounts
+   */
+  async getAllAdmins(): Promise<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    createdAt: string;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/auth/admins`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch admin accounts');
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Create new admin account
+   */
+  async createAdmin(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }): Promise<{ id: string; email: string; password: string }> {
+    const response = await fetch(`${API_BASE_URL}/auth/create-admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create admin account');
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Delete admin account
+   */
+  async deleteAdmin(adminId: string, requesterId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/auth/admin/${adminId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ requesterId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete admin account');
+    }
+  }
+
+  /**
+   * Change password for current user
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, currentPassword, newPassword }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to change password');
+    }
+  }
 }
 
 export const authService = new AuthService();
