@@ -52,6 +52,15 @@ interface NotVisitedMarket {
   gebietsleiter: string;
 }
 
+interface VisitedNoSuccessMarket {
+  id: string;
+  name: string;
+  chain: string;
+  address: string;
+  gebietsleiter: string;
+  lastVisitDate: string;
+}
+
 // Chain color mapping - matching MarketsPage/GLDetailModal colors
 const getChainColors = (chain: string): { bg: string; text: string; border: string } => {
   switch (chain) {
@@ -101,8 +110,10 @@ const getChainColors = (chain: string): { bg: string; text: string; border: stri
 
 export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClose }) => {
   const [visited, setVisited] = useState<VisitedMarket[]>([]);
+  const [visitedNoSuccess, setVisitedNoSuccess] = useState<VisitedNoSuccessMarket[]>([]);
   const [notVisited, setNotVisited] = useState<NotVisitedMarket[]>([]);
   const [visitedCount, setVisitedCount] = useState(0);
+  const [visitedNoSuccessCount, setVisitedNoSuccessCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,8 +127,10 @@ export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClo
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setVisited(data.visited || []);
+        setVisitedNoSuccess(data.visitedNoSuccess || []);
         setNotVisited(data.notVisited || []);
         setVisitedCount(data.visitedCount || 0);
+        setVisitedNoSuccessCount(data.visitedNoSuccessCount || 0);
         setTotalCount(data.totalCount || 0);
       } catch (error) {
         console.error('Error fetching wave markets:', error);
@@ -169,6 +182,17 @@ export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClo
     );
   }, [visited, searchQuery]);
 
+  const filteredVisitedNoSuccess = useMemo(() => {
+    if (!searchQuery.trim()) return visitedNoSuccess;
+    const query = searchQuery.toLowerCase();
+    return visitedNoSuccess.filter(m =>
+      m.name.toLowerCase().includes(query) ||
+      m.chain.toLowerCase().includes(query) ||
+      m.address?.toLowerCase().includes(query) ||
+      m.gebietsleiter?.toLowerCase().includes(query)
+    );
+  }, [visitedNoSuccess, searchQuery]);
+
   const filteredNotVisited = useMemo(() => {
     if (!searchQuery.trim()) return notVisited;
     const query = searchQuery.toLowerCase();
@@ -190,9 +214,13 @@ export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClo
             <div className={styles.headerInfo}>
               <h2 className={styles.title}>Märkte - {welle.name}</h2>
               <p className={styles.subtitle}>
-                <span className={styles.visitedBadge}>{visitedCount}</span>
+                <span className={styles.visitedBadge}>{visitedCount + visitedNoSuccessCount}</span>
                 <span className={styles.subtitleDivider}>/</span>
                 <span>{totalCount} Märkte besucht</span>
+              </p>
+              <p className={styles.subtitleSecondary}>
+                <span className={styles.successBadge}>{visitedCount}</span>
+                <span>erfolgreich besucht</span>
               </p>
             </div>
           </div>
@@ -335,6 +363,48 @@ export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClo
                 </div>
               )}
 
+              {/* Visited Without Success Section */}
+              {filteredVisitedNoSuccess.length > 0 && (
+                <div className={styles.section}>
+                  <div className={styles.sectionHeader}>
+                    <Clock size={18} weight="regular" className={styles.sectionIconNoSuccess} />
+                    <h3 className={styles.sectionTitle}>Besucht ohne Erfolg</h3>
+                    <span className={styles.sectionCount}>{filteredVisitedNoSuccess.length}</span>
+                  </div>
+                  <div className={styles.marketsList}>
+                    {filteredVisitedNoSuccess.map((market) => (
+                      <div key={market.id} className={`${styles.marketCard} ${styles.marketCardNoSuccess}`}>
+                        <div className={styles.marketHeader}>
+                          <div className={styles.marketInfo}>
+                            <div className={styles.marketTop}>
+                              <span 
+                                className={styles.chainPill}
+                                style={{
+                                  background: getChainStyle(market.chain).bg,
+                                  color: getChainStyle(market.chain).text,
+                                  borderColor: getChainStyle(market.chain).border
+                                }}
+                              >
+                                {market.chain}
+                              </span>
+                              <span className={styles.marketName}>{market.name}</span>
+                              <span className={styles.marketAddress}>{market.address}</span>
+                            </div>
+                            <div className={styles.marketMeta}>
+                              <span className={styles.visitedNoSuccessStamp}>
+                                <Clock size={12} weight="regular" />
+                                Besucht am {formatDate(market.lastVisitDate)}
+                              </span>
+                              <span className={styles.glName}>GL: {market.gebietsleiter || 'Nicht zugewiesen'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Not Visited Markets Section */}
               {filteredNotVisited.length > 0 && (
                 <div className={styles.section}>
@@ -374,7 +444,7 @@ export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClo
               )}
 
               {/* Empty State */}
-              {filteredVisited.length === 0 && filteredNotVisited.length === 0 && (
+              {filteredVisited.length === 0 && filteredVisitedNoSuccess.length === 0 && filteredNotVisited.length === 0 && (
                 <div className={styles.emptyState}>
                   <Storefront size={48} weight="thin" />
                   <p>{searchQuery ? 'Keine Märkte gefunden' : 'Keine Märkte zugewiesen'}</p>
