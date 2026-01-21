@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Calendar, CheckCircle, Package, TrendUp, Clock, CheckCircle as CheckCircleFilled, Users, Storefront, Target, CalendarBlank, Trash } from '@phosphor-icons/react';
+import { X, Calendar, CheckCircle, Package, TrendUp, Clock, CheckCircle as CheckCircleFilled, Users, Storefront, Target, CalendarBlank, Trash, Cube } from '@phosphor-icons/react';
 import styles from './WelleDetailModal.module.css';
 import { wellenService } from '../../services/wellenService';
 
@@ -51,23 +51,34 @@ interface SchutteItem {
   products: PaletteProduct[];
 }
 
+interface EinzelproduktItem {
+  id: string;
+  name: string;
+  targetNumber?: number;
+  currentNumber?: number;
+  picture?: string | null;
+  itemValue?: number | null;
+}
+
 interface Welle {
   id: string;
   name: string;
   image: string | null;
   startDate: string;
   endDate: string;
-  types: ('display' | 'kartonware' | 'palette' | 'schuette')[];
+  types: ('display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt')[];
   status: 'upcoming' | 'active' | 'past';
   displayCount: number;
   kartonwareCount: number;
   paletteCount?: number;
   schutteCount?: number;
+  einzelproduktCount?: number;
   kwDays?: KWDay[];
   displays?: DisplayItem[];
   kartonwareItems?: KartonwareItem[];
   paletteItems?: PaletteItem[];
   schutteItems?: SchutteItem[];
+  einzelproduktItems?: EinzelproduktItem[];
   totalGLs?: number;
   participatingGLs?: number;
   goalType?: 'percentage' | 'value';
@@ -129,16 +140,20 @@ export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClo
   const totalDisplayCurrent = welle.displays?.reduce((sum, d) => sum + (d.currentNumber || 0), 0) || 0;
   const totalKartonwareTarget = welle.kartonwareItems?.reduce((sum, k) => sum + (k.targetNumber || 0), 0) || 0;
   const totalKartonwareCurrent = welle.kartonwareItems?.reduce((sum, k) => sum + (k.currentNumber || 0), 0) || 0;
+  const totalEinzelproduktTarget = welle.einzelproduktItems?.reduce((sum, e) => sum + (e.targetNumber || 0), 0) || 0;
+  const totalEinzelproduktCurrent = welle.einzelproduktItems?.reduce((sum, e) => sum + (e.currentNumber || 0), 0) || 0;
   
-  const totalTarget = totalDisplayTarget + totalKartonwareTarget;
-  const totalCurrent = totalDisplayCurrent + totalKartonwareCurrent;
+  const totalTarget = totalDisplayTarget + totalKartonwareTarget + totalEinzelproduktTarget;
+  const totalCurrent = totalDisplayCurrent + totalKartonwareCurrent + totalEinzelproduktCurrent;
   const overallProgress = totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100 * 10) / 10 : 0;
 
   // Calculate value progress for value-based goals
   const totalValueTarget = (welle.displays?.reduce((sum, d) => sum + ((d.targetNumber || 0) * (d.itemValue || 0)), 0) || 0) +
-    (welle.kartonwareItems?.reduce((sum, k) => sum + ((k.targetNumber || 0) * (k.itemValue || 0)), 0) || 0);
+    (welle.kartonwareItems?.reduce((sum, k) => sum + ((k.targetNumber || 0) * (k.itemValue || 0)), 0) || 0) +
+    (welle.einzelproduktItems?.reduce((sum, e) => sum + ((e.targetNumber || 0) * (e.itemValue || 0)), 0) || 0);
   const totalValueCurrent = (welle.displays?.reduce((sum, d) => sum + ((d.currentNumber || 0) * (d.itemValue || 0)), 0) || 0) +
-    (welle.kartonwareItems?.reduce((sum, k) => sum + ((k.currentNumber || 0) * (k.itemValue || 0)), 0) || 0);
+    (welle.kartonwareItems?.reduce((sum, k) => sum + ((k.currentNumber || 0) * (k.itemValue || 0)), 0) || 0) +
+    (welle.einzelproduktItems?.reduce((sum, e) => sum + ((e.currentNumber || 0) * (e.itemValue || 0)), 0) || 0);
 
   // Days remaining
   const today = new Date();
@@ -491,6 +506,57 @@ export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClo
                             Gesamtwert: €{totalValue.toLocaleString('de-DE')}
                           </div>
                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Einzelprodukte */}
+            {welle.einzelproduktItems && welle.einzelproduktItems.length > 0 && (
+              <div className={styles.itemsColumn}>
+                <div className={styles.itemsHeader}>
+                  <Cube size={20} weight="bold" className={styles.itemsHeaderIcon} />
+                  <h3>Einzelprodukte</h3>
+                  <span className={styles.itemsCount}>{welle.einzelproduktCount || welle.einzelproduktItems.length}</span>
+                </div>
+                <div className={styles.itemsList}>
+                  {welle.einzelproduktItems.map(item => {
+                    const progress = item.targetNumber ? ((item.currentNumber || 0) / item.targetNumber) * 100 : 0;
+                    const isComplete = (item.currentNumber || 0) >= (item.targetNumber || 1);
+                    
+                    return (
+                      <div key={item.id} className={`${styles.itemCard} ${isComplete ? styles.itemCardComplete : ''}`}>
+                        {item.picture && (
+                          <div className={styles.itemImage}>
+                            <img src={item.picture} alt={item.name} />
+                          </div>
+                        )}
+                        <div className={styles.itemContent}>
+                          <div className={styles.itemName}>{item.name}</div>
+                          <div className={styles.itemProgress}>
+                            <div className={styles.itemProgressBar}>
+                              <div
+                                className={`${styles.itemProgressFill} ${isComplete ? styles.itemProgressComplete : ''}`}
+                                style={{ width: `${Math.min(progress, 100)}%` }}
+                              />
+                            </div>
+                            <span className={styles.itemProgressText}>
+                              {item.currentNumber || 0} / {item.targetNumber || 0}
+                            </span>
+                          </div>
+                          {welle.goalType === 'value' && item.itemValue && (
+                            <div className={styles.itemValue}>
+                              €{((item.currentNumber || 0) * item.itemValue).toLocaleString('de-DE')} / €{((item.targetNumber || 0) * item.itemValue).toLocaleString('de-DE')}
+                            </div>
+                          )}
+                        </div>
+                        {isComplete && (
+                          <div className={styles.itemCompleteBadge}>
+                            <CheckCircle size={18} weight="fill" />
+                          </div>
+                        )}
                       </div>
                     );
                   })}

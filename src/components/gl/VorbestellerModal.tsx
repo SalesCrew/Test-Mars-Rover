@@ -268,7 +268,7 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     try {
       // Prepare items array with only items that have quantities > 0
       const items: Array<{
-        item_type: 'display' | 'kartonware' | 'palette' | 'schuette';
+        item_type: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt';
         item_id: string;
         current_number: number;
         value_per_unit?: number; // For palette/schuette to track value
@@ -292,6 +292,18 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
         if (qty > 0) {
           items.push({
             item_type: 'kartonware',
+            item_id: item.id,
+            current_number: qty
+          });
+        }
+      });
+
+      // Add einzelprodukte with quantities
+      selectedVorbesteller?.einzelproduktItems?.forEach(item => {
+        const qty = itemQuantities[item.id] || 0;
+        if (qty > 0) {
+          items.push({
+            item_type: 'einzelprodukt',
             item_id: item.id,
             current_number: qty
           });
@@ -472,6 +484,10 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                             const qty = itemQuantities[k.id] || 0;
                             totalValue += qty * (k.itemValue || 0);
                           });
+                          selectedVorbesteller.einzelproduktItems?.forEach(e => {
+                            const qty = itemQuantities[e.id] || 0;
+                            totalValue += qty * (e.itemValue || 0);
+                          });
                         }
                         // Add palette/schütte value
                         totalValue += paletteSchutteValue;
@@ -526,6 +542,24 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                   })}
                   
                   {selectedVorbesteller?.kartonwareItems?.map(item => {
+                    const qty = itemQuantities[item.id] || 0;
+                    if (qty > 0) {
+                      return (
+                        <div key={item.id} className={styles.successDetailRow}>
+                          <div className={styles.successDetailCheck}>
+                            <Check size={14} weight="bold" />
+                          </div>
+                          <div className={styles.successDetailText}>
+                            {item.name}: {qty} Stück
+                            {item.itemValue && ` (€${(qty * item.itemValue).toFixed(2)})`}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  {selectedVorbesteller?.einzelproduktItems?.map(item => {
                     const qty = itemQuantities[item.id] || 0;
                     if (qty > 0) {
                       return (
@@ -680,7 +714,7 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                               <div className={styles.cardOverlay}>
                                 <div className={styles.itemsBadge}>
                                   <Package size={16} weight="fill" />
-                                  <span>{(welle.displays?.length || 0) + (welle.kartonwareItems?.length || 0)}</span>
+                                  <span>{(welle.displays?.length || 0) + (welle.kartonwareItems?.length || 0) + (welle.einzelproduktItems?.length || 0)}</span>
                                 </div>
                               </div>
                             </div>
@@ -745,7 +779,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                                       `${welle.participatingGLs || 0}/${welle.totalGLs || 0}`
                                     ) : (
                                       `€${((welle.displays || []).reduce((sum, d) => sum + (d.currentNumber || 0) * (d.itemValue || 0), 0) + 
-                                        (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0)).toLocaleString('de-DE')}`
+                                        (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0) +
+                                        (welle.einzelproduktItems || []).reduce((sum, e) => sum + (e.currentNumber || 0) * (e.itemValue || 0), 0)).toLocaleString('de-DE')}`
                                     )}
                                   </div>
                                 </div>
@@ -756,7 +791,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                                         welle.goalType === 'percentage' 
                                           ? ((welle.participatingGLs || 0) / (welle.totalGLs || 1) * 100) >= (welle.goalPercentage || 100)
                                           : ((welle.displays || []).reduce((sum, d) => sum + (d.currentNumber || 0) * (d.itemValue || 0), 0) + 
-                                            (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0)) >= (welle.goalValue || Infinity)
+                                            (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0) +
+                                            (welle.einzelproduktItems || []).reduce((sum, e) => sum + (e.currentNumber || 0) * (e.itemValue || 0), 0)) >= (welle.goalValue || Infinity)
                                           ? styles.coverageComplete 
                                           : ''
                                       }`}
@@ -764,7 +800,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                                         width: welle.goalType === 'percentage'
                                           ? `${Math.min(100, (welle.participatingGLs || 0) / (welle.totalGLs || 1) * 100)}%`
                                           : `${Math.min(100, ((welle.displays || []).reduce((sum, d) => sum + (d.currentNumber || 0) * (d.itemValue || 0), 0) + 
-                                              (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0)) / (welle.goalValue || 1) * 100)}%`
+                                              (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0) +
+                                              (welle.einzelproduktItems || []).reduce((sum, e) => sum + (e.currentNumber || 0) * (e.itemValue || 0), 0)) / (welle.goalValue || 1) * 100)}%`
                                       }}
                                     />
                                   </div>
@@ -773,7 +810,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                                       {welle.goalType === 'percentage' 
                                         ? `${Math.round((welle.participatingGLs || 0) / (welle.totalGLs || 1) * 100)}%`
                                         : `€${((welle.displays || []).reduce((sum, d) => sum + (d.currentNumber || 0) * (d.itemValue || 0), 0) + 
-                                            (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0)).toLocaleString('de-DE')}`
+                                            (welle.kartonwareItems || []).reduce((sum, k) => sum + (k.currentNumber || 0) * (k.itemValue || 0), 0) +
+                                            (welle.einzelproduktItems || []).reduce((sum, e) => sum + (e.currentNumber || 0) * (e.itemValue || 0), 0)).toLocaleString('de-DE')}`
                                       }
                                     </span>
                                     <span className={styles.coverageGoal}>
@@ -980,6 +1018,48 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                   <div className={styles.itemsGroup}>
                     <div className={styles.itemsGroupLabel}>Kartonware</div>
                     {selectedVorbesteller.kartonwareItems.map((item) => (
+                      <div key={item.id} className={styles.itemCard}>
+                        <div className={styles.itemInfo}>
+                          <div className={styles.itemName}>{item.name}</div>
+                          <div className={styles.itemMeta}>
+                            Ziel: {item.targetNumber} Stück
+                            {item.itemValue && ` · €${item.itemValue.toFixed(2)}`}
+                          </div>
+                        </div>
+                        <div className={styles.quantityControls}>
+                          <button
+                            className={styles.quantityButton}
+                            onClick={() => handleUpdateItemQuantity(item.id, -1)}
+                            aria-label="Weniger"
+                          >
+                            <Minus size={14} weight="bold" />
+                          </button>
+                          <input
+                            type="text"
+                            className={styles.quantity}
+                            value={itemQuantities[item.id] === 0 || !itemQuantities[item.id] ? '' : itemQuantities[item.id]}
+                            onChange={(e) => handleManualItemQuantityChange(item.id, e.target.value)}
+                            placeholder="0"
+                            aria-label="Menge"
+                          />
+                          <button
+                            className={styles.quantityButton}
+                            onClick={() => handleUpdateItemQuantity(item.id, 1)}
+                            aria-label="Mehr"
+                          >
+                            <Plus size={14} weight="bold" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Einzelprodukte Section */}
+                {selectedVorbesteller?.einzelproduktItems && selectedVorbesteller.einzelproduktItems.length > 0 && (
+                  <div className={styles.itemsGroup}>
+                    <div className={styles.itemsGroupLabel}>Einzelprodukte</div>
+                    {selectedVorbesteller.einzelproduktItems.map((item) => (
                       <div key={item.id} className={styles.itemCard}>
                         <div className={styles.itemInfo}>
                           <div className={styles.itemName}>{item.name}</div>

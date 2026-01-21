@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled, Storefront, Stack, ShoppingBag } from '@phosphor-icons/react';
+import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled, Storefront, Stack, ShoppingBag, Cube } from '@phosphor-icons/react';
 import styles from './VorbestellerPage.module.css';
 import { CustomDatePicker } from './CustomDatePicker';
 import { WelleDetailModal } from './WelleDetailModal';
@@ -86,6 +86,14 @@ interface SchutteItem {
   size: string;
   picture: File | null;
   products: PaletteProductItem[]; // Same structure as palette
+}
+
+interface EinzelproduktItem {
+  id: string;
+  name: string;
+  targetNumber: string;
+  picture: File | null;
+  itemValue?: string; // Only used when wave goalType is 'value'
 }
 
 interface KWDay {
@@ -202,9 +210,9 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
 
   const [editingWelle, setEditingWelle] = useState<Welle | null>(null);
   const [isPastItemsModalOpen, setIsPastItemsModalOpen] = useState<boolean>(false);
-  const [pastItemType, setPastItemType] = useState<'display' | 'kartonware' | 'palette' | 'schuette' | null>(null);
+  const [pastItemType, setPastItemType] = useState<'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedTypes, setSelectedTypes] = useState<('display' | 'kartonware' | 'palette' | 'schuette')[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<('display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt')[]>([]);
   const [productDisplays, setProductDisplays] = useState<Product[]>([]);
   const [productPalettes, setProductPalettes] = useState<Product[]>([]);
   const [productSchuetten, setProductSchuetten] = useState<Product[]>([]);
@@ -233,13 +241,16 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   // Schütte items
   const [schutteItems, setSchutteItems] = useState<SchutteItem[]>([]);
   
+  // Einzelprodukt items
+  const [einzelprodukte, setEinzelprodukte] = useState<EinzelproduktItem[]>([]);
+  
   // KW + Days
   const [kwDays, setKwDays] = useState<KWDay[]>([]);
   
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleToggleType = (type: 'display' | 'kartonware' | 'palette' | 'schuette') => {
+  const handleToggleType = (type: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt') => {
     setSelectedTypes(prev => {
       if (prev.includes(type)) {
         return prev.filter(t => t !== type);
@@ -412,6 +423,25 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     }));
   };
 
+  // Einzelprodukt management functions
+  const addEinzelprodukt = () => {
+    setEinzelprodukte(prev => [...prev, {
+      id: `einzelprodukt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: '',
+      targetNumber: '1',
+      picture: null,
+      itemValue: ''
+    }]);
+  };
+
+  const removeEinzelprodukt = (id: string) => {
+    setEinzelprodukte(prev => prev.filter(e => e.id !== id));
+  };
+
+  const updateEinzelprodukt = (id: string, field: keyof EinzelproduktItem, value: any) => {
+    setEinzelprodukte(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
+  };
+
   const addKWDay = () => {
     setKwDays(prev => [...prev, {
       kw: '',
@@ -560,6 +590,28 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         };
       }));
 
+      // Process einzelprodukt items - same logic as displays/kartonware
+      const validEinzelprodukte = einzelprodukte.filter(e => {
+        if (!e.name.trim()) return false;
+        if (goalType === 'value') {
+          return parseInt(e.targetNumber) > 0 || (e.itemValue && parseFloat(e.itemValue) > 0);
+        }
+        return parseInt(e.targetNumber) > 0;
+      });
+      const processedEinzelprodukte = await Promise.all(validEinzelprodukte.map(async (e) => {
+        let pictureUrl: string | null = null;
+        if (e.picture) {
+          pictureUrl = await uploadImageToStorage(e.picture, 'einzelprodukte');
+        }
+        const targetNum = parseInt(e.targetNumber) > 0 ? parseInt(e.targetNumber) : 1;
+        return {
+          name: e.name,
+          targetNumber: targetNum,
+          picture: pictureUrl,
+          itemValue: goalType === 'value' && e.itemValue ? parseFloat(e.itemValue) : null
+        };
+      }));
+
       const welleData = {
         name: waveName,
         image: imageUrl,
@@ -572,6 +624,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         kartonwareItems: processedKartonware,
         paletteItems: processedPalettes,
         schutteItems: processedSchuetten,
+        einzelproduktItems: processedEinzelprodukte,
         kwDays: kwDays.map(kw => ({
           kw: kw.kw,
           days: kw.days
@@ -669,6 +722,17 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
       })));
     }
     
+    // Load einzelprodukte
+    if (welle.einzelproduktItems) {
+      setEinzelprodukte(welle.einzelproduktItems.map(e => ({
+        id: e.id,
+        name: e.name,
+        targetNumber: (e.targetNumber || 0).toString(),
+        picture: null,
+        itemValue: e.itemValue?.toString()
+      })));
+    }
+    
     // Load KW days
     setKwDays(welle.kwDays || []);
     
@@ -687,7 +751,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     return pastWellen.flatMap(w => w.kartonwareItems || []);
   };
 
-  const handleOpenPastItems = (type: 'display' | 'kartonware' | 'palette' | 'schuette') => {
+  const handleOpenPastItems = (type: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt') => {
     setPastItemType(type);
     setIsPastItemsModalOpen(true);
   };
@@ -820,6 +884,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     setKartonwareItems([]);
     setPaletteItems([]);
     setSchutteItems([]);
+    setEinzelprodukte([]);
     setKwDays([]);
     setEditingWelle(null);
     setSelectedWelle(null);
@@ -832,6 +897,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     if (selectedTypes.includes('kartonware')) steps++;
     if (selectedTypes.includes('palette')) steps++;
     if (selectedTypes.includes('schuette')) steps++;
+    if (selectedTypes.includes('einzelprodukt')) steps++;
     steps++; // KW + Days
     return steps;
   };
@@ -842,9 +908,9 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     if (currentStep === 2) return editingWelle ? 'Welle bearbeiten - Details' : 'Welle Details';
     
     // Calculate which step shows which type
-    const getTypeForStep = (step: number): 'display' | 'kartonware' | 'palette' | 'schuette' | 'kw' | null => {
+    const getTypeForStep = (step: number): 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt' | 'kw' | null => {
       let currentTypeStep = 3;
-      const typeOrder: ('display' | 'kartonware' | 'palette' | 'schuette')[] = ['display', 'kartonware', 'palette', 'schuette'];
+      const typeOrder: ('display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt')[] = ['display', 'kartonware', 'palette', 'schuette', 'einzelprodukt'];
       for (const type of typeOrder) {
         if (selectedTypes.includes(type)) {
           if (step === currentTypeStep) return type;
@@ -858,15 +924,16 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     const typeForStep = getTypeForStep(currentStep);
     if (typeForStep === 'display') return editingWelle ? 'Welle bearbeiten - Displays' : 'Displays hinzufügen';
     if (typeForStep === 'kartonware') return editingWelle ? 'Welle bearbeiten - Kartonware' : 'Kartonware hinzufügen';
+    if (typeForStep === 'einzelprodukt') return editingWelle ? 'Welle bearbeiten - Einzelprodukte' : 'Einzelprodukte hinzufügen';
     if (typeForStep === 'palette') return editingWelle ? 'Welle bearbeiten - Paletten' : 'Paletten hinzufügen';
     if (typeForStep === 'schuette') return editingWelle ? 'Welle bearbeiten - Schütten' : 'Schütten hinzufügen';
     return editingWelle ? 'Welle bearbeiten - Verkaufstage' : 'Verkaufstage festlegen';
   };
   
   // Helper function to determine which type is shown at a given step
-  const getTypeForStep = (step: number): 'display' | 'kartonware' | 'palette' | 'schuette' | null => {
+  const getTypeForStep = (step: number): 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt' | null => {
     let currentTypeStep = 3;
-    const typeOrder: ('display' | 'kartonware' | 'palette' | 'schuette')[] = ['display', 'kartonware', 'palette', 'schuette'];
+    const typeOrder: ('display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt')[] = ['display', 'kartonware', 'palette', 'schuette', 'einzelprodukt'];
     for (const type of typeOrder) {
       if (selectedTypes.includes(type)) {
         if (step === currentTypeStep) return type;
@@ -1225,6 +1292,15 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                       <Plus size={14} weight="bold" />
                     </button>
                   )}
+                  {getTypeForStep(currentStep) === 'einzelprodukt' && (
+                    <button 
+                      className={styles.addFromPastButton}
+                      onClick={() => handleOpenPastItems('einzelprodukt')}
+                      title="Aus Produktliste hinzufügen"
+                    >
+                      <Plus size={14} weight="bold" />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1314,6 +1390,27 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                         Schütten-Platzierungen mit Produktauswahl
                       </p>
                       {selectedTypes.includes('schuette') && (
+                        <div className={styles.optionCheckmark}>
+                          <CheckCircle size={20} weight="fill" />
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      className={`${styles.optionCard} ${selectedTypes.includes('einzelprodukt') ? styles.optionCardActive : ''}`}
+                      onClick={() => handleToggleType('einzelprodukt')}
+                    >
+                      <div className={styles.optionIcon}>
+                        <Cube 
+                          size={48} 
+                          weight={selectedTypes.includes('einzelprodukt') ? 'fill' : 'regular'} 
+                        />
+                      </div>
+                      <h4 className={styles.optionTitle}>Einzelprodukte</h4>
+                      <p className={styles.optionDescription}>
+                        Einzelne Produkte für diese Welle
+                      </p>
+                      {selectedTypes.includes('einzelprodukt') && (
                         <div className={styles.optionCheckmark}>
                           <CheckCircle size={20} weight="fill" />
                         </div>
@@ -1967,6 +2064,112 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                       <button className={styles.addFirstButton} onClick={addSchutte}>
                         <Plus size={18} weight="bold" />
                         <span>Erste Schütte hinzufügen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step: Einzelprodukte Details */}
+              {getTypeForStep(currentStep) === 'einzelprodukt' && (
+                <div className={styles.stepContent}>
+                  <div className={styles.itemsList}>
+                    {einzelprodukte.map((produkt, index) => (
+                      <div key={produkt.id} className={styles.itemCard}>
+                        <div className={styles.itemHeader}>
+                          <span className={styles.itemNumber}>Produkt {index + 1}</span>
+                          {einzelprodukte.length > 1 && (
+                            <button
+                              className={styles.removeItemButton}
+                              onClick={() => removeEinzelprodukt(produkt.id)}
+                            >
+                              <Trash size={16} weight="bold" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className={styles.formRow}>
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Produktname</label>
+                            <input
+                              type="text"
+                              className={styles.input}
+                              placeholder="z.B. Whiskas Adult 400g"
+                              value={produkt.name}
+                              onChange={(e) => updateEinzelprodukt(produkt.id, 'name', e.target.value)}
+                            />
+                          </div>
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Zielanzahl</label>
+                            <input
+                              type="number"
+                              min="1"
+                              className={styles.input}
+                              value={produkt.targetNumber}
+                              onChange={(e) => updateEinzelprodukt(produkt.id, 'targetNumber', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        {goalType === 'value' && (
+                          <div className={styles.formSection}>
+                            <label className={styles.label}>Wert pro Stück (€)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              className={styles.input}
+                              placeholder="z.B. 2.50"
+                              value={produkt.itemValue || ''}
+                              onChange={(e) => updateEinzelprodukt(produkt.id, 'itemValue', e.target.value)}
+                            />
+                          </div>
+                        )}
+
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Produktbild (optional)</label>
+                          <div className={styles.imageUploadArea}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) updateEinzelprodukt(produkt.id, 'picture', file);
+                              }}
+                              className={styles.imageInput}
+                              id={`einzelproduktImage-${produkt.id}`}
+                            />
+                            <label htmlFor={`einzelproduktImage-${produkt.id}`} className={styles.imageLabel}>
+                              {produkt.picture ? (
+                                <img 
+                                  src={URL.createObjectURL(produkt.picture)} 
+                                  alt="Produkt preview" 
+                                  className={styles.imagePreview} 
+                                />
+                              ) : (
+                                <>
+                                  <ImageIcon size={24} weight="regular" />
+                                  <span>Bild hochladen</span>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button className={styles.addItemButton} onClick={addEinzelprodukt}>
+                    <Plus size={18} weight="bold" />
+                    <span>Weiteres Produkt hinzufügen</span>
+                  </button>
+
+                  {einzelprodukte.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <Cube size={48} weight="regular" />
+                      <p>Füge mindestens ein Produkt hinzu</p>
+                      <button className={styles.addFirstButton} onClick={addEinzelprodukt}>
+                        <Plus size={18} weight="bold" />
+                        <span>Erstes Produkt hinzufügen</span>
                       </button>
                     </div>
                   )}

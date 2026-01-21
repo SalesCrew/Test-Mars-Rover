@@ -18,6 +18,15 @@ export interface WelleKartonware {
   itemValue?: number | null;
 }
 
+export interface WelleEinzelprodukt {
+  id: string;
+  name: string;
+  targetNumber: number;
+  currentNumber?: number;
+  picture: string | null;
+  itemValue?: number | null;
+}
+
 export interface WellePaletteProduct {
   id: string;
   name: string;
@@ -53,7 +62,7 @@ export interface Welle {
   image: string | null;
   startDate: string;
   endDate: string;
-  types: ('display' | 'kartonware' | 'palette' | 'schuette')[];
+  types: ('display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt')[];
   status: 'upcoming' | 'active' | 'past';
   goalType: 'percentage' | 'value';
   goalPercentage?: number | null;
@@ -62,10 +71,12 @@ export interface Welle {
   kartonwareCount: number;
   paletteCount?: number;
   schutteCount?: number;
+  einzelproduktCount?: number;
   displays?: WelleDisplay[];
   kartonwareItems?: WelleKartonware[];
   paletteItems?: WellePalette[];
   schutteItems?: WelleSchuette[];
+  einzelproduktItems?: WelleEinzelprodukt[];
   kwDays?: WelleKWDay[];
   assignedMarketIds?: string[];
   participatingGLs?: number;
@@ -114,6 +125,12 @@ export interface CreateWelleDTO {
       ean: string;
     }>;
   }>;
+  einzelproduktItems?: Array<{
+    name: string;
+    targetNumber: number;
+    picture: string | null;
+    itemValue?: number | null;
+  }>;
   kwDays: Array<{
     kw: string;
     days: string[];
@@ -128,7 +145,7 @@ export interface UpdateWelleDTO extends CreateWelleDTO {
 export interface UpdateProgressDTO {
   gebietsleiter_id: string;
   market_id?: string;
-  item_type: 'display' | 'kartonware' | 'palette' | 'schuette';
+  item_type: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt';
   item_id: string;
   current_number: number;
   value_per_unit?: number;
@@ -287,7 +304,7 @@ class WellenService {
     gebietsleiter_id: string;
     market_id: string;
     items: Array<{
-      item_type: 'display' | 'kartonware' | 'palette' | 'schuette';
+      item_type: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt';
       item_id: string;
       current_number: number;
       value_per_unit?: number;

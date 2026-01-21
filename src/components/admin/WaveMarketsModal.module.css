@@ -535,6 +535,11 @@
   color: #F59E0B;
 }
 
+.itemTypeEinzelprodukt {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
 .nestedProducts {
   margin-left: 24px;
   padding-left: 12px;

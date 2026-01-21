@@ -325,8 +325,8 @@ export const WaveMarketsModal: React.FC<WaveMarketsModalProps> = ({ welle, onClo
                                           {item.products ? `${item.products.reduce((s, p) => s + p.quantity, 0)}x` : `${item.quantity}x`}
                                         </span>
                                         <span className={styles.itemName}>{item.name}</span>
-                                        <span className={`${styles.itemType} ${item.type === 'palette' ? styles.itemTypePalette : item.type === 'schuette' ? styles.itemTypeSchuette : ''}`}>
-                                          {item.type === 'display' ? 'Display' : item.type === 'kartonware' ? 'Kartonware' : item.type === 'palette' ? 'Palette' : 'Schütte'}
+                                        <span className={`${styles.itemType} ${item.type === 'palette' ? styles.itemTypePalette : item.type === 'schuette' ? styles.itemTypeSchuette : item.type === 'einzelprodukt' ? styles.itemTypeEinzelprodukt : ''}`}>
+                                          {item.type === 'display' ? 'Display' : item.type === 'kartonware' ? 'Kartonware' : item.type === 'palette' ? 'Palette' : item.type === 'schuette' ? 'Schütte' : 'Einzelprodukt'}
                                         </span>
                                         {item.value > 0 && (
                                           <span className={styles.itemValue}>
