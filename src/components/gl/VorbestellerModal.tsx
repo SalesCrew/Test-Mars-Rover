@@ -6,6 +6,7 @@ import type { Market } from '../../types/market-types';
 import { wellenService, type Welle } from '../../services/wellenService';
 import { useAuth } from '../../contexts/AuthContext';
 import { marketService } from '../../services/marketService';
+import { MarketVisitChoiceModal } from './MarketVisitChoiceModal';
 
 interface VorbestellerModalProps {
   isOpen: boolean;
@@ -30,6 +31,15 @@ const formatCompactDate = (dateStr: string): string => {
   return `${day}.${month}`;
 };
 
+// Check if a date is within 3 weeks (21 days) from now
+const isWithinThreeWeeks = (lastVisitDate: string | null | undefined): boolean => {
+  if (!lastVisitDate) return false;
+  const lastVisit = new Date(lastVisitDate);
+  const threeWeeksAgo = new Date();
+  threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+  return lastVisit >= threeWeeksAgo;
+};
+
 export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [wellen, setWellen] = useState<Welle[]>([]);
@@ -50,6 +60,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
   const [isSubmitCompleted, setIsSubmitCompleted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSuccessAnimating, setIsSuccessAnimating] = useState(false);
+  const [showVisitChoiceModal, setShowVisitChoiceModal] = useState(false);
+  const [pendingCreateNewVisit, setPendingCreateNewVisit] = useState<boolean | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,8 +99,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
           postalCode: m.postalCode,
           chain: m.chain || '',
           frequency: m.frequency || 12,
-          currentVisits: 0,
-          lastVisitDate: '',
+          currentVisits: m.currentVisits || 0,
+          lastVisitDate: m.lastVisitDate || '',
           isCompleted: false,
           gebietsleiter: m.gebietsleiter, // Include GL assignment
         }));
@@ -262,7 +274,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     fileInputRef.current?.click();
   };
 
-  const handleSubmitPhoto = async () => {
+  // Actual submission logic - can be called with or without creating a new visit
+  const executeSubmission = async (createNewVisit: boolean) => {
     setIsSubmitting(true);
     
     try {
@@ -351,17 +364,20 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
           photo_url: capturedPhoto || undefined
         });
         
-        // Record visit to update market frequency
-        try {
-          await marketService.recordVisit(selectedMarket.id, user.id);
-        } catch (visitError) {
-          console.warn('Could not record market visit:', visitError);
-          // Don't fail the whole submission if visit recording fails
+        // Only record visit if user chose to create a new visit
+        if (createNewVisit) {
+          try {
+            await marketService.recordVisit(selectedMarket.id, user.id);
+          } catch (visitError) {
+            console.warn('Could not record market visit:', visitError);
+            // Don't fail the whole submission if visit recording fails
+          }
         }
       }
 
       setIsSubmitting(false);
       setIsSubmitCompleted(true);
+      setPendingCreateNewVisit(null);
       
       // Show success modal after completion animation
       setTimeout(() => {
@@ -372,8 +388,33 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     } catch (error) {
       console.error('Error submitting progress:', error);
       setIsSubmitting(false);
+      setPendingCreateNewVisit(null);
       alert('Fehler beim Speichern. Bitte versuche es erneut.');
     }
+  };
+
+  // Handler when user clicks submit - checks if we need to show visit choice modal
+  const handleSubmitPhoto = async () => {
+    // Check if last visit was within 3 weeks
+    if (selectedMarket && isWithinThreeWeeks(selectedMarket.lastVisitDate)) {
+      // Show the choice modal
+      setShowVisitChoiceModal(true);
+    } else {
+      // No recent visit, automatically create new visit
+      await executeSubmission(true);
+    }
+  };
+
+  // Handler when user chooses to create a new visit from the modal
+  const handleCreateNewVisit = async () => {
+    setShowVisitChoiceModal(false);
+    await executeSubmission(true);
+  };
+
+  // Handler when user chooses to count to existing visit from the modal
+  const handleCountToExisting = async () => {
+    setShowVisitChoiceModal(false);
+    await executeSubmission(false);
   };
 
   const handleClose = () => {
@@ -397,6 +438,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     setIsSubmitCompleted(false);
     setShowSuccess(false);
     setIsSuccessAnimating(false);
+    setShowVisitChoiceModal(false);
+    setPendingCreateNewVisit(null);
     onClose();
   };
 
@@ -1358,6 +1401,16 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
           )}
         </div>
       </div>
+
+      {/* Market Visit Choice Modal */}
+      <MarketVisitChoiceModal
+        isOpen={showVisitChoiceModal}
+        marketName={selectedMarket?.name || ''}
+        lastVisitDate={selectedMarket?.lastVisitDate || ''}
+        onCreateNewVisit={handleCreateNewVisit}
+        onCountToExisting={handleCountToExisting}
+        onClose={() => setShowVisitChoiceModal(false)}
+      />
     </div>
   );
 };

@@ -8,7 +8,17 @@ import { produktersatzService } from '../../services/produktersatzService';
 import { useAuth } from '../../contexts/AuthContext';
 import { RingLoader } from 'react-spinners';
 import { ExchangeSuccessModal } from './ExchangeSuccessModal';
+import { MarketVisitChoiceModal } from './MarketVisitChoiceModal';
 import styles from './ProductCalculator.module.css';
+
+// Check if a date is within 3 weeks (21 days) from now
+const isWithinThreeWeeks = (lastVisitDate: string | null | undefined): boolean => {
+  if (!lastVisitDate) return false;
+  const lastVisit = new Date(lastVisitDate);
+  const threeWeeksAgo = new Date();
+  threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+  return lastVisit >= threeWeeksAgo;
+};
 
 interface ProductCalculatorProps {
   isOpen: boolean;
@@ -61,6 +71,10 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const customDropdownRef = useRef<HTMLDivElement>(null);
   const customSearchInputRef = useRef<HTMLInputElement>(null);
   const [customSuggestion, setCustomSuggestion] = useState<ReplacementSuggestion | null>(null);
+  
+  // Visit choice modal states
+  const [showVisitChoiceModal, setShowVisitChoiceModal] = useState(false);
+  const [pendingSubmitType, setPendingSubmitType] = useState<'pending' | 'confirm' | null>(null);
 
   // Fetch real products and markets from database
   useEffect(() => {
@@ -80,8 +94,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
           postalCode: m.postalCode,
           chain: m.chain || '',
           frequency: m.frequency || 12,
-          currentVisits: 0,
-          lastVisitDate: '',
+          currentVisits: m.currentVisits || 0,
+          lastVisitDate: m.lastVisitDate || '',
           isCompleted: false,
           gebietsleiter: m.gebietsleiter,
         })));
@@ -537,6 +551,147 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     }
     
     return Math.max(0, Math.min(100, score));
+  };
+
+  // Execute pending submission (Vormerken)
+  const executePendingSubmission = async (createNewVisit: boolean) => {
+    if (!selectedMarketId || !selectedSuggestion || !user?.id) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Prepare data for backend with pending status
+      const takeOutItems = removedProducts.map(p => ({
+        product_id: p.product.id,
+        quantity: p.quantity
+      }));
+      
+      const replaceItems = selectedSuggestion.products.map(p => ({
+        product_id: p.product.id,
+        quantity: p.quantity
+      }));
+      
+      await produktersatzService.createEntry({
+        gebietsleiter_id: user.id,
+        market_id: selectedMarketId,
+        reason: 'Produkttausch',
+        notes: `Warenwert: €${getTotalRemovedValue().toFixed(2)} → €${selectedSuggestion.totalValue.toFixed(2)}`,
+        total_value: selectedSuggestion.totalValue,
+        status: 'pending',
+        take_out_items: takeOutItems,
+        replace_items: replaceItems
+      });
+      
+      // Only record visit if user chose to create a new visit
+      if (createNewVisit) {
+        try {
+          await marketService.recordVisit(selectedMarketId, user.id);
+        } catch (visitError) {
+          console.warn('Could not record market visit:', visitError);
+        }
+      }
+      
+      // Reset and show pending success modal
+      setShowConfirmation(false);
+      setPendingSubmitType(null);
+      setShowPendingSuccessModal(true);
+    } catch (error) {
+      console.error('Error saving pending produktersatz:', error);
+      alert('Fehler beim Vormerken. Bitte versuche es erneut.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Execute confirm submission (Tausch bestätigen)
+  const executeConfirmSubmission = async (createNewVisit: boolean) => {
+    if (!selectedMarketId || !selectedSuggestion || !user?.id) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Prepare data for backend
+      const takeOutItems = removedProducts.map(p => ({
+        product_id: p.product.id,
+        quantity: p.quantity
+      }));
+      
+      const replaceItems = selectedSuggestion.products.map(p => ({
+        product_id: p.product.id,
+        quantity: p.quantity
+      }));
+      
+      await produktersatzService.createEntry({
+        gebietsleiter_id: user.id,
+        market_id: selectedMarketId,
+        reason: 'Produkttausch',
+        notes: `Warenwert: €${getTotalRemovedValue().toFixed(2)} → €${selectedSuggestion.totalValue.toFixed(2)}`,
+        total_value: selectedSuggestion.totalValue,
+        take_out_items: takeOutItems,
+        replace_items: replaceItems
+      });
+      
+      // Only record visit if user chose to create a new visit
+      if (createNewVisit) {
+        try {
+          await marketService.recordVisit(selectedMarketId, user.id);
+        } catch (visitError) {
+          console.warn('Could not record market visit:', visitError);
+        }
+      }
+      
+      // Close confirmation modal and show success modal
+      setShowConfirmation(false);
+      setPendingSubmitType(null);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error submitting produktersatz:', error);
+      alert('Fehler beim Speichern. Bitte versuche es erneut.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle pending button click - check for 3-week visit
+  const handlePendingClick = () => {
+    const selectedMarket = allMarkets.find(m => m.id === selectedMarketId);
+    
+    if (selectedMarket && isWithinThreeWeeks(selectedMarket.lastVisitDate)) {
+      setPendingSubmitType('pending');
+      setShowVisitChoiceModal(true);
+    } else {
+      executePendingSubmission(true);
+    }
+  };
+
+  // Handle confirm button click - check for 3-week visit
+  const handleConfirmClick = () => {
+    const selectedMarket = allMarkets.find(m => m.id === selectedMarketId);
+    
+    if (selectedMarket && isWithinThreeWeeks(selectedMarket.lastVisitDate)) {
+      setPendingSubmitType('confirm');
+      setShowVisitChoiceModal(true);
+    } else {
+      executeConfirmSubmission(true);
+    }
+  };
+
+  // Handler when user chooses to create a new visit from the modal
+  const handleCreateNewVisit = async () => {
+    setShowVisitChoiceModal(false);
+    if (pendingSubmitType === 'pending') {
+      await executePendingSubmission(true);
+    } else if (pendingSubmitType === 'confirm') {
+      await executeConfirmSubmission(true);
+    }
+  };
+
+  // Handler when user chooses to count to existing visit from the modal
+  const handleCountToExisting = async () => {
+    setShowVisitChoiceModal(false);
+    if (pendingSubmitType === 'pending') {
+      await executePendingSubmission(false);
+    } else if (pendingSubmitType === 'confirm') {
+      await executeConfirmSubmission(false);
+    }
   };
 
   const formatPrice = (price: number) => `€${price.toFixed(2)}`;
@@ -1637,50 +1792,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
               <button
                 className={`${styles.button} ${styles.buttonWarning}`}
                 disabled={isSubmitting}
-                onClick={async () => {
-                  if (!selectedMarketId || !selectedSuggestion || !user?.id) return;
-                  
-                  setIsSubmitting(true);
-                  try {
-                    // Prepare data for backend with pending status
-                    const takeOutItems = removedProducts.map(p => ({
-                      product_id: p.product.id,
-                      quantity: p.quantity
-                    }));
-                    
-                    const replaceItems = selectedSuggestion.products.map(p => ({
-                      product_id: p.product.id,
-                      quantity: p.quantity
-                    }));
-                    
-                    await produktersatzService.createEntry({
-                      gebietsleiter_id: user.id,
-                      market_id: selectedMarketId,
-                      reason: 'Produkttausch',
-                      notes: `Warenwert: €${getTotalRemovedValue().toFixed(2)} → €${selectedSuggestion.totalValue.toFixed(2)}`,
-                      total_value: selectedSuggestion.totalValue,
-                      status: 'pending',
-                      take_out_items: takeOutItems,
-                      replace_items: replaceItems
-                    });
-                    
-                    // Record visit to update market frequency (same day rule)
-                    try {
-                      await marketService.recordVisit(selectedMarketId, user.id);
-                    } catch (visitError) {
-                      console.warn('Could not record market visit:', visitError);
-                    }
-                    
-                    // Reset and show pending success modal
-                    setShowConfirmation(false);
-                    setShowPendingSuccessModal(true);
-                  } catch (error) {
-                    console.error('Error saving pending produktersatz:', error);
-                    alert('Fehler beim Vormerken. Bitte versuche es erneut.');
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
+                onClick={handlePendingClick}
               >
                 <Clock size={18} weight="bold" />
                 Vormerken
@@ -1688,49 +1800,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
               <button
                 className={`${styles.button} ${styles.buttonSuccess}`}
                 disabled={isSubmitting}
-                onClick={async () => {
-                  if (!selectedMarketId || !selectedSuggestion || !user?.id) return;
-                  
-                  setIsSubmitting(true);
-                  try {
-                    // Prepare data for backend
-                    const takeOutItems = removedProducts.map(p => ({
-                      product_id: p.product.id,
-                      quantity: p.quantity
-                    }));
-                    
-                    const replaceItems = selectedSuggestion.products.map(p => ({
-                      product_id: p.product.id,
-                      quantity: p.quantity
-                    }));
-                    
-                    await produktersatzService.createEntry({
-                      gebietsleiter_id: user.id,
-                      market_id: selectedMarketId,
-                      reason: 'Produkttausch',
-                      notes: `Warenwert: €${getTotalRemovedValue().toFixed(2)} → €${selectedSuggestion.totalValue.toFixed(2)}`,
-                      total_value: selectedSuggestion.totalValue,
-                      take_out_items: takeOutItems,
-                      replace_items: replaceItems
-                    });
-                    
-                    // Record visit to update market frequency
-                    try {
-                      await marketService.recordVisit(selectedMarketId, user.id);
-                    } catch (visitError) {
-                      console.warn('Could not record market visit:', visitError);
-                    }
-                    
-                    // Close confirmation modal and show success modal
-                    setShowConfirmation(false);
-                    setShowSuccessModal(true);
-                  } catch (error) {
-                    console.error('Error submitting produktersatz:', error);
-                    alert('Fehler beim Speichern. Bitte versuche es erneut.');
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
+                onClick={handleConfirmClick}
               >
                 <Check size={18} weight="bold" />
                 {isSubmitting ? 'Speichern...' : 'Tausch bestätigen'}
@@ -1781,6 +1851,19 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
         totalValue={selectedSuggestion?.totalValue || 0}
         userName={userName}
         isPending={true}
+      />
+
+      {/* Market Visit Choice Modal */}
+      <MarketVisitChoiceModal
+        isOpen={showVisitChoiceModal}
+        marketName={allMarkets.find(m => m.id === selectedMarketId)?.name || ''}
+        lastVisitDate={allMarkets.find(m => m.id === selectedMarketId)?.lastVisitDate || ''}
+        onCreateNewVisit={handleCreateNewVisit}
+        onCountToExisting={handleCountToExisting}
+        onClose={() => {
+          setShowVisitChoiceModal(false);
+          setPendingSubmitType(null);
+        }}
       />
     </div>
   );

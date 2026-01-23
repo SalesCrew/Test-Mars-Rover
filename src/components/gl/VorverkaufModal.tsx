@@ -7,6 +7,7 @@ import { vorverkaufService } from '../../services/vorverkaufService';
 import { marketService } from '../../services/marketService';
 import { getAllProducts } from '../../data/productsData';
 import styles from './VorverkaufModal.module.css';
+import { MarketVisitChoiceModal } from './MarketVisitChoiceModal';
 
 interface VorverkaufModalProps {
   isOpen: boolean;
@@ -36,6 +37,15 @@ const getCategoryName = (department: string, productType: string): string => {
   return 'Sonstige';
 };
 
+// Check if a date is within 3 weeks (21 days) from now
+const isWithinThreeWeeks = (lastVisitDate: string | null | undefined): boolean => {
+  if (!lastVisitDate) return false;
+  const lastVisit = new Date(lastVisitDate);
+  const threeWeeksAgo = new Date();
+  threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+  return lastVisit >= threeWeeksAgo;
+};
+
 export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   
@@ -54,6 +64,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
   // View states - start directly at 'markets' (no wave selection)
   const [step, setStep] = useState<'markets' | 'products' | 'confirmation' | 'success'>('markets');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showVisitChoiceModal, setShowVisitChoiceModal] = useState(false);
   
   // Dropdown states
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
@@ -280,7 +291,8 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     }
   };
 
-  const handleSubmit = async () => {
+  // Actual submission logic - can be called with or without creating a new visit
+  const executeSubmission = async (createNewVisit: boolean) => {
     if (!selectedMarketId || !user?.id || selectedProducts.length === 0 || !allProductsHaveReasons) return;
     
     setIsSubmitting(true);
@@ -299,6 +311,16 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
         products: productsToSubmit
       });
       
+      // Only record visit if user chose to create a new visit
+      if (createNewVisit) {
+        try {
+          await marketService.recordVisit(selectedMarketId, user.id);
+        } catch (visitError) {
+          console.warn('Could not record market visit:', visitError);
+          // Don't fail the whole submission if visit recording fails
+        }
+      }
+      
       setStep('success');
     } catch (error) {
       console.error('Error submitting vorverkauf:', error);
@@ -306,6 +328,33 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handler when user clicks submit - checks if we need to show visit choice modal
+  const handleSubmit = async () => {
+    // Find the selected market to check last visit date
+    const selectedMarket = allMarkets.find(m => m.id === selectedMarketId);
+    
+    // Check if last visit was within 3 weeks
+    if (selectedMarket && isWithinThreeWeeks(selectedMarket.lastVisitDate)) {
+      // Show the choice modal
+      setShowVisitChoiceModal(true);
+    } else {
+      // No recent visit, automatically create new visit
+      await executeSubmission(true);
+    }
+  };
+
+  // Handler when user chooses to create a new visit from the modal
+  const handleCreateNewVisit = async () => {
+    setShowVisitChoiceModal(false);
+    await executeSubmission(true);
+  };
+
+  // Handler when user chooses to count to existing visit from the modal
+  const handleCountToExisting = async () => {
+    setShowVisitChoiceModal(false);
+    await executeSubmission(false);
   };
 
   const handleBack = () => {
@@ -335,6 +384,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
     setProductSearchQuery('');
     setIsProductDropdownOpen(false);
     setIsMarketDropdownOpen(false);
+    setShowVisitChoiceModal(false);
     onClose();
   };
 
@@ -887,6 +937,16 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
           )}
         </div>
       </div>
+
+      {/* Market Visit Choice Modal */}
+      <MarketVisitChoiceModal
+        isOpen={showVisitChoiceModal}
+        marketName={allMarkets.find(m => m.id === selectedMarketId)?.name || ''}
+        lastVisitDate={allMarkets.find(m => m.id === selectedMarketId)?.lastVisitDate || ''}
+        onCreateNewVisit={handleCreateNewVisit}
+        onCountToExisting={handleCountToExisting}
+        onClose={() => setShowVisitChoiceModal(false)}
+      />
     </div>
   );
 };
