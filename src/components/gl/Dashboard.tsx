@@ -8,6 +8,7 @@ import { MarketDetailModal } from './MarketDetailModal';
 import { ProductCalculator } from './ProductCalculator';
 import { VorverkaufModal } from './VorverkaufModal';
 import { TourPage } from './TourPage';
+import { MarketVisitPage } from './MarketVisitPage';
 import { Header } from './Header';
 import { ChatBubble } from './ChatBubble';
 import { PreorderNotification } from './PreorderNotification';
@@ -18,8 +19,10 @@ import { AdminPanel } from '../admin/AdminPanel';
 import { BugReportModal } from './BugReportModal';
 import { VorgemerktModal } from './VorgemerktModal';
 import { OnboardingModal } from './OnboardingModal';
+import { MarketsVisitedModal } from './MarketsVisitedModal';
 import Aurora from './Aurora';
 import { produktersatzService } from '../../services/produktersatzService';
+import fragebogenService from '../../services/fragebogenService';
 import type { GLDashboard, NavigationTab, GLProfile, Bonuses, MarketFrequencyAlert } from '../../types/gl-types';
 import type { TourRoute, Market } from '../../types/market-types';
 import { allMarkets as mockMarkets } from '../../data/marketsData';
@@ -44,9 +47,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
   const [isVorgemerktOpen, setIsVorgemerktOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isMarketsVisitedOpen, setIsMarketsVisitedOpen] = useState(false);
   const [pendingProdukttauschCount, setPendingProdukttauschCount] = useState(0);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [activeTour, setActiveTour] = useState<TourRoute | null>(null);
+  const [activeVisit, setActiveVisit] = useState<{
+    market: Market;
+    modules: any[];
+    zeiterfassungActive: boolean;
+  } | null>(null);
   const [notificationTrigger, setNotificationTrigger] = useState(0);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [glProfileData, setGlProfileData] = useState<any>(null);
@@ -123,12 +132,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     setIsOnboardingOpen(false);
   };
 
-  // Fetch real markets from database
+  // Fetch real markets from database (only for current GL)
   useEffect(() => {
     const fetchMarkets = async () => {
+      if (!user?.id) return;
+      
       try {
         const dbMarkets = await marketService.getAllMarkets();
-        const markets: Market[] = dbMarkets.map(m => ({
+        // Filter to only markets assigned to this GL
+        const glMarkets = dbMarkets.filter(m => m.gebietsleiter === user.id);
+        const markets: Market[] = glMarkets.map(m => ({
           id: m.id,
           name: m.name,
           address: m.address,
@@ -136,19 +149,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           postalCode: m.postalCode,
           chain: m.chain || '',
           frequency: m.frequency || 12,
-          currentVisits: 0,
-          lastVisitDate: '',
-          isCompleted: false,
-          gebietsleiter: m.gebietsleiter, // GL UUID for "Meine Märkte" clustering
+          currentVisits: m.currentVisits || 0,
+          lastVisitDate: m.lastVisitDate || '',
+          isCompleted: m.isCompleted || false,
+          gebietsleiter: m.gebietsleiter,
         }));
         setRealMarkets(markets);
       } catch (error) {
         console.error('Error fetching markets:', error);
-        setRealMarkets(mockMarkets); // Fallback to mock data
+        setRealMarkets([]); // Empty array on error
       }
     };
     fetchMarkets();
-  }, []);
+  }, [user?.id]);
 
   // Fetch real dashboard stats
   useEffect(() => {
@@ -287,6 +300,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const handleStartSingleVisit = async (marketId: string) => {
     console.log('Start visit for market:', marketId);
     
+    // Find the market
+    const markets = realMarkets.length > 0 ? realMarkets : mockMarkets;
+    const market = markets.find((m: Market) => m.id === marketId);
+    if (!market) {
+      console.error('Market not found:', marketId);
+      return;
+    }
+    
     // Record visit to update market frequency
     if (user?.id) {
       try {
@@ -296,7 +317,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       }
     }
     
-    // TODO: Navigate to visit workflow
+    // Fetch active fragebogen for this market
+    try {
+      const allFragebogen = await fragebogenService.fragebogen.getAll({ status: 'active' });
+      
+      // Find fragebogen assigned to this market
+      const marketFragebogen = allFragebogen.find((f: any) => 
+        f.market_ids && f.market_ids.includes(marketId)
+      );
+      
+      if (marketFragebogen) {
+        // Fetch full fragebogen with modules and questions
+        const fullFragebogen = await fragebogenService.fragebogen.getById(marketFragebogen.id);
+        
+        // Transform modules to the format MarketVisitPage expects
+        const modules = (fullFragebogen.modules || []).map((fm: any) => ({
+          id: fm.module?.id || fm.id,
+          name: fm.module?.name || 'Modul',
+          questions: (fm.module?.questions || []).map((q: any) => ({
+            id: q.question?.id || q.id,
+            type: q.question?.type || 'open_text',
+            questionText: q.question?.question_text || '',
+            instruction: q.question?.instruction,
+            required: q.required || false,
+            options: q.question?.options,
+            likertScale: q.question?.likert_scale,
+            matrixRows: q.question?.matrix_config?.rows,
+            matrixColumns: q.question?.matrix_config?.columns,
+            numericConstraints: q.question?.numeric_constraints,
+            sliderConfig: q.question?.slider_config
+          }))
+        }));
+        
+        console.log('Starting visit with fragebogen:', fullFragebogen.name, 'modules:', modules.length);
+        
+        setActiveVisit({
+          market,
+          modules,
+          zeiterfassungActive: (fullFragebogen as any).zeiterfassung_active !== false
+        });
+        setIsMarketModalOpen(false);
+      } else {
+        console.log('No active fragebogen found for this market');
+        // Still start the visit but without a fragebogen
+        setActiveVisit({
+          market,
+          modules: [],
+          zeiterfassungActive: true
+        });
+        setIsMarketModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error fetching fragebogen:', error);
+      // Still start the visit but without a fragebogen
+      setActiveVisit({
+        market,
+        modules: [],
+        zeiterfassungActive: true
+      });
+      setIsMarketModalOpen(false);
+    }
   };
 
   const handleStartTour = (route: TourRoute) => {
@@ -331,19 +411,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   };
 
   const handleStartMarketVisit = async (marketId: string) => {
-    console.log('Start visit for market:', marketId);
-    
-    // Record visit to update market frequency
-    if (user?.id) {
-      try {
-        await marketService.recordVisit(marketId, user.id);
-      } catch (visitError) {
-        console.warn('Could not record market visit:', visitError);
-      }
-    }
-    
     setSelectedMarket(null);
-    // TODO: Navigate to visit workflow
+    await handleStartSingleVisit(marketId);
   };
 
   const handleTabChange = (tab: NavigationTab) => {
@@ -359,6 +428,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     setNotificationTrigger(prev => prev + 1);
   };
   void _handleNotificationClick; // Reserved for future use
+
+  // If there's an active market visit, show the MarketVisitPage
+  if (activeVisit) {
+    return (
+      <MarketVisitPage
+        market={activeVisit.market}
+        modules={activeVisit.modules}
+        zeiterfassungActive={activeVisit.zeiterfassungActive}
+        onClose={() => setActiveVisit(null)}
+        onComplete={(answers) => {
+          console.log('Visit completed with answers:', answers);
+          setActiveVisit(null);
+        }}
+        onOpenVorbesteller={() => setIsVorbestellerOpen(true)}
+        onOpenVorverkauf={() => setIsVorverkaufOpen(true)}
+        onOpenProduktrechner={() => setIsCalculatorOpen(true)}
+      />
+    );
+  }
 
   // If there's an active tour, show the TourPage
   if (activeTour) {
@@ -394,7 +482,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
             <>
               {/* Bonus Hero Card */}
               <section className={styles.section}>
-                <BonusHeroCard bonuses={realBonuses} isLoading={!realBonuses} onClick={handleBonusClick} />
+                <BonusHeroCard 
+                  bonuses={realBonuses} 
+                  isLoading={!realBonuses} 
+                  onClick={handleBonusClick}
+                  onMarketsClick={() => setIsMarketsVisitedOpen(true)}
+                />
               </section>
 
               {/* Quick Actions */}
@@ -510,6 +603,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       <OnboardingModal
         isOpen={isOnboardingOpen}
         onComplete={handleOnboardingComplete}
+      />
+
+      {/* Markets Visited Modal */}
+      <MarketsVisitedModal
+        isOpen={isMarketsVisitedOpen}
+        markets={realMarkets}
+        onClose={() => setIsMarketsVisitedOpen(false)}
       />
     </div>
   );

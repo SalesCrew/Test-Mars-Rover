@@ -7,9 +7,10 @@ interface BonusHeroCardProps {
   bonuses: Bonuses | null;
   isLoading?: boolean;
   onClick?: () => void;
+  onMarketsClick?: () => void;
 }
 
-export const BonusHeroCard: React.FC<BonusHeroCardProps> = ({ bonuses, isLoading, onClick }) => {
+export const BonusHeroCard: React.FC<BonusHeroCardProps> = ({ bonuses, isLoading, onClick, onMarketsClick }) => {
   const [progressAnimated, setProgressAnimated] = React.useState(false);
 
   React.useEffect(() => {
@@ -90,7 +91,17 @@ export const BonusHeroCard: React.FC<BonusHeroCardProps> = ({ bonuses, isLoading
           <span className={styles.statLabel}>Vorbestellungen</span>
         </div>
 
-        <div className={styles.stat}>
+        <div 
+          className={`${styles.stat} ${onMarketsClick ? styles.statClickable : ''}`}
+          onClick={(e) => {
+            if (onMarketsClick) {
+              e.stopPropagation();
+              onMarketsClick();
+            }
+          }}
+          role={onMarketsClick ? 'button' : undefined}
+          tabIndex={onMarketsClick ? 0 : undefined}
+        >
           <div className={styles.statValue}>
             <span className={styles.statIconContainer}>
               <MapPin size={18} weight="regular" />

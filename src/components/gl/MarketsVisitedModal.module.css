@@ -1,0 +1,331 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100002;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconWrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1));
+  border: 2px solid rgba(59, 130, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3B82F6;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.marketCount {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.closeButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(241, 245, 249, 0.8);
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+
+/* Stats Summary */
+.statsSummary {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  background: rgba(249, 250, 251, 0.6);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+.statBadge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+}
+
+.statBadgeSuccess {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.05));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.statNumber {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.statBadgeSuccess .statNumber {
+  color: #059669;
+}
+
+.statText {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.statBadgeSuccess .statText {
+  color: #059669;
+}
+
+/* Markets List */
+.marketsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.marketsList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.marketsList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.marketsList::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 2px;
+}
+
+/* Market Card */
+.marketCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.marketCard:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.marketCardVisited {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.04));
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.marketCardVisited:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.marketIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.marketCardVisited .marketIcon {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.marketInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.marketName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marketMeta {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.marketStatus {
+  flex-shrink: 0;
+}
+
+/* Status Badges */
+.visitedBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #10B981, #059669);
+  border-radius: 20px;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.staleBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 20px;
+  color: #D97706;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pendingBadge {
+  padding: 4px 10px;
+  background: rgba(100, 116, 139, 0.1);
+  border-radius: 20px;
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Footer Info */
+.footerInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 24px;
+  background: rgba(249, 250, 251, 0.8);
+  border-top: 1px solid rgba(226, 232, 240, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  border-radius: 0 0 20px 20px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .modal {
+    max-height: 90vh;
+    border-radius: 16px;
+  }
+
+  .modalHeader {
+    padding: 16px 20px;
+  }
+
+  .iconWrapper {
+    width: 42px;
+    height: 42px;
+  }
+
+  .modalTitle {
+    font-size: 18px;
+  }
+
+  .marketsList {
+    padding: 12px 16px;
+  }
+
+  .marketCard {
+    padding: 10px 12px;
+  }
+
+  .marketIcon {
+    width: 32px;
+    height: 32px;
+  }
+}
