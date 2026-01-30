@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, DownloadSimple, Check, CaretRight, CaretDown, DotsSixVertical, CheckCircle } from '@phosphor-icons/react';
+import React, { useState, useEffect } from 'react';
+import { X, DownloadSimple, CaretRight, CaretDown, DotsSixVertical, CheckCircle } from '@phosphor-icons/react';
 import { ClipLoader } from 'react-spinners';
 import { exportService, type ExportConfig } from '../../services/exportService';
 import { CustomDatePicker } from './CustomDatePicker';
