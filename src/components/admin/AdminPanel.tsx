@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus, Plus, Stack, SignOut, Receipt, TrendUp } from '@phosphor-icons/react';
+import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus, Plus, Stack, SignOut, Receipt, TrendUp, DownloadSimple } from '@phosphor-icons/react';
 import { AdminDashboard } from './AdminDashboard';
 import { MarketsPage } from './MarketsPage';
 import { GebietsleiterPage } from './GebietsleiterPage';
@@ -14,6 +14,7 @@ import { CreatePaletteModal } from './CreatePaletteModal';
 import { CreateSchutteModal } from './CreateSchutteModal';
 import { MarketImportPreviewModal } from './MarketImportPreviewModal';
 import { AdminAccountsModal } from './AdminAccountsModal';
+import { ExportDataModal } from './ExportDataModal';
 import { parseMarketFile, validateImportFile } from '../../utils/marketImporter';
 import { actionHistoryService, type ActionHistoryEntry } from '../../services/actionHistoryService';
 import { marketService } from '../../services/marketService';
@@ -44,6 +45,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [isAdminAccountsModalOpen, setIsAdminAccountsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isHistorieModalOpen, setIsHistorieModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isCreateGLModalOpen, setIsCreateGLModalOpen] = useState(false);
   const [isCreateWelleModalOpen, setIsCreateWelleModalOpen] = useState(false);
   const [isCreateModuleModalOpen, setIsCreateModuleModalOpen] = useState(false);
@@ -73,6 +75,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
   const [waveIdToEdit, setWaveIdToEdit] = useState<string | null>(null);
   const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
   const [pendingImportMarkets, setPendingImportMarkets] = useState<AdminMarket[]>([]);
+  const [availableGLs, setAvailableGLs] = useState<Array<{ id: string; name: string }>>([]);
   const { logout } = useAuth();
 
   // Save selected page to localStorage whenever it changes
@@ -103,6 +106,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
     
     loadMarkets();
   }, [importedMarkets]); // Reload when markets are imported
+
+  // Fetch available GLs for export modal
+  useEffect(() => {
+    const loadGLs = async () => {
+      try {
+        const { gebietsleiterService } = await import('../../services/gebietsleiterService');
+        const gls = await gebietsleiterService.getAllGebietsleiter();
+        setAvailableGLs(gls.map(gl => ({ id: gl.id, name: gl.name })));
+      } catch (error) {
+        console.error('Failed to load GLs for export:', error);
+      }
+    };
+    
+    loadGLs();
+  }, []);
 
   // Fetch history when modal opens
   useEffect(() => {
@@ -419,6 +437,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           <h1 className={styles.pageTitle}>
             {menuItems.find(item => item.id === selectedPage)?.label}
           </h1>
+          {selectedPage === 'dashboard' && (
+            <div className={styles.headerButtons}>
+              <button 
+                className={styles.exportButton}
+                onClick={() => setIsExportModalOpen(true)}
+              >
+                <DownloadSimple size={18} weight="bold" />
+                <span>Export</span>
+              </button>
+            </div>
+          )}
           {selectedPage === 'markets' && (
             <div className={styles.headerButtons}>
               <button 
@@ -968,6 +997,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
       <AdminAccountsModal
         isOpen={isAdminAccountsModalOpen}
         onClose={() => setIsAdminAccountsModalOpen(false)}
+      />
+
+      {/* Export Data Modal */}
+      <ExportDataModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        availableGLs={availableGLs}
       />
     </div>
   );
