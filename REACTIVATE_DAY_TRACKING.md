@@ -2,6 +2,23 @@
 
 This document contains instructions to re-enable the Day Tracking features that were temporarily hidden from the UI.
 
+## ⚠️ IMPORTANT NOTES:
+
+### Temporary Changes Made:
+1. **DayTrackingButton** - Commented out in Dashboard.tsx (line ~774)
+2. **QuickActionsBar buttons** - Zusatz Zeiterfassung and Zeiterfassung Verlauf buttons are commented out
+3. **MarketVisitPage behavior** - Temporarily reverted to auto-start besuchszeit on page load (old system)
+4. **Handler functions** - Some functions prefixed with underscore to suppress TypeScript warnings
+
+### Code Preservation:
+- ✅ All components still exist (DayTrackingButton, DayTrackingModal, ZusatzZeiterfassungModal, ZeiterfassungVerlaufModal)
+- ✅ All services still exist (dayTrackingService)
+- ✅ All backend endpoints are LIVE and functional
+- ✅ All database tables exist and are ready
+- ✅ No code was deleted, only commented/hidden
+
+---
+
 ## Features to Reactivate:
 
 1. **GO!/STOP! Day Tracking Button** - Floating button for starting/ending the workday
@@ -257,6 +274,30 @@ These tables are already in the database and contain data:
 ## Estimated Time to Reactivate:
 
 **5-10 minutes** - Just uncommenting the marked sections and testing.
+
+---
+
+## Additional Technical Details:
+
+### Functions Renamed with Underscore (for TypeScript):
+These were renamed to suppress "unused variable" warnings but are ready to use:
+- `_handleDayTrackingClick` in Dashboard.tsx → rename back to `handleDayTrackingClick`
+- `_toggleFahrzeitTimer` in MarketVisitPage.tsx → rename back to `toggleFahrzeitTimer`
+- `_getYesterday` in ZeiterfassungVerlaufModal.tsx → rename back to `getYesterday` (if needed)
+- `_getTwoDaysAgo` in ZeiterfassungVerlaufModal.tsx → rename back to `getTwoDaysAgo` (if needed)
+- `_setTimeframeFilter` in ZeiterfassungPage.tsx → rename back to `setTimeframeFilter` (if timeframe filter UI is added)
+
+### Import Statements Still Present:
+All imports for day tracking components are still in Dashboard.tsx:
+```tsx
+import { DayTrackingButton } from './DayTrackingButton';
+import { DayTrackingModal } from './DayTrackingModal';
+import { ZusatzZeiterfassungModal } from './ZusatzZeiterfassungModal';
+import { ZeiterfassungVerlaufModal } from './ZeiterfassungVerlaufModal';
+import { dayTrackingService, type DayTrackingStatus } from '../../services/dayTrackingService';
+```
+
+These imports can stay - they don't affect the build or runtime.
 
 ---
 
