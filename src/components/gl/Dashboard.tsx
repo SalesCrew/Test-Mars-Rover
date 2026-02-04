@@ -15,7 +15,8 @@ import { PreorderNotification } from './PreorderNotification';
 import { VorbestellerModal } from './VorbestellerModal';
 import { ZusatzZeiterfassungModal } from './ZusatzZeiterfassungModal';
 import { ZeiterfassungVerlaufModal } from './ZeiterfassungVerlaufModal';
-import { DayTrackingButton } from './DayTrackingButton';
+// TEMPORARILY DISABLED - Imports kept for reactivation
+// import { DayTrackingButton } from './DayTrackingButton';
 import { DayTrackingModal } from './DayTrackingModal';
 import { dayTrackingService, type DayTrackingStatus } from '../../services/dayTrackingService';
 import { StatisticsContent } from './StatisticsContent';

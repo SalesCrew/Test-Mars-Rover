@@ -273,7 +273,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       setDetailedEntries(prev => {
         const updated = { ...prev };
         if (updated[todayKey]) {
-          updated[todayKey] = updated[todayKey].map((entry, i) => ({
+          updated[todayKey] = updated[todayKey].map((entry) => ({
             ...entry,
             submissions: {
               ...entry.submissions,
@@ -615,11 +615,11 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         const unterbrechungMinutes = glZusatzForDay.reduce((sum, z) => sum + parseInterval(z.zeit_diff), 0);
         const netMinutes = Math.max(0, totalMinutes - unterbrechungMinutes);
 
-        const ersteAktion = earliestTime && earliestTime instanceof Date
-          ? `${earliestTime.getHours().toString().padStart(2, '0')}:${earliestTime.getMinutes().toString().padStart(2, '0')}`
+        const ersteAktion = earliestTime
+          ? `${(earliestTime as Date).getHours().toString().padStart(2, '0')}:${(earliestTime as Date).getMinutes().toString().padStart(2, '0')}`
           : '--:--';
-        const letzteAktion = latestTime && latestTime instanceof Date
-          ? `${latestTime.getHours().toString().padStart(2, '0')}:${latestTime.getMinutes().toString().padStart(2, '0')}`
+        const letzteAktion = latestTime
+          ? `${(latestTime as Date).getHours().toString().padStart(2, '0')}:${(latestTime as Date).getMinutes().toString().padStart(2, '0')}`
           : '--:--';
 
         glsData.push({
@@ -735,17 +735,17 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         const unterbrechungMinutes = glZusatzForDay.reduce((sum, z) => sum + parseInterval(z.zeit_diff), 0);
         const netDayMinutes = Math.max(0, dayTotalMinutes - unterbrechungMinutes);
 
-        const ersteAktion = earliestTime && earliestTime instanceof Date
-          ? `${earliestTime.getHours().toString().padStart(2, '0')}:${earliestTime.getMinutes().toString().padStart(2, '0')}`
+        const ersteAktion = earliestTime
+          ? `${(earliestTime as Date).getHours().toString().padStart(2, '0')}:${(earliestTime as Date).getMinutes().toString().padStart(2, '0')}`
           : '--:--';
-        const letzteAktion = latestTime && latestTime instanceof Date
-          ? `${latestTime.getHours().toString().padStart(2, '0')}:${latestTime.getMinutes().toString().padStart(2, '0')}`
+        const letzteAktion = latestTime
+          ? `${(latestTime as Date).getHours().toString().padStart(2, '0')}:${(latestTime as Date).getMinutes().toString().padStart(2, '0')}`
           : '--:--';
 
         // Calculate erste-letzte span in minutes
         let ersteLetzteSpanMinutes = 0;
-        if (earliestTime && latestTime && earliestTime instanceof Date && latestTime instanceof Date) {
-          ersteLetzteSpanMinutes = Math.round((latestTime.getTime() - earliestTime.getTime()) / 60000);
+        if (earliestTime && latestTime) {
+          ersteLetzteSpanMinutes = Math.round(((latestTime as Date).getTime() - (earliestTime as Date).getTime()) / 60000);
         }
 
         totalReineArbeitszeit += netDayMinutes;
