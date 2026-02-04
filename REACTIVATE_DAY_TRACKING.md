@@ -28,66 +28,110 @@ This document contains instructions to re-enable the Day Tracking features that 
 
 ---
 
-## Step 1: Show DayTrackingButton in Dashboard
+## Step 1: Restore DayTrackingButton in Dashboard
 
 **File:** `src/components/gl/Dashboard.tsx`
 
-**Action:** Uncomment the DayTrackingButton component
+### 1a. Uncomment the Import (Line ~18)
 
-**Find this section (search for "TEMPORARILY HIDDEN"):**
+**Find:**
+```tsx
+// TEMPORARILY DISABLED - Imports kept for reactivation
+// import { DayTrackingButton } from './DayTrackingButton';
+import { DayTrackingModal } from './DayTrackingModal';
+```
+
+**Change to:**
+```tsx
+import { DayTrackingButton } from './DayTrackingButton';
+import { DayTrackingModal } from './DayTrackingModal';
+```
+
+### 1b. Rename Handler Function (Line ~201)
+
+**Find:**
+```tsx
+// TEMPORARILY DISABLED - Reserved for day tracking reactivation
+const _handleDayTrackingClick = async () => {
+```
+
+**Change to:**
+```tsx
+const handleDayTrackingClick = async () => {
+```
+
+### 1c. Uncomment the Button Component (Line ~774)
+
+**Find:**
 ```tsx
 {/* TEMPORARILY HIDDEN - Day Tracking Button */}
-{/* <DayTrackingButton 
-  dayStatus={dayStatus}
-  onStart={() => setIsDayTrackingOpen(true)}
-  onEnd={() => setIsDayTrackingOpen(true)}
+{/* <DayTrackingButton
+  isActive={dayTrackingStatus === 'active'}
+  onClick={handleDayTrackingClick}
 /> */}
 ```
 
 **Change to:**
 ```tsx
-<DayTrackingButton 
-  dayStatus={dayStatus}
-  onStart={() => setIsDayTrackingOpen(true)}
-  onEnd={() => setIsDayTrackingOpen(true)}
+<DayTrackingButton
+  isActive={dayTrackingStatus === 'active'}
+  onClick={handleDayTrackingClick}
 />
 ```
 
 ---
 
-## Step 2: Show Zusatz Zeiterfassung Button in Dashboard
+## Step 2: Restore Zeiterfassung Buttons in QuickActionsBar
 
-**File:** `src/components/gl/Dashboard.tsx`
+**File:** `src/components/gl/QuickActionsBar.tsx`
 
-**Action:** Uncomment the Zusatz Zeiterfassung button in QuickActionsBar
+### 2a. Restore Icon Imports (Line ~2)
 
-**Find this section:**
+**Find:**
 ```tsx
-{/* TEMPORARILY HIDDEN - Zusatz Zeiterfassung */}
-{/* <button 
-  className={styles.quickActionButton}
-  onClick={() => setIsZusatzModalOpen(true)}
-  style={{
-    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
-  }}
->
-  <Clock size={20} weight="fill" />
-  <span>Zusatz Zeiterfassung</span>
-</button> */}
+import { Calculator, Storefront, Receipt, ShoppingBag, Package } from '@phosphor-icons/react';
+// TEMPORARILY DISABLED - Imports for zeiterfassung buttons (kept for reactivation)
+// import { Clock, ClockCounterClockwise } from '@phosphor-icons/react';
 ```
 
 **Change to:**
 ```tsx
-<button 
-  className={styles.quickActionButton}
-  onClick={() => setIsZusatzModalOpen(true)}
-  style={{
-    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
-  }}
->
-  <Clock size={20} weight="fill" />
-  <span>Zusatz Zeiterfassung</span>
-</button>
+import { Calculator, Storefront, Receipt, ShoppingBag, Package, Clock, ClockCounterClockwise } from '@phosphor-icons/react';
+```
+
+### 2b. Uncomment the Button Definitions (Line ~72)
+
+**Find:**
+```tsx
+    // TEMPORARILY HIDDEN - Zusatz Zeiterfassung & Verlauf
+    // {
+    //   id: 'zusatz-zeiterfassung',
+    //   label: 'Zusatz Zeiterfassung',
+    //   icon: <Clock size={32} weight="regular" />,
+    //   onClick: onZusatzZeiterfassung || (() => {}),
+    // },
+    // {
+    //   id: 'zeiterfassung-verlauf',
+    //   label: 'Zeiterfassung Verlauf',
+    //   icon: <ClockCounterClockwise size={32} weight="regular" />,
+    //   onClick: onZeiterfassungVerlauf || (() => {}),
+    // },
+```
+
+**Change to:**
+```tsx
+    {
+      id: 'zusatz-zeiterfassung',
+      label: 'Zusatz Zeiterfassung',
+      icon: <Clock size={32} weight="regular" />,
+      onClick: onZusatzZeiterfassung || (() => {}),
+    },
+    {
+      id: 'zeiterfassung-verlauf',
+      label: 'Zeiterfassung Verlauf',
+      icon: <ClockCounterClockwise size={32} weight="regular" />,
+      onClick: onZeiterfassungVerlauf || (() => {}),
+    },
 ```
 
 ---
@@ -281,23 +325,29 @@ These tables are already in the database and contain data:
 
 ### Functions Renamed with Underscore (for TypeScript):
 These were renamed to suppress "unused variable" warnings but are ready to use:
-- `_handleDayTrackingClick` in Dashboard.tsx → rename back to `handleDayTrackingClick`
-- `_toggleFahrzeitTimer` in MarketVisitPage.tsx → rename back to `toggleFahrzeitTimer`
-- `_getYesterday` in ZeiterfassungVerlaufModal.tsx → rename back to `getYesterday` (if needed)
-- `_getTwoDaysAgo` in ZeiterfassungVerlaufModal.tsx → rename back to `getTwoDaysAgo` (if needed)
-- `_setTimeframeFilter` in ZeiterfassungPage.tsx → rename back to `setTimeframeFilter` (if timeframe filter UI is added)
+- `_handleDayTrackingClick` in Dashboard.tsx → Already handled in Step 1b above
+- `_toggleFahrzeitTimer` in MarketVisitPage.tsx → Can stay prefixed (legacy Fahrzeit UI not needed)
+- `_getYesterday` in ZeiterfassungVerlaufModal.tsx → Can stay prefixed (helper function)
+- `_getTwoDaysAgo` in ZeiterfassungVerlaufModal.tsx → Can stay prefixed (helper function)
+- `_setTimeframeFilter` in ZeiterfassungPage.tsx → Can stay prefixed (reserved for future feature)
 
-### Import Statements Still Present:
-All imports for day tracking components are still in Dashboard.tsx:
+### Type Assertions in ZeiterfassungPage.tsx:
+The code uses type assertions (`as Date`) for date objects in the admin zeiterfassung page:
 ```tsx
-import { DayTrackingButton } from './DayTrackingButton';
-import { DayTrackingModal } from './DayTrackingModal';
-import { ZusatzZeiterfassungModal } from './ZusatzZeiterfassungModal';
-import { ZeiterfassungVerlaufModal } from './ZeiterfassungVerlaufModal';
-import { dayTrackingService, type DayTrackingStatus } from '../../services/dayTrackingService';
+const ersteAktion = earliestTime
+  ? `${(earliestTime as Date).getHours()...`
 ```
+This is necessary due to TypeScript's type narrowing limitations in loops. **No changes needed** - works correctly as-is.
 
-These imports can stay - they don't affect the build or runtime.
+### Import Statements:
+**Dashboard.tsx:**
+- ⚠️ `DayTrackingButton` import is COMMENTED OUT - must uncomment in Step 1a
+- ✅ Other imports still active (DayTrackingModal, ZusatzZeiterfassungModal, etc.)
+
+**QuickActionsBar.tsx:**
+- ⚠️ `Clock` and `ClockCounterClockwise` imports are COMMENTED OUT - must uncomment in Step 2a
+
+These were removed to eliminate TypeScript unused import warnings during the temporary hiding phase.
 
 ---
 
