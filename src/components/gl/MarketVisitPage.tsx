@@ -106,21 +106,27 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isCompleted, setIsCompleted] = useState(false);
   
-  // Zeiterfassung state
+  // Determine if there are any questions/modules
+  const hasFragebogen = modules.length > 0 && allQuestions.length > 0;
+  
+  // Zeiterfassung state - if no fragebogen, go directly to 'end' step
   const [zeiterfassungStep, setZeiterfassungStep] = useState<'start' | 'questions' | 'end' | null>(
-    zeiterfassungActive ? 'start' : 'questions'
+    hasFragebogen ? 'questions' : 'end' // Go directly to end if no fragebogen
   );
   const [zeiterfassung, setZeiterfassung] = useState({
-    fahrzeitVon: '',
-    fahrzeitBis: '',
+    fahrzeitVon: '', // Kept for backward compatibility
+    fahrzeitBis: '', // Kept for backward compatibility
     distanzKm: '',
     besuchszeitVon: '',
     besuchszeitBis: '',
     kommentar: '',
-    foodProzent: 50
+    foodProzent: 50,
+    marketStartTime: '', // Auto-recorded when visit starts
+    marketEndTime: ''    // Auto-recorded when visit ends
   });
   const [fahrzeitRunning, setFahrzeitRunning] = useState(false);
   const [besuchszeitRunning, setBesuchszeitRunning] = useState(false);
+  const [visitStarted, setVisitStarted] = useState(false); // Track if visit has been started
   
   // Elapsed time in seconds for live counter
   const [fahrzeitElapsed, setFahrzeitElapsed] = useState(0);
@@ -172,6 +178,34 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
       if (interval) clearInterval(interval);
     };
   }, [besuchszeitRunning]);
+
+  // TEMPORARILY DISABLED - Enhanced day tracking integration
+  // Will be reactivated in 2 days after GL training
+  // Function to start the market visit (records timestamp)
+  // const startMarketVisit = () => {
+  //   const now = new Date();
+  //   const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  //   setZeiterfassung(prev => ({
+  //     ...prev,
+  //     marketStartTime: startTime,
+  //     besuchszeitVon: startTime
+  //   }));
+  //   setVisitStarted(true);
+  // };
+
+  // TEMPORARY: Simple auto-start behavior (old system)
+  useEffect(() => {
+    if (!zeiterfassung.besuchszeitVon) {
+      const now = new Date();
+      const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      setZeiterfassung(prev => ({
+        ...prev,
+        besuchszeitVon: startTime,
+        marketStartTime: startTime
+      }));
+      setVisitStarted(true);
+    }
+  }, []); // Auto-set on component mount (old behavior)
 
   // Format elapsed seconds to HH:MM:SS
   const formatElapsed = (seconds: number): string => {
@@ -242,13 +276,32 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
   };
 
+  // TEMPORARILY DISABLED - Enhanced toggle with day tracking
+  // const toggleBesuchszeitTimer = () => {
+  //   const currentTime = getCurrentTime();
+  //   if (!besuchszeitRunning) {
+  //     // Start the visit - this creates the timestamp
+  //     if (!visitStarted) {
+  //       startMarketVisit();
+  //     } else {
+  //       // Resume - just update the start time for this session
+  //       setZeiterfassung(prev => ({ ...prev, besuchszeitVon: prev.besuchszeitVon || currentTime }));
+  //     }
+  //     setBesuchszeitRunning(true);
+  //   } else {
+  //     // Stop the timer and record end time
+  //     setZeiterfassung(prev => ({ ...prev, besuchszeitBis: currentTime, marketEndTime: currentTime }));
+  //     setBesuchszeitRunning(false);
+  //   }
+  // };
+
+  // TEMPORARY: Simple timer toggle (old behavior)
   const toggleBesuchszeitTimer = () => {
     const currentTime = getCurrentTime();
     if (!besuchszeitRunning) {
-      setZeiterfassung(prev => ({ ...prev, besuchszeitVon: currentTime }));
       setBesuchszeitRunning(true);
     } else {
-      setZeiterfassung(prev => ({ ...prev, besuchszeitBis: currentTime }));
+      setZeiterfassung(prev => ({ ...prev, besuchszeitBis: currentTime, marketEndTime: currentTime }));
       setBesuchszeitRunning(false);
     }
   };
@@ -259,8 +312,18 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   };
 
   const handleNext = () => {
+    // 'start' step is no longer used - Fahrzeit is auto-calculated by day tracking
     if (zeiterfassungStep === 'start') {
-      setZeiterfassungStep('questions');
+      // Legacy support: just move to questions
+      if (totalQuestions === 0) {
+        if (zeiterfassungActive) {
+          setZeiterfassungStep('end');
+        } else {
+          setIsCompleted(true);
+        }
+      } else {
+        setZeiterfassungStep('questions');
+      }
       return;
     }
     
@@ -277,6 +340,14 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
     
     if (zeiterfassungStep === 'end') {
+      // Record market end time
+      const now = new Date();
+      const endTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      setZeiterfassung(prev => ({
+        ...prev,
+        marketEndTime: endTime,
+        besuchszeitBis: prev.besuchszeitBis || endTime // Set if not already set
+      }));
       setIsCompleted(true);
       // Don't call onComplete here - wait for user to click "Zurück zur Übersicht"
     }
@@ -288,8 +359,12 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
 
   const handlePrev = () => {
     if (zeiterfassungStep === 'end') {
-      setZeiterfassungStep('questions');
-      setCurrentIndex(totalQuestions - 1);
+      // Go back to questions (no longer going to 'start' - Fahrzeit is auto-calculated)
+      if (totalQuestions > 0) {
+        setZeiterfassungStep('questions');
+        setCurrentIndex(totalQuestions - 1);
+      }
+      // If no questions, stay on 'end' (can't go back further)
       return;
     }
     
@@ -298,17 +373,21 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
       return;
     }
     
-    if (zeiterfassungStep === 'questions' && currentIndex === 0 && zeiterfassungActive) {
-      setZeiterfassungStep('start');
-    }
+    // At first question - can't go back further (no 'start' step anymore)
+    // User can only close the visit
   };
 
   const canProceed = () => {
+    // 'start' step is no longer used - always allow proceeding
     if (zeiterfassungStep === 'start') {
-      return zeiterfassung.fahrzeitVon && zeiterfassung.fahrzeitBis;
+      return true;
     }
     if (zeiterfassungStep === 'end') {
       return zeiterfassung.besuchszeitVon && zeiterfassung.besuchszeitBis;
+    }
+    // If in 'questions' step but no questions exist, allow proceeding
+    if (zeiterfassungStep === 'questions' && totalQuestions === 0) {
+      return true;
     }
     if (!currentQuestion) return false;
     if (!currentQuestion.required) return true;
@@ -589,78 +668,26 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
   };
 
-  // Render Zeiterfassung Start
+  // Render Zeiterfassung Start (Legacy - no longer used, Fahrzeit is auto-calculated)
   const renderZeiterfassungStart = () => (
     <div className={styles.zeitContainer}>
       <div className={styles.zeitHeader}>
         <div className={styles.zeitIcon}>
           <Timer size={28} weight="fill" />
         </div>
-        <h3 className={styles.zeitTitle}>Zeiterfassung</h3>
-        <p className={styles.zeitSubtitle}>Fahrzeit erfassen</p>
+        <h3 className={styles.zeitTitle}>Marktbesuch gestartet</h3>
+        <p className={styles.zeitSubtitle}>Fahrzeit wird automatisch berechnet</p>
       </div>
       
       <div className={styles.zeitFields}>
-        {/* Fahrzeit */}
         <div className={styles.zeitSection}>
           <div className={styles.zeitSectionHeader}>
             <Car size={18} weight="fill" />
             <span>Fahrzeit</span>
           </div>
-          
-          {/* Von - Bis with connecting line and centered Dauer */}
-          <div className={styles.timeRowConnected}>
-            <div className={styles.timeFieldWide}>
-              <span className={styles.timeLabel}>Von</span>
-              <input
-                type="text"
-                className={styles.timeInput}
-                value={zeiterfassung.fahrzeitVon}
-                onChange={(e) => setZeiterfassung(prev => ({ ...prev, fahrzeitVon: e.target.value }))}
-                placeholder="--:--"
-                maxLength={5}
-              />
-            </div>
-            <div className={styles.timeFieldWide}>
-              <span className={styles.timeLabel}>Bis</span>
-              <input
-                type="text"
-                className={styles.timeInput}
-                value={zeiterfassung.fahrzeitBis}
-                onChange={(e) => setZeiterfassung(prev => ({ ...prev, fahrzeitBis: e.target.value }))}
-                placeholder="--:--"
-                maxLength={5}
-              />
-            </div>
-            {/* Connecting line below the boxes */}
-            <div className={styles.connectingLine}>
-              {fahrzeitRunning && <div className={styles.lineDot} />}
-            </div>
-            {/* Dauer centered above the line */}
-            <div className={styles.dauerRow}>
-              <span className={styles.dauerLabel}>Dauer</span>
-              <div className={styles.dauerValueWrapper}>
-                {getFahrzeitDauer().split('').map((char, idx) => (
-                  <span 
-                    key={`${idx}-${char}`}
-                    className={char === ':' ? styles.dauerColon : styles.dauerDigit}
-                  >
-                    {char}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <div className={styles.timerButtonWrapper}>
-            <button 
-              type="button"
-              className={fahrzeitRunning ? styles.timerButtonStop : styles.timerButtonStart}
-              onClick={toggleFahrzeitTimer}
-            >
-              {fahrzeitRunning ? 'Stoppen' : (zeiterfassung.fahrzeitVon ? 'Fortsetzen' : 'Starten')}
-            </button>
-          </div>
+          <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: 'var(--space-lg)' }}>
+            Fahrzeit wird automatisch aus der Tageserfassung berechnet.
+          </p>
         </div>
       </div>
     </div>
@@ -678,7 +705,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
       </div>
       
       <div className={styles.zeitFields}>
-        {/* Besuchszeit display */}
+        {/* Besuchszeit Section */}
         <div className={styles.zeitSection}>
           <div className={styles.zeitSectionHeader}>
             <Timer size={18} weight="fill" />
@@ -739,7 +766,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
             <ChartPie size={18} weight="fill" />
             <span>Zeitaufteilung Food / Pets</span>
           </div>
-          <div className={styles.sliderContainer}>
+          <div className={styles.foodSliderContainer}>
             <input
               type="range"
               className={styles.foodSlider}
@@ -763,25 +790,26 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
         </div>
 
         {/* Marktbesuch Button at bottom */}
-        <button 
-          type="button"
-          className={besuchszeitRunning ? styles.marktbesuchButtonStop : styles.marktbesuchButtonStart}
-          onClick={toggleBesuchszeitTimer}
-          style={{ marginTop: '24px', marginBottom: 0 }}
-        >
-          {besuchszeitRunning ? (
-            <>
-              <span>Marktbesuch beenden</span>
-              <span className={styles.marktbesuchTimer}>
-                {formatElapsed(besuchszeitElapsed).split('').map((char, idx) => (
-                  <span key={`${idx}-${char}`} className={styles.timerDigit}>{char}</span>
-                ))}
-              </span>
-            </>
-          ) : (
-            <span>{zeiterfassung.besuchszeitVon ? 'Marktbesuch fortsetzen' : 'Marktbesuch starten'}</span>
-          )}
-        </button>
+        <div className={styles.timerButtonWrapper}>
+          <button 
+            type="button"
+            className={besuchszeitRunning ? styles.marktbesuchButtonStop : styles.marktbesuchButtonStart}
+            onClick={toggleBesuchszeitTimer}
+          >
+            {besuchszeitRunning ? (
+              <>
+                <span>Marktbesuch beenden</span>
+                <span className={styles.marktbesuchTimer}>
+                  {formatElapsed(besuchszeitElapsed).split('').map((char, idx) => (
+                    <span key={`${idx}-${char}`} className={styles.timerDigit}>{char}</span>
+                  ))}
+                </span>
+              </>
+            ) : (
+              <span>{visitStarted && !besuchszeitRunning ? 'Marktbesuch fortsetzen' : 'Marktbesuch starten'}</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -907,9 +935,10 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
 
           {/* Module Indicator */}
           <div className={styles.moduleIndicator}>
-            {zeiterfassungStep === 'start' && 'Zeiterfassung - Anfahrt'}
+            {zeiterfassungStep === 'start' && 'Marktbesuch gestartet'}
             {zeiterfassungStep === 'end' && 'Zeiterfassung - Abschluss'}
             {zeiterfassungStep === 'questions' && currentQuestion && currentQuestion.moduleName}
+            {zeiterfassungStep === 'questions' && !currentQuestion && totalQuestions === 0 && 'Marktbesuch'}
           </div>
 
           {/* Content - no card container */}
@@ -958,7 +987,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
                       </span>
                     </>
                   ) : (
-                    <span>{zeiterfassung.besuchszeitVon ? 'Marktbesuch fortsetzen' : 'Marktbesuch starten'}</span>
+                    <span>{visitStarted && !besuchszeitRunning ? 'Marktbesuch fortsetzen' : 'Marktbesuch starten'}</span>
                   )}
                 </button>
               </div>

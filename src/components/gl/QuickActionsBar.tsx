@@ -1,5 +1,5 @@
 import React from 'react';
-import { Storefront, Receipt, CalendarCheck, Calculator, Warning } from '@phosphor-icons/react';
+import { Storefront, Receipt, CalendarCheck, Calculator, Warning, Clock, ClockCounterClockwise } from '@phosphor-icons/react';
 import { useResponsive } from '../../hooks/useResponsive';
 import SpotlightCard from './SpotlightCard';
 import StarBorder from './StarBorder';
@@ -23,6 +23,8 @@ interface QuickActionsBarProps {
   onVorbestellung: () => void;
   onCalculator: () => void;
   onPendingClick?: () => void;
+  onZusatzZeiterfassung?: () => void;
+  onZeiterfassungVerlauf?: () => void;
 }
 
 export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
@@ -33,6 +35,8 @@ export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
   onVorbestellung,
   onCalculator,
   onPendingClick,
+  onZusatzZeiterfassung,
+  onZeiterfassungVerlauf,
 }) => {
   const { isMobile } = useResponsive();
 
@@ -64,6 +68,19 @@ export const QuickActionsBar: React.FC<QuickActionsBarProps> = ({
       pendingCount: pendingProdukttauschCount,
       onPendingClick: onPendingClick,
     },
+    // TEMPORARILY HIDDEN - Zusatz Zeiterfassung & Verlauf
+    // {
+    //   id: 'zusatz-zeiterfassung',
+    //   label: 'Zusatz Zeiterfassung',
+    //   icon: <Clock size={32} weight="regular" />,
+    //   onClick: onZusatzZeiterfassung || (() => {}),
+    // },
+    // {
+    //   id: 'zeiterfassung-verlauf',
+    //   label: 'Zeiterfassung Verlauf',
+    //   icon: <ClockCounterClockwise size={32} weight="regular" />,
+    //   onClick: onZeiterfassungVerlauf || (() => {}),
+    // },
   ];
 
   return (

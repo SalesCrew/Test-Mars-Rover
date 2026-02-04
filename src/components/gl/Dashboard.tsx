@@ -13,6 +13,11 @@ import { Header } from './Header';
 import { ChatBubble } from './ChatBubble';
 import { PreorderNotification } from './PreorderNotification';
 import { VorbestellerModal } from './VorbestellerModal';
+import { ZusatzZeiterfassungModal } from './ZusatzZeiterfassungModal';
+import { ZeiterfassungVerlaufModal } from './ZeiterfassungVerlaufModal';
+import { DayTrackingButton } from './DayTrackingButton';
+import { DayTrackingModal } from './DayTrackingModal';
+import { dayTrackingService, type DayTrackingStatus } from '../../services/dayTrackingService';
 import { StatisticsContent } from './StatisticsContent';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from '../admin/AdminPanel';
@@ -47,8 +52,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
   const [isVorgemerktOpen, setIsVorgemerktOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isZusatzZeiterfassungOpen, setIsZusatzZeiterfassungOpen] = useState(false);
+  const [isZeiterfassungVerlaufOpen, setIsZeiterfassungVerlaufOpen] = useState(false);
   const [isMarketsVisitedOpen, setIsMarketsVisitedOpen] = useState(false);
   const [pendingProdukttauschCount, setPendingProdukttauschCount] = useState(0);
+  
+  // Day tracking state
+  const [isDayTrackingModalOpen, setIsDayTrackingModalOpen] = useState(false);
+  const [dayTrackingStatus, setDayTrackingStatus] = useState<DayTrackingStatus>('not_started');
+  const [dayTrackingModalMode, setDayTrackingModalMode] = useState<'start' | 'end' | 'force_close'>('start');
+  const [daySummary, setDaySummary] = useState<{
+    totalFahrzeit: string;
+    totalBesuchszeit: string;
+    marketsVisited: number;
+  } | undefined>(undefined);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [activeTour, setActiveTour] = useState<TourRoute | null>(null);
   const [activeVisit, setActiveVisit] = useState<{
@@ -130,6 +147,109 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     }
     
     setIsOnboardingOpen(false);
+  };
+
+  // Load day tracking status on mount
+  useEffect(() => {
+    const loadDayTrackingStatus = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const status = await dayTrackingService.getStatus(user.id);
+        if (status) {
+          setDayTrackingStatus(status.status as DayTrackingStatus);
+          // If day is active, prepare summary for end modal
+          if (status.status === 'active') {
+            const summary = await dayTrackingService.getDaySummary(user.id);
+            setDaySummary({
+              totalFahrzeit: dayTrackingService.formatInterval(summary.totalFahrzeit),
+              totalBesuchszeit: dayTrackingService.formatInterval(summary.totalBesuchszeit),
+              marketsVisited: summary.marketsVisited
+            });
+          }
+        } else {
+          setDayTrackingStatus('not_started');
+        }
+      } catch (error) {
+        console.error('Error loading day tracking status:', error);
+        setDayTrackingStatus('not_started');
+      }
+    };
+    
+    loadDayTrackingStatus();
+  }, [user?.id]);
+
+  // Check for 9 PM force close
+  useEffect(() => {
+    const checkForceClose = () => {
+      const now = new Date();
+      if (now.getHours() >= 21 && dayTrackingStatus === 'active') {
+        setDayTrackingModalMode('force_close');
+        setIsDayTrackingModalOpen(true);
+      }
+    };
+    
+    // Check every minute
+    const interval = setInterval(checkForceClose, 60000);
+    // Initial check
+    checkForceClose();
+    
+    return () => clearInterval(interval);
+  }, [dayTrackingStatus]);
+
+  // Handle day tracking button click
+  const handleDayTrackingClick = async () => {
+    if (dayTrackingStatus === 'active') {
+      // Show end modal
+      if (user?.id) {
+        try {
+          const summary = await dayTrackingService.getDaySummary(user.id);
+          setDaySummary({
+            totalFahrzeit: dayTrackingService.formatInterval(summary.totalFahrzeit),
+            totalBesuchszeit: dayTrackingService.formatInterval(summary.totalBesuchszeit),
+            marketsVisited: summary.marketsVisited
+          });
+        } catch (error) {
+          console.error('Error loading summary:', error);
+        }
+      }
+      setDayTrackingModalMode('end');
+    } else {
+      // Show start modal
+      setDayTrackingModalMode('start');
+    }
+    setIsDayTrackingModalOpen(true);
+  };
+
+  // Handle start day
+  const handleStartDay = async (skipFahrzeit: boolean) => {
+    if (!user?.id) return;
+    
+    try {
+      await dayTrackingService.startDay(user.id, { skipFahrzeit });
+      setDayTrackingStatus('active');
+      setIsDayTrackingModalOpen(false);
+    } catch (error) {
+      console.error('Error starting day:', error);
+      alert('Fehler beim Starten des Tages');
+    }
+  };
+
+  // Handle end day
+  const handleEndDay = async (endTime: string) => {
+    if (!user?.id) return;
+    
+    try {
+      await dayTrackingService.endDay(user.id, { 
+        endTime, 
+        forceClose: dayTrackingModalMode === 'force_close' 
+      });
+      setDayTrackingStatus('completed');
+      setIsDayTrackingModalOpen(false);
+    } catch (error) {
+      console.error('Error ending day:', error);
+      alert('Fehler beim Beenden des Tages');
+    }
   };
 
   // Fetch real markets from database (only for current GL)
@@ -354,7 +474,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         setActiveVisit({
           market,
           modules,
-          zeiterfassungActive: (fullFragebogen as any).zeiterfassung_active !== false
+          zeiterfassungActive: true // Always enable zeiterfassung
         });
         setIsMarketModalOpen(false);
       } else {
@@ -437,8 +557,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         modules={activeVisit.modules}
         zeiterfassungActive={activeVisit.zeiterfassungActive}
         onClose={() => setActiveVisit(null)}
-        onComplete={(answers: Record<string, string>) => {
+        onComplete={async (answers: Record<string, string>) => {
           console.log('Visit completed with answers:', answers);
+          
+          // Save zeiterfassung data if it exists
+          if (answers.zeiterfassung && user?.id) {
+            try {
+              const zeitData = answers.zeiterfassung as any;
+              await fragebogenService.zeiterfassung.submit({
+                gebietsleiter_id: user.id,
+                market_id: activeVisit.market.id,
+                fahrzeit_von: zeitData.fahrzeitVon,
+                fahrzeit_bis: zeitData.fahrzeitBis,
+                besuchszeit_von: zeitData.besuchszeitVon,
+                besuchszeit_bis: zeitData.besuchszeitBis,
+                distanz_km: zeitData.distanzKm,
+                kommentar: zeitData.kommentar,
+                food_prozent: zeitData.foodProzent
+              });
+              console.log('✅ Zeiterfassung saved successfully');
+            } catch (error) {
+              console.error('Error saving zeiterfassung:', error);
+              // Don't block the flow if zeiterfassung fails
+            }
+          }
+          
           setActiveVisit(null);
         }}
         onOpenVorbesteller={() => setIsVorbestellerOpen(true)}
@@ -500,6 +643,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                   onVorbestellung={handleVorbestellung}
                   onCalculator={handleCalculator}
                   onPendingClick={() => setIsVorgemerktOpen(true)}
+                  onZusatzZeiterfassung={() => setIsZusatzZeiterfassungOpen(true)}
+                  onZeiterfassungVerlauf={() => setIsZeiterfassungVerlaufOpen(true)}
                 />
               </section>
 
@@ -574,6 +719,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         onClose={() => setIsVorbestellerOpen(false)}
       />
 
+      <ZusatzZeiterfassungModal
+        isOpen={isZusatzZeiterfassungOpen}
+        onClose={() => setIsZusatzZeiterfassungOpen(false)}
+        onSubmit={async (entries) => {
+          if (!user?.id) return;
+          try {
+            const response = await fetch(`${API_BASE_URL}/fragebogen/zusatz-zeiterfassung`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                gebietsleiter_id: user.id,
+                entries: entries
+              })
+            });
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to save');
+            }
+            console.log('✅ Zusatz Zeiterfassung entries saved');
+          } catch (error) {
+            console.error('Error saving zusatz zeiterfassung:', error);
+            alert('Fehler beim Speichern der Zeiteinträge');
+          }
+          setIsZusatzZeiterfassungOpen(false);
+        }}
+      />
+
+      <ZeiterfassungVerlaufModal
+        isOpen={isZeiterfassungVerlaufOpen}
+        onClose={() => setIsZeiterfassungVerlaufOpen(false)}
+      />
+
       {/* Bug Report Modal */}
       <BugReportModal
         isOpen={isBugReportOpen}
@@ -592,6 +769,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
 
       {/* Chat Bubble */}
       <ChatBubble />
+
+      {/* TEMPORARILY HIDDEN - Day Tracking Button */}
+      {/* <DayTrackingButton
+        isActive={dayTrackingStatus === 'active'}
+        onClick={handleDayTrackingClick}
+      /> */}
+
+      {/* Day Tracking Modal */}
+      <DayTrackingModal
+        isOpen={isDayTrackingModalOpen}
+        onClose={() => {
+          // Only allow closing if not force close mode
+          if (dayTrackingModalMode !== 'force_close') {
+            setIsDayTrackingModalOpen(false);
+          }
+        }}
+        mode={dayTrackingModalMode}
+        onStartDay={handleStartDay}
+        onEndDay={handleEndDay}
+        summary={daySummary}
+      />
 
       {/* Admin Panel */}
       <AdminPanel
