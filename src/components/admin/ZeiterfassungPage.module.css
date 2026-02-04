@@ -1,0 +1,966 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.loadingContainer,
+.emptyContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(59, 130, 246, 0.1);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Day Group */
+.dayGroup {
+  margin-bottom: 32px;
+}
+
+.dateHeader {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+  padding: 12px 0;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #E2E8F0;
+}
+
+/* GL Card */
+.glCard {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.glCard:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.glHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 80px;
+}
+
+.glHeader:hover {
+  background: #F8FAFC;
+}
+
+.glHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+.expandIcon {
+  display: flex;
+  align-items: center;
+  color: #64748B;
+  flex-shrink: 0;
+}
+
+.glName {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.glStats {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.stat:nth-child(1) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+.stat:nth-child(2) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.12);
+}
+
+.stat:nth-child(3) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.04) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.12);
+}
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.stat:nth-child(1) .statLabel {
+  color: #3B82F6;
+}
+
+.stat:nth-child(2) .statLabel {
+  color: #10B981;
+}
+
+.stat:nth-child(3) .statLabel {
+  color: #8B5CF6;
+}
+
+.statValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.glDetails {
+  padding: 24px 20px;
+  border: 1px solid #E2E8F0;
+  border-top: 1px solid #F1F5F9;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 48px;
+  background: #FAFBFC;
+  position: relative;
+  border-radius: 0 0 12px 12px;
+}
+
+.glDetails::before {
+  content: '';
+  position: absolute;
+  left: calc(1fr + 24px);
+  top: 24px;
+  bottom: 24px;
+  width: 1px;
+  background: linear-gradient(to bottom, 
+    transparent 0%, 
+    rgba(226, 232, 240, 0.6) 10%, 
+    rgba(226, 232, 240, 0.6) 90%, 
+    transparent 100%
+  );
+}
+
+.detailsLoading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+/* Timeline Column */
+.timelineColumn {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 28px;
+}
+
+.timelineColumn::before {
+  display: none;
+}
+
+.fahrzeitLine {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.06), rgba(148, 163, 184, 0.03));
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+/* Horizontal connector line */
+.fahrzeitLine::before {
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  width: 28px;
+  height: 2px;
+  background: #E2E8F0;
+  transform: translateY(-50%);
+}
+
+/* Vertical line segment - default spans full height + gaps */
+.fahrzeitLine::after {
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #E2E8F0;
+}
+
+/* First item: vertical only from center down */
+.fahrzeitLine:first-child::after {
+  top: 50%;
+}
+
+/* Last item: vertical only from top to center */
+.fahrzeitLine:last-child::after {
+  bottom: 50%;
+}
+
+/* Only one item: no vertical line */
+.fahrzeitLine:only-child::after {
+  display: none;
+}
+
+.fahrzeitInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.fahrzeitInfo svg {
+  color: #64748B;
+  flex-shrink: 0;
+}
+
+.fahrzeitLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.fahrzeitTimeRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.fahrzeitTime {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.marketTimeRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.marketCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.06), rgba(148, 163, 184, 0.03));
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+/* Horizontal connector line */
+.marketCard::before {
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  width: 28px;
+  height: 2px;
+  background: #E2E8F0;
+  transform: translateY(-50%);
+}
+
+/* Vertical line segment - default spans full height + gaps */
+.marketCard::after {
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #E2E8F0;
+}
+
+/* First item: vertical only from center down */
+.marketCard:first-child::after {
+  top: 50%;
+}
+
+/* Last item: vertical only from top to center */
+.marketCard:last-child::after {
+  bottom: 50%;
+}
+
+/* Only one item: no vertical line */
+.marketCard:only-child::after {
+  display: none;
+}
+
+.marketInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.marketInfo svg {
+  flex-shrink: 0;
+}
+
+.marketName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+}
+
+.marketAddress {
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748B;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.marketChain {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  padding: 2px 8px;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 4px;
+}
+
+.besuchszeit {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.duration {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3B82F6;
+  padding: 2px 8px;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 5px;
+}
+
+.kommentar {
+  font-size: 12px;
+  color: #64748B;
+  font-style: italic;
+  padding: 6px 10px;
+  background: rgba(148, 163, 184, 0.05);
+  border-radius: 6px;
+  border-left: 2px solid #CBD5E1;
+}
+
+/* Stats Column */
+.statsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.statCard:nth-child(1) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.04));
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.statCard:nth-child(2) {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.04));
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.statCard:nth-child(3) {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(249, 115, 22, 0.04));
+  border-color: rgba(249, 115, 22, 0.2);
+}
+
+.statCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.statCardIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.statCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.statCardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.statCardDetails {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statCardCount {
+  font-size: 12px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.statCardValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+.noSubmissions {
+  padding: 32px;
+  text-align: center;
+  color: #94A3B8;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .glDetails {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .statsColumn {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .glStats {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .glHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .glHeaderLeft {
+    width: 100%;
+  }
+
+  .glStats {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .stat {
+    width: 100%;
+  }
+
+  .timelineColumn {
+    width: 100%;
+  }
+}
+
+/* ===== Profile View Mode ===== */
+
+.profileContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* GL List Header with Search */
+.glListHeader {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.glSearchContainer {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+}
+
+.glSearchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.glSearchInput {
+  width: 100%;
+  padding: 10px 14px 10px 42px;
+  font-size: 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  background: white;
+  color: #1E293B;
+  transition: all 0.2s ease;
+}
+
+.glSearchInput:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.glSearchInput::placeholder {
+  color: #94A3B8;
+}
+
+/* Timeframe Filter Pills */
+.timeframeFilters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeframePill {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeframePill:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.timeframePillActive {
+  background: #3B82F6;
+  color: white;
+  border-color: #3B82F6;
+}
+
+.timeframePillActive:hover {
+  background: #2563EB;
+  border-color: #2563EB;
+}
+
+/* GL Profile List */
+.glProfileList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* GL Profile Card */
+.glProfileCard {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 20px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.glProfileCard:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.glProfileCard:hover .glProfileChevron {
+  color: #3B82F6;
+  transform: translateX(2px);
+}
+
+.glProfileCard:hover .glProfileAvatar {
+  background: #3B82F6;
+  color: white;
+}
+
+.glProfileHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.glProfileAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #F1F5F9;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.glProfileName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  flex: 1;
+}
+
+.glProfileChevron {
+  color: #CBD5E1;
+  transition: all 0.2s ease;
+}
+
+.glProfileStats {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.glProfileStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.glProfileStatLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.glProfileStatValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+}
+
+/* GL Detail Header */
+.glDetailHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748B;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  background: #F8FAFC;
+  border-color: #3B82F6;
+  color: #3B82F6;
+}
+
+.glDetailName {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+}
+
+/* Stats Grid - 2 rows x 3 columns */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.profileStatCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.profileStatCard:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.profileStatLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.profileStatValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+}
+
+.profileStatSubtext {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94A3B8;
+}
+
+/* Working Days List */
+.daysList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.daysListTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #E2E8F0;
+}
+
+.dayRowContainer {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.dayRowContainer:last-child {
+  margin-bottom: 0;
+}
+
+.dayRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.dayRow:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.dayRowExpanded {
+  border-radius: 12px 12px 0 0;
+  border-bottom-color: transparent;
+  background: #F8FAFC;
+}
+
+/* Make glDetails work inside dayRowContainer */
+.dayRowContainer .glDetails {
+  border-radius: 0 0 12px 12px;
+  border-top: none;
+  margin-top: 0;
+}
+
+.dayRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dayRowExpandIcon {
+  display: flex;
+  align-items: center;
+  color: #64748B;
+}
+
+.dayRowDate {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1E293B;
+}
+
+.dayRowStats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dayRowStat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dayRowStatPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.dayRowStatLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.dayRowStatValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+
+
+.timeRange {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+/* Responsive for Profile View */
+@media (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .glProfileStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .glListHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .glSearchContainer {
+    max-width: none;
+  }
+  
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .glProfileStats {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .dayRowStats {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
