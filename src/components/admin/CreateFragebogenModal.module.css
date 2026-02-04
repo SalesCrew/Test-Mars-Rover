@@ -47,6 +47,11 @@
     0 4px 12px rgba(0, 0, 0, 0.08);
   animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modalNameStep {
+  max-width: 560px;
 }
 
 .modalHeader {
@@ -106,6 +111,15 @@
   gap: 24px;
   max-width: 600px;
   margin: 0 auto;
+  align-items: center;
+}
+
+.nameStep .formGroup {
+  width: 100%;
+}
+
+.nameStep .primaryButton {
+  width: 100%;
 }
 
 .formGroup {
@@ -354,6 +368,7 @@
   color: white;
 }
 
+/* Zeiterfassung Box */
 /* Sortable Module List */
 .sortableModuleList {
   display: flex;

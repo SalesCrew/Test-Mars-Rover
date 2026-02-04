@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, PencilSimple, Stack, Question, Storefront, Check, MagnifyingGlass, Funnel, Archive, CheckCircle } from '@phosphor-icons/react';
+import { X, PencilSimple, Stack, Question, Storefront, Check, MagnifyingGlass, Funnel, Archive, CheckCircle, Eye } from '@phosphor-icons/react';
 import { adminMarkets } from '../../data/adminMarketsData';
+import { FragebogenPreviewModal } from './FragebogenPreviewModal';
+import fragebogenService from '../../services/fragebogenService';
 // AdminMarket type available if needed from market-types
 import styles from './FragebogenDetailModal.module.css';
 
@@ -43,23 +45,105 @@ interface FragebogenDetailModalProps {
   onClose: () => void;
   onUpdateMarkets?: (marketIds: string[]) => void; // Callback to save market changes
   onArchive?: (fragebogenId: string) => void; // Callback to archive fragebogen
+  onEdit?: (fragebogen: Fragebogen) => void; // Callback to open edit modal
 }
 
 type FilterType = 'chain' | 'plz' | 'adresse' | 'gebietsleiter' | 'subgroup' | 'status';
 
 export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({ 
   fragebogen, 
-  modules,
+  modules: initialModules,
   onClose,
   onUpdateMarkets,
-  onArchive
+  onArchive,
+  onEdit
 }) => {
-  const [activeModuleId, setActiveModuleId] = useState<string | null>(modules[0]?.id || null);
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(initialModules[0]?.id || null);
   const moduleRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
+  // Modules with full question data for preview
+  const [modulesWithQuestions, setModulesWithQuestions] = useState<Module[]>(initialModules);
+  
+  // Fetch full module data with questions when opening preview
+  useEffect(() => {
+    const loadFullModuleData = async () => {
+      try {
+        // Fetch full data for each module
+        const fullModules = await Promise.all(
+          initialModules.map(async (m) => {
+            const fullModule = await fragebogenService.modules.getById(m.id);
+            
+            // Build a map from local_id to question_id for rule transformation
+            const localIdToQuestionId: Record<string, string> = {};
+            (fullModule.questions || []).forEach((mq: any) => {
+              if (mq.local_id && mq.question?.id) {
+                localIdToQuestionId[mq.local_id] = mq.question.id;
+              }
+            });
+            
+            // Transform rules into conditions attached to the trigger question
+            const rulesByQuestion: Record<string, any[]> = {};
+            (fullModule.rules || []).forEach((rule: any) => {
+              const triggerQuestionId = localIdToQuestionId[rule.trigger_local_id] || '';
+              const targetQuestionIds = (rule.target_local_ids || []).map((lid: string) => localIdToQuestionId[lid] || '');
+              
+              const condition = {
+                id: rule.id,
+                triggerQuestionId,
+                triggerAnswer: rule.trigger_answer,
+                operator: rule.operator || 'equals',
+                triggerAnswerMax: rule.trigger_answer_max ? Number(rule.trigger_answer_max) : undefined,
+                action: rule.action,
+                targetQuestionIds
+              };
+              
+              if (!rulesByQuestion[triggerQuestionId]) {
+                rulesByQuestion[triggerQuestionId] = [];
+              }
+              rulesByQuestion[triggerQuestionId].push(condition);
+            });
+            
+            // Transform API response to component format
+            return {
+              id: fullModule.id,
+              name: fullModule.name,
+              description: fullModule.description,
+              questionCount: fullModule.question_count || 0,
+              questions: (fullModule.questions || []).map((mq: any) => ({
+                id: mq.question?.id || mq.id,
+                moduleId: fullModule.id,
+                type: mq.question?.type || 'open_text',
+                questionText: mq.question?.question_text || '',
+                instruction: mq.question?.instruction,
+                required: mq.required || false,
+                order: mq.order_index || 0,
+                options: mq.question?.options,
+                likertScale: mq.question?.likert_scale,
+                matrixRows: mq.question?.matrix_config?.rows,
+                matrixColumns: mq.question?.matrix_config?.columns,
+                numericConstraints: mq.question?.numeric_constraints,
+                sliderConfig: mq.question?.slider_config,
+                conditions: rulesByQuestion[mq.question?.id] || []
+              })),
+              createdAt: fullModule.created_at
+            } as Module;
+          })
+        );
+        setModulesWithQuestions(fullModules);
+      } catch (error) {
+        console.error('Failed to load full module data:', error);
+      }
+    };
+    
+    loadFullModuleData();
+  }, [initialModules]);
+  
   // Archive confirmation state
   const [showArchiveConfirmation, setShowArchiveConfirmation] = useState(false);
+  
+  // Preview modal state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   // Market selection state
   const [isMarketSelectorOpen, setIsMarketSelectorOpen] = useState(false);
@@ -297,7 +381,7 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
     const handleScroll = () => {
       const scrollPosition = container.scrollTop + 150;
       
-      for (const module of modules) {
+      for (const module of initialModules) {
         const element = moduleRefs.current[module.id];
         if (element) {
           const elementTop = element.offsetTop;
@@ -313,7 +397,7 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [modules]);
+  }, [initialModules]);
 
   const handleArchiveClick = () => {
     setShowArchiveConfirmation(true);
@@ -371,7 +455,7 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
         {/* Module Navigation */}
         <div className={styles.moduleNav}>
           <div className={styles.moduleNavScroller}>
-            {modules.map(module => (
+            {initialModules.map(module => (
               <button
                 key={module.id}
                 className={`${styles.moduleNavPill} ${activeModuleId === module.id ? styles.moduleNavPillActive : ''}`}
@@ -386,7 +470,7 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
 
         {/* Questions Content */}
         <div className={styles.modalContent} ref={scrollContainerRef}>
-          {modules.map((module, _moduleIndex) => (
+          {modulesWithQuestions.map((module, _moduleIndex) => (
             <div 
               key={module.id} 
               className={styles.moduleSection}
@@ -445,7 +529,19 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
 
         {/* Footer */}
         <div className={styles.modalFooter}>
-          <button className={styles.editButton}>
+          <button className={styles.previewButton} onClick={() => setIsPreviewOpen(true)}>
+            <Eye size={18} weight="bold" />
+            Vorschau
+          </button>
+          <button 
+            className={styles.editButton}
+            onClick={() => {
+              if (onEdit) {
+                onEdit(fragebogen);
+                onClose();
+              }
+            }}
+          >
             <PencilSimple size={18} weight="bold" />
             Fragebogen bearbeiten
           </button>
@@ -794,6 +890,27 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Preview Modal */}
+        {isPreviewOpen && (
+          <FragebogenPreviewModal
+            title={fragebogen.name}
+            modules={modulesWithQuestions.map(m => ({
+              id: m.id,
+              name: m.name,
+              description: m.description,
+              questions: (m.questions || []).map(q => ({
+                ...q,
+                type: q.type as any
+              }))
+            }))}
+            onClose={() => setIsPreviewOpen(false)}
+            onComplete={() => {
+              // Preview only - no data storage, just close
+              setIsPreviewOpen(false);
+            }}
+          />
         )}
       </div>
     </div>

@@ -611,10 +611,86 @@ export const responsesApi = {
   }
 };
 
+// ============================================================================
+// ZEITERFASSUNG API
+// ============================================================================
+
+export const zeiterfassungApi = {
+  /**
+   * Submit zeiterfassung (time tracking) data for a market visit
+   */
+  async submit(data: {
+    response_id?: string;
+    fragebogen_id?: string;
+    gebietsleiter_id: string;
+    market_id: string;
+    fahrzeit_von?: string;
+    fahrzeit_bis?: string;
+    besuchszeit_von?: string;
+    besuchszeit_bis?: string;
+    distanz_km?: string;
+    kommentar?: string;
+    food_prozent?: number;
+  }): Promise<any> {
+    const response = await fetch(`${FRAGEBOGEN_API}/zeiterfassung`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to save zeiterfassung');
+    }
+    return response.json();
+  },
+
+  /**
+   * Get zeiterfassung submissions for a GL
+   */
+  async getByGL(glId: string, options?: { limit?: number; offset?: number }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.offset) params.append('offset', String(options.offset));
+    
+    const response = await fetch(`${FRAGEBOGEN_API}/zeiterfassung/gl/${glId}?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch zeiterfassung');
+    return response.json();
+  },
+
+  /**
+   * Get all zeiterfassung submissions for admin view
+   */
+  async getForAdmin(options?: {
+    start_date?: string;
+    end_date?: string;
+    gl_id?: string;
+  }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (options?.start_date) params.append('start_date', options.start_date);
+    if (options?.end_date) params.append('end_date', options.end_date);
+    if (options?.gl_id) params.append('gl_id', options.gl_id);
+    
+    const response = await fetch(`${FRAGEBOGEN_API}/zeiterfassung/admin?${params}`);
+    if (!response.ok) throw new Error('Failed to fetch zeiterfassung');
+    return response.json();
+  },
+
+  /**
+   * Get detailed zeiterfassung for a GL on a specific date with submission data
+   */
+  async getGLDayDetails(glId: string, date: string): Promise<any[]> {
+    const response = await fetch(`${FRAGEBOGEN_API}/zeiterfassung/gl/${glId}/date/${date}`);
+    if (!response.ok) throw new Error('Failed to fetch GL day details');
+    return response.json();
+  }
+};
+
 // Default export for convenience
 export default {
   questions: questionsApi,
   modules: modulesApi,
   fragebogen: fragebogenApi,
-  responses: responsesApi
+  responses: responsesApi,
+  zeiterfassung: zeiterfassungApi,
+  API_URL: FRAGEBOGEN_API
 };

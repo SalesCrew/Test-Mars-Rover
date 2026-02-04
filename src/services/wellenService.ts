@@ -88,6 +88,7 @@ export interface CreateWelleDTO {
   image: string | null;
   startDate: string;
   endDate: string;
+  types: ('display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt')[];
   goalType: 'percentage' | 'value';
   goalPercentage?: number | null;
   goalValue?: number | null;

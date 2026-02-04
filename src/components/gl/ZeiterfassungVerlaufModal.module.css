@@ -1,0 +1,967 @@
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal */
+.modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}
+
+.closeButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: #F8FAFC;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
+/* Content */
+.content {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Summary Cards */
+.summaryRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: #F8FAFC;
+  border-radius: 16px;
+  padding: 4px;
+}
+
+.summaryCard {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.summaryLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summaryStats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.summaryStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  padding: 10px 8px;
+  background: #F8FAFC;
+  border-radius: 10px;
+}
+
+.summaryStat:first-child {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.04) 100%);
+}
+
+.summaryStat:first-child .summaryValue {
+  color: #059669;
+}
+
+.summaryStat:nth-child(2) {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.04) 100%);
+}
+
+.summaryStat:nth-child(2) .summaryValue {
+  color: #2563EB;
+}
+
+.summaryStat:last-child {
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.08) 0%, rgba(71, 85, 105, 0.04) 100%);
+}
+
+.summaryValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.summaryStatLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Search */
+.searchWrapper {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94A3B8;
+}
+
+.searchInput {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px 0 42px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #1E293B;
+  transition: all 0.2s ease;
+}
+
+.searchInput::placeholder {
+  color: #94A3B8;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #3B82F6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Entries List */
+.entriesList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Day Group */
+.dayGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dayHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dayLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.dayLine {
+  flex: 1;
+  height: 1px;
+  background: #E2E8F0;
+}
+
+.dayStats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+}
+
+.dayStatItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dayStatLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.dayStatValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: #3B82F6;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: #94A3B8;
+  font-size: 14px;
+}
+
+.dayEntries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Entry Group (Fahrzeit + Market) */
+.entryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Fahrzeit Card */
+.fahrzeitCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+}
+
+.fahrzeitIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #E2E8F0;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fahrzeitInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.fahrzeitLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fahrzeitTimes {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+}
+
+.fahrzeitDuration {
+  font-size: 12px;
+  color: #64748B;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Market Card */
+.marketCard {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-left: 3px solid #3B82F6;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.marketCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.marketHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chainBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.marketName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  flex: 1;
+}
+
+.editButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s ease;
+}
+
+.editButton:hover {
+  opacity: 1;
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.marketTimes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.visitLabel {
+  color: #64748B;
+}
+
+.visitTimes {
+  font-weight: 500;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+}
+
+.visitDuration {
+  color: #64748B;
+  font-variant-numeric: tabular-nums;
+}
+
+.marketAddress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.submissionBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.submissionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+.submissionBadge[data-type="vorbesteller"] {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.submissionBadge[data-type="vorverkauf"] {
+  background: rgba(59, 130, 246, 0.08);
+  color: #2563EB;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.submissionBadge[data-type="produkttausch"] {
+  background: rgba(139, 92, 246, 0.08);
+  color: #7C3AED;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+/* Zusatz Card */
+.zusatzCard {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(37, 99, 235, 0.01) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.zusatzCard:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.zusatzIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.zusatzContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zusatzHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zusatzLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.zusatzTimes {
+  font-size: 13px;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.zusatzDuration {
+  color: #64748B;
+  margin-left: 6px;
+}
+
+.zusatzComment {
+  font-size: 12px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+/* Edit Form */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #F8FAFC;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editRow label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  min-width: 80px;
+}
+
+.editRow input {
+  height: 36px;
+  padding: 0 12px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1E293B;
+  width: 80px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.editRow input:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.editRow span {
+  color: #94A3B8;
+}
+
+.editFullWidth {
+  flex: 1 !important;
+  width: auto !important;
+  text-align: left !important;
+}
+
+/* Time Input with Clock */
+.timeInputWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.editTimeInput {
+  width: 90px !important;
+  padding-right: 32px !important;
+  padding-left: 10px !important;
+}
+
+.clockButton {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #94A3B8;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clockButton:hover {
+  opacity: 1;
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* Time Picker Dropdown */
+.timePicker {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  z-index: 200;
+  min-width: 180px;
+  animation: pickerSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pickerSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.timePickerDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.timePickerDigit {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E293B;
+  background: #F8FAFC;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.timePickerDigit:hover {
+  background: #F1F5F9;
+}
+
+.timePickerDigitActive {
+  border-color: #3B82F6;
+  background: rgba(59, 130, 246, 0.05);
+  color: #3B82F6;
+}
+
+.timePickerColon {
+  font-size: 24px;
+  font-weight: 700;
+  color: #CBD5E1;
+}
+
+.timePickerSlider {
+  margin-bottom: 16px;
+}
+
+.timePickerSliderLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.timePickerRange {
+  display: block;
+  width: 100% !important;
+  min-width: 100%;
+  max-width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #E2E8F0 0%, #CBD5E1 100%);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+.timePickerRange::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, #E2E8F0 0%, #CBD5E1 100%);
+  border-radius: 4px;
+}
+
+.timePickerRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: transform 0.15s ease;
+  margin-top: -7px;
+}
+
+.timePickerRange::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.timePickerRange::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, #E2E8F0 0%, #CBD5E1 100%);
+  border-radius: 4px;
+}
+
+.timePickerRange::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.timePickerRangeLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #94A3B8;
+}
+
+.timePickerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.timePickerNow {
+  flex: 1;
+  padding: 8px 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timePickerNow:hover {
+  background: #F1F5F9;
+  color: #3B82F6;
+}
+
+.timePickerConfirm {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timePickerConfirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Fahrzeit Card Edit */
+.fahrzeitCardEdit {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #F8FAFC;
+  border: 1px solid #3B82F6;
+  border-radius: 10px;
+}
+
+.fahrzeitEditContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fahrzeitEditContent .editRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fahrzeitEditContent .editActions {
+  margin-top: 4px;
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cancelBtn {
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelBtn:hover {
+  background: #F8FAFC;
+  color: #1E293B;
+}
+
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .header {
+    padding: 16px 20px;
+  }
+
+  .content {
+    padding: 16px 20px;
+  }
+
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryStats {
+    justify-content: space-between;
+  }
+
+  .editRow {
+    flex-wrap: wrap;
+  }
+
+  .editRow label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+}

@@ -31,12 +31,27 @@ export const DevPanel: React.FC<DevPanelProps> = ({ onCompleteNextMarket, onTogg
     }
   }, [onToggle]);
 
-  // Toggle dev panel with Ctrl+Shift+D
+  // Toggle dev panel with Shift+G+H (key sequence)
   useEffect(() => {
+    let lastKey = '';
+    let lastTime = 0;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        togglePanel();
+      const now = Date.now();
+      
+      // Check for Shift+G followed by Shift+H within 500ms
+      if (e.shiftKey && (e.key === 'G' || e.key === 'g')) {
+        lastKey = 'G';
+        lastTime = now;
+      } else if (e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        if (lastKey === 'G' && now - lastTime < 500) {
+          e.preventDefault();
+          togglePanel();
+          lastKey = '';
+        }
+      } else {
+        // Reset if any other key is pressed
+        lastKey = '';
       }
     };
 
@@ -88,10 +103,47 @@ export const DevPanel: React.FC<DevPanelProps> = ({ onCompleteNextMarket, onTogg
           Complete Next Market
         </button>
         
+        {/* Zeiterfassung Test Buttons */}
+        <button 
+          className={styles.devButton} 
+          onClick={() => window.dispatchEvent(new CustomEvent('dev:addTestZeiterfassung'))}
+        >
+          Add Test Time Entry (5 Markets)
+        </button>
+        
+        <button 
+          className={styles.devButton} 
+          onClick={() => window.dispatchEvent(new CustomEvent('dev:addVorbestellerSubmissions'))}
+        >
+          Add Vorbesteller Submissions
+        </button>
+        
+        <button 
+          className={styles.devButton} 
+          onClick={() => window.dispatchEvent(new CustomEvent('dev:addVorverkaufSubmissions'))}
+        >
+          Add Vorverkauf Submissions
+        </button>
+        
+        <button 
+          className={styles.devButton} 
+          onClick={() => window.dispatchEvent(new CustomEvent('dev:addProdukttauschSubmissions'))}
+        >
+          Add Produkttausch Submissions
+        </button>
+        
+        <button 
+          className={styles.devButton} 
+          onClick={() => window.dispatchEvent(new CustomEvent('dev:clearTestData'))}
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+        >
+          Clear Test Data
+        </button>
+        
         {/* Placeholder buttons for future functionality */}
-        {Array.from({ length: 19 }, (_, i) => (
+        {Array.from({ length: 14 }, (_, i) => (
           <button key={i} className={styles.devButton} disabled>
-            Function {i + 2}
+            Function {i + 7}
           </button>
         ))}
       </div>

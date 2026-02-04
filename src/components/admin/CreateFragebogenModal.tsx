@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { X, ArrowLeft, Check, Plus, Trash, DotsSixVertical, Calendar, Infinity, Stack, Storefront, MagnifyingGlass, CaretLeft, CaretRight, WarningCircle, ArrowsClockwise, XCircle } from '@phosphor-icons/react';
+import { X, ArrowLeft, Check, Plus, Trash, DotsSixVertical, Calendar, Infinity, Stack, Storefront, MagnifyingGlass, CaretLeft, CaretRight, WarningCircle, ArrowsClockwise, XCircle, Timer } from '@phosphor-icons/react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Module } from './FragebogenPage';
-import { adminMarkets } from '../../data/adminMarketsData';
+import { marketService } from '../../services/marketService';
 import type { AdminMarket } from '../../types/market-types';
 import styles from './CreateFragebogenModal.module.css';
 
@@ -115,6 +115,29 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
     subgroup: '',
     status: ''
   });
+  
+  // Real markets from database
+  const [markets, setMarkets] = useState<AdminMarket[]>([]);
+  const [isLoadingMarkets, setIsLoadingMarkets] = useState(true);
+  
+  // Fetch markets from database when modal opens
+  useEffect(() => {
+    const loadMarkets = async () => {
+      if (!isOpen) return;
+      
+      try {
+        setIsLoadingMarkets(true);
+        const fetchedMarkets = await marketService.getAllMarkets();
+        setMarkets(fetchedMarkets);
+      } catch (error) {
+        console.error('Failed to load markets:', error);
+      } finally {
+        setIsLoadingMarkets(false);
+      }
+    };
+    
+    loadMarkets();
+  }, [isOpen]);
 
   // Initialize with editing data if provided
   React.useEffect(() => {
@@ -276,7 +299,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
     const conflictingMarkets: MarketConflict[] = [];
     
     selectedMarkets.forEach(marketId => {
-      const market = adminMarkets.find(m => m.id === marketId);
+      const market = markets.find(m => m.id === marketId);
       if (!market) return;
       
       // Find if this market is already assigned to another fragebogen (exclude current if editing)
@@ -361,7 +384,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
         endDate: isAlwaysActive ? '2099-12-31' : endDate,
         status: isAlwaysActive || (startDate && new Date(startDate) <= new Date() && new Date(endDate) >= new Date()) ? 'active' : 'scheduled',
         moduleIds: selectedModules.map(m => m.id),
-        marketIds: selectedMarkets,
+        marketIds: selectedMarkets
       };
       onSave(updatedFragebogen);
     } else {
@@ -387,24 +410,24 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
 
   // Markets filtering - matching MarketsPage logic
   const uniqueChains = useMemo(() => {
-    return [...new Set(adminMarkets.map(m => m.chain))].sort();
-  }, []);
+    return [...new Set(markets.map(m => m.chain))].sort();
+  }, [markets]);
 
   const uniquePLZs = useMemo(() => {
-    return [...new Set(adminMarkets.map(m => m.postalCode))].sort();
-  }, []);
+    return [...new Set(markets.map(m => m.postalCode))].sort();
+  }, [markets]);
 
   const uniqueAddresses = useMemo(() => {
-    return [...new Set(adminMarkets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
-  }, []);
+    return [...new Set(markets.map(m => `${m.address}, ${m.postalCode} ${m.city}`))].sort();
+  }, [markets]);
 
   const uniqueGLs = useMemo(() => {
-    return [...new Set([...adminMarkets.map(m => m.gebietsleiterName).filter(Boolean)])].sort() as string[];
-  }, []);
+    return [...new Set([...markets.map(m => m.gebietsleiterName).filter(Boolean)])].sort() as string[];
+  }, [markets]);
 
   const uniqueSubgroups = useMemo(() => {
-    return [...new Set(adminMarkets.map(m => m.subgroup).filter(Boolean))].sort() as string[];
-  }, []);
+    return [...new Set(markets.map(m => m.subgroup).filter(Boolean))].sort() as string[];
+  }, [markets]);
 
   const statusOptions = ['Aktiv', 'Inaktiv'];
 
@@ -423,7 +446,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
   };
 
   const filteredMarkets = useMemo(() => {
-    let filtered = adminMarkets;
+    let filtered = markets;
 
     // Search filter
     if (marketSearchTerm.trim()) {
@@ -475,7 +498,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
     }
 
     return filtered;
-  }, [selectedFilters, marketSearchTerm]);
+  }, [markets, selectedFilters, marketSearchTerm]);
 
   const handleToggleMarket = (marketId: string, event?: React.MouseEvent) => {
     if (event) {
@@ -723,7 +746,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
 
   return (
     <div className={styles.modalOverlay} onClick={handleClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={`${styles.modal} ${step === 'name' ? styles.modalNameStep : ''}`} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>
@@ -823,6 +846,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
               {/* Selected Modules */}
               <div className={styles.selectedModules}>
                 <h3 className={styles.sectionTitle}>Ausgewählte Module ({selectedModules.length})</h3>
+
                 {selectedModules.length === 0 ? (
                   <div className={styles.emptyState}>
                     <Stack size={48} weight="regular" />
@@ -1174,7 +1198,12 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
 
                     {/* Market List - Compact Single Row */}
                     <div className={styles.marketList}>
-                      {filteredMarkets.length === 0 ? (
+                      {isLoadingMarkets ? (
+                        <div className={styles.emptyState}>
+                          <Storefront size={48} weight="regular" />
+                          <p>Märkte werden geladen...</p>
+                        </div>
+                      ) : filteredMarkets.length === 0 ? (
                         <div className={styles.emptyState}>
                           <Storefront size={48} weight="regular" />
                           <p>Keine Märkte gefunden</p>
@@ -1306,13 +1335,10 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - hide on name step since X or click outside works */}
+        {step !== 'name' && (
         <div className={styles.modalFooter}>
-          {step === 'name' ? (
-            <button className={styles.secondaryButton} onClick={handleClose}>
-              Abbrechen
-            </button>
-          ) : step === 'modules' ? (
+          {step === 'modules' ? (
             <>
               <button className={styles.secondaryButton} onClick={() => setStep('name')}>
                 <ArrowLeft size={18} weight="bold" />
@@ -1354,6 +1380,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   );

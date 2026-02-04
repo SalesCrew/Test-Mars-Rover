@@ -32,7 +32,10 @@ interface GLProgress {
   glEmail: string;
   marketName: string;
   marketChain: string;
-  itemType: 'display' | 'kartonware' | 'palette' | 'schuette';
+  marketAddress: string;
+  marketPostalCode: string;
+  marketCity: string;
+  itemType: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt';
   itemName: string;
   quantity: number;
   value: number;
@@ -97,6 +100,7 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
       case 'kartonware': return 'Kartonware';
       case 'palette': return 'Palette';
       case 'schuette': return 'Schütte';
+      case 'einzelprodukt': return 'Einzelprodukt';
       default: return itemType;
     }
   };
@@ -334,7 +338,7 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
             <div className={styles.entryDetails}>
               <div className={styles.entryItem}>
                 <span className={styles.itemName}>{progress.itemName}</span>
-                <span className={`${styles.itemType} ${progress.itemType === 'palette' ? styles.itemTypePalette : progress.itemType === 'schuette' ? styles.itemTypeSchuette : ''}`}>
+                <span className={`${styles.itemType} ${progress.itemType === 'palette' ? styles.itemTypePalette : progress.itemType === 'schuette' ? styles.itemTypeSchuette : progress.itemType === 'einzelprodukt' ? styles.itemTypeEinzelprodukt : ''}`}>
                   {getItemTypeLabel(progress.itemType)}
                 </span>
                 {progress.products && progress.products.length > 0 && (
@@ -351,7 +355,8 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
                   </>
                 )}
                 <span className={styles.marketChain}>{progress.marketChain}</span>
-                <span className={styles.marketName}>{progress.marketName}</span>
+                <span className={styles.marketSeparator}>-</span>
+                <span className={styles.marketAddress}>{progress.marketAddress}, {progress.marketPostalCode} {progress.marketCity}</span>
               </div>
             </div>
           </div>

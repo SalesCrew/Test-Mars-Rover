@@ -1,0 +1,186 @@
+/* Day Tracking Floating Button */
+.dayTrackingButton {
+  position: fixed;
+  bottom: var(--space-2xl);
+  left: var(--space-2xl);
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  overflow: visible;
+}
+
+/* Inactive state - Green "GO" button */
+.dayTrackingButton.inactive {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+  box-shadow: 
+    0 8px 24px rgba(34, 197, 94, 0.4),
+    0 0 0 4px rgba(34, 197, 94, 0.15);
+}
+
+.dayTrackingButton.inactive .pulse {
+  background: rgba(34, 197, 94, 0.4);
+}
+
+.dayTrackingButton.inactive .statusDot {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.8);
+}
+
+/* Active state - Red "STOP" button */
+.dayTrackingButton.active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+  box-shadow: 
+    0 8px 24px rgba(239, 68, 68, 0.4),
+    0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.dayTrackingButton.active .pulse {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+.dayTrackingButton.active .statusDot {
+  background: #fca5a5;
+  box-shadow: 0 0 8px rgba(252, 165, 165, 0.8);
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+/* Hover effects */
+.dayTrackingButton:hover {
+  transform: scale(1.05);
+}
+
+.dayTrackingButton:active {
+  transform: scale(0.95);
+}
+
+.dayTrackingButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dayTrackingButton:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+/* Content container */
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+.icon {
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Pulse animation */
+.pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  animation: pulsate 3s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulsate {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Status indicator dot */
+.statusDot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  border: 2px solid white;
+  z-index: 2;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .dayTrackingButton {
+    bottom: calc(var(--bottom-nav-height) + var(--space-xl));
+    left: var(--space-lg);
+    width: 64px;
+    height: 64px;
+  }
+
+  .icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .label {
+    font-size: 10px;
+  }
+
+  .statusDot {
+    width: 10px;
+    height: 10px;
+    top: 2px;
+    right: 2px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .dayTrackingButton {
+    width: 56px;
+    height: 56px;
+    left: var(--space-md);
+  }
+
+  .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .label {
+    font-size: 9px;
+  }
+}

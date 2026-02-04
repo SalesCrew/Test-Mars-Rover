@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, ArrowLeft, Check, Plus, Trash, DotsSixVertical, GitBranch, Question, CheckCircle as CheckCircleFilled, CaretDown, DownloadSimple } from '@phosphor-icons/react';
+import React, { useState, useEffect } from 'react';
+import { X, ArrowLeft, Check, Plus, Trash, DotsSixVertical, GitBranch, Question, CheckCircle as CheckCircleFilled, CaretDown } from '@phosphor-icons/react';
+import fragebogenService from '../../services/fragebogenService';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -19,7 +20,7 @@ interface CreateModuleModalProps {
 
 type Step = 'name' | 'questions' | 'review';
 
-export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, onClose, onSave, editingModule, originalModuleName, allModules = [] }) => {
+export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, onClose, onSave, editingModule, originalModuleName }) => {
   const [step, setStep] = useState<Step>('name');
   const [moduleName, setModuleName] = useState('');
   const [moduleDescription, setModuleDescription] = useState('');
@@ -31,6 +32,8 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
   const [importSearchTerm, setImportSearchTerm] = useState('');
   const [selectedQuestionType, setSelectedQuestionType] = useState<QuestionType | 'all'>('all');
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+  const [allDatabaseQuestions, setAllDatabaseQuestions] = useState<QuestionInterface[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
 
   // Initialize with editing data if provided
   React.useEffect(() => {
@@ -42,6 +45,40 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
       setStep(editingModule.id ? 'questions' : 'name');
     }
   }, [editingModule]);
+
+  // Fetch all questions from database when import modal opens
+  useEffect(() => {
+    if (isImportModalOpen && allDatabaseQuestions.length === 0) {
+      const loadQuestions = async () => {
+        setIsLoadingQuestions(true);
+        try {
+          const questionsFromDb = await fragebogenService.questions.getAll();
+          // Transform to QuestionInterface format
+          const transformed: QuestionInterface[] = questionsFromDb.map((q: any) => ({
+            id: q.id,
+            moduleId: '',
+            type: q.type as QuestionType,
+            questionText: q.question_text,
+            required: false,
+            order: 0,
+            options: q.options,
+            likertScale: q.likert_scale,
+            matrixRows: q.matrix_config?.rows,
+            matrixColumns: q.matrix_config?.columns,
+            numericConstraints: q.numeric_constraints,
+            sliderConfig: q.slider_config,
+            instruction: q.instruction,
+          }));
+          setAllDatabaseQuestions(transformed);
+        } catch (error) {
+          console.error('Failed to load questions:', error);
+        } finally {
+          setIsLoadingQuestions(false);
+        }
+      };
+      loadQuestions();
+    }
+  }, [isImportModalOpen, allDatabaseQuestions.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -106,11 +143,8 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
     setIsImportModalOpen(false);
   };
 
-  // Get all questions from all modules
-  const allExistingQuestions = allModules.flatMap(module => module.questions || []);
-
-  // Filter questions based on search and type
-  const filteredImportQuestions = allExistingQuestions.filter(q => {
+  // Filter questions based on search and type (from database)
+  const filteredImportQuestions = allDatabaseQuestions.filter(q => {
     const matchesSearch = importSearchTerm.trim() === '' || 
       q.questionText.toLowerCase().includes(importSearchTerm.toLowerCase()) ||
       (q.options?.some(opt => opt.toLowerCase().includes(importSearchTerm.toLowerCase())));
@@ -223,7 +257,7 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
   return (
     <>
       <div className={styles.modalOverlay} onClick={handleClose}>
-        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={`${styles.modal} ${step === 'name' ? styles.modalNameStep : ''}`} onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className={styles.modalHeader}>
             <h2 className={styles.modalTitle}>
@@ -234,9 +268,9 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
                 <button 
                   className={styles.importButton}
                   onClick={() => setIsImportModalOpen(true)}
-                  title="Existierende Fragen importieren"
+                  title="Existierende Fragen hinzufügen"
                 >
-                  <DownloadSimple size={20} weight="bold" />
+                  <Plus size={20} weight="bold" />
                 </button>
               )}
               <button className={styles.closeButton} onClick={handleClose}>
@@ -609,13 +643,10 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - hide on name step since X or click outside works */}
+        {step !== 'name' && (
         <div className={styles.modalFooter}>
-          {step === 'name' ? (
-            <button className={styles.secondaryButton} onClick={handleClose}>
-              Abbrechen
-            </button>
-          ) : step === 'review' ? (
+          {step === 'review' ? (
             <>
               <button className={styles.secondaryButton} onClick={() => setStep('questions')}>
                 <ArrowLeft size={18} weight="bold" />
@@ -646,6 +677,7 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Import Questions Modal */}
@@ -755,7 +787,12 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
 
               {/* Questions List */}
               <div className={styles.importQuestionsList}>
-                {filteredImportQuestions.length === 0 ? (
+                {isLoadingQuestions ? (
+                  <div className={styles.importEmptyState}>
+                    <div className={styles.loadingSpinner} />
+                    <p>Fragen werden geladen...</p>
+                  </div>
+                ) : filteredImportQuestions.length === 0 ? (
                   <div className={styles.importEmptyState}>
                     <Question size={48} weight="regular" />
                     <p>Keine Fragen gefunden</p>
@@ -1307,8 +1344,9 @@ const ConditionalLogicEditor: React.FC<ConditionalLogicEditorProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Get questions that can be used as triggers (questions with evaluable answers)
+  // Include current question and all previous questions with selectable answer types
   const triggerableQuestions = allQuestions.filter(q => 
-    q.order < question.order && 
+    q.order <= question.order && 
     (q.type === 'single_choice' || 
      q.type === 'yesno' || 
      q.type === 'multiple_choice' || 

@@ -92,6 +92,7 @@
   color: #3B82F6;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
 /* Content - no card container */
@@ -99,8 +100,10 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: 16px;
   position: relative;
+  z-index: 10;
+  width: 100%;
 }
 
 .questionContent {
@@ -911,14 +914,19 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 100%;
+  min-height: auto;
+  width: 100%;
+  position: relative;
+  z-index: 10;
 }
 
 .zeitFields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 0;
+  width: 100%;
 }
 
 .zeitHeader {
@@ -926,7 +934,9 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 8px;
+  gap: 4px;
+  padding: 8px 0;
+  width: 100%;
 }
 
 .zeitIcon {
@@ -957,7 +967,8 @@
 .zeitSection {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
+  width: 100%;
 }
 
 .zeitSectionHeader {
@@ -1165,13 +1176,15 @@
 
 /* Timer Button Wrapper */
 .timerButtonWrapper {
-  margin-top: 48px;
-  padding-top: var(--space-lg);
+  margin-top: 12px;
+  padding-top: 0;
+  width: 100%;
 }
 
 .timeRow {
   display: flex;
   gap: 12px;
+  width: 100%;
 }
 
 .timeField {
@@ -1179,12 +1192,13 @@
   flex-direction: column;
   gap: 6px;
   flex: 1;
+  min-width: 0;
 }
 
 .timeLabel {
   font-size: 11px;
-  color: #94A3B8;
-  font-weight: 500;
+  color: #64748B;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1276,6 +1290,13 @@
   color: #94A3B8;
 }
 
+.foodSliderContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .foodSlider {
   width: 100%;
   height: 8px;
@@ -1283,6 +1304,7 @@
   background: linear-gradient(90deg, #F59E0B 0%, #8B5CF6 100%);
   -webkit-appearance: none;
   appearance: none;
+  cursor: pointer;
 }
 
 .foodSlider::-webkit-slider-thumb {

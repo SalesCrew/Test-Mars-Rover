@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS wellen (
     end_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('upcoming', 'active', 'past')),
     
+    -- Types enabled for this wave (display, kartonware, palette, schuette, einzelprodukt)
+    types TEXT[] DEFAULT '{}',
+    
     -- Goal configuration (wave-level)
     goal_type VARCHAR(20) NOT NULL CHECK (goal_type IN ('percentage', 'value')),
     goal_percentage DECIMAL(5,2), -- For percentage goals (e.g., 80.00)
@@ -72,6 +75,25 @@ CREATE TABLE IF NOT EXISTS wellen_kartonware (
 CREATE INDEX IF NOT EXISTS idx_wellen_kartonware_welle ON wellen_kartonware(welle_id);
 
 -- ============================================================================
+-- WELLEN EINZELPRODUKTE TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS wellen_einzelprodukte (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    welle_id UUID NOT NULL REFERENCES wellen(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    target_number INTEGER NOT NULL CHECK (target_number > 0),
+    item_value DECIMAL(10,2), -- Only used when welle.goal_type = 'value'
+    picture_url TEXT,
+    einzelprodukt_order INTEGER DEFAULT 0, -- For maintaining order
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT fk_welle_einzelprodukte FOREIGN KEY (welle_id) REFERENCES wellen(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_wellen_einzelprodukte_welle ON wellen_einzelprodukte(welle_id);
+
+-- ============================================================================
 -- WELLEN CALENDAR WEEK DAYS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS wellen_kw_days (
@@ -116,8 +138,8 @@ CREATE TABLE IF NOT EXISTS wellen_gl_progress (
     welle_id UUID NOT NULL REFERENCES wellen(id) ON DELETE CASCADE,
     gebietsleiter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
-    -- Item reference (either display or kartonware)
-    item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('display', 'kartonware')),
+    -- Item reference (display, kartonware, palette, schuette, or einzelprodukt)
+    item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('display', 'kartonware', 'palette', 'schuette', 'einzelprodukt')),
     item_id UUID NOT NULL, -- References wellen_displays.id or wellen_kartonware.id
     
     -- Progress tracking
@@ -266,6 +288,7 @@ GROUP BY w.id, w.name, w.status, wgp.gebietsleiter_id, u.first_name, u.last_name
 ALTER TABLE wellen ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellen_displays ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellen_kartonware ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wellen_einzelprodukte ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellen_kw_days ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellen_markets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellen_gl_progress ENABLE ROW LEVEL SECURITY;
@@ -282,6 +305,11 @@ CREATE POLICY "Admins can do everything on wellen_displays" ON wellen_displays
     ));
 
 CREATE POLICY "Admins can do everything on wellen_kartonware" ON wellen_kartonware
+    FOR ALL USING (EXISTS (
+        SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'
+    ));
+
+CREATE POLICY "Admins can do everything on wellen_einzelprodukte" ON wellen_einzelprodukte
     FOR ALL USING (EXISTS (
         SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'
     ));
@@ -332,6 +360,17 @@ CREATE POLICY "GLs can view kartonware for their wellen" ON wellen_kartonware
         )
     );
 
+-- GLs can view einzelprodukte for their wellen
+CREATE POLICY "GLs can view einzelprodukte for their wellen" ON wellen_einzelprodukte
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM wellen_markets wm
+            INNER JOIN markets m ON wm.market_id = m.id
+            WHERE wm.welle_id = wellen_einzelprodukte.welle_id
+            AND m.gebietsleiter_id = auth.uid()::text
+        )
+    );
+
 -- GLs can view KW days for their wellen
 CREATE POLICY "GLs can view kw_days for their wellen" ON wellen_kw_days
     FOR SELECT USING (
@@ -358,6 +397,46 @@ CREATE POLICY "GLs can manage their own progress" ON wellen_gl_progress
     FOR ALL USING (gebietsleiter_id = auth.uid());
 
 CREATE POLICY "Admins can do everything on wellen_gl_progress" ON wellen_gl_progress
+    FOR ALL USING (EXISTS (
+        SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'
+    ));
+
+-- ============================================================================
+-- WELLEN SUBMISSIONS TABLE (for logging individual submissions)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS wellen_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    welle_id UUID NOT NULL REFERENCES wellen(id) ON DELETE CASCADE,
+    gebietsleiter_id UUID NOT NULL,
+    market_id VARCHAR(50) NOT NULL,
+    item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('display', 'kartonware', 'palette', 'schuette', 'einzelprodukt')),
+    item_id UUID NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
+    value_per_unit DECIMAL(10,2),
+    photo_url TEXT,
+    delivery_photo_url TEXT, -- Photo taken on follow-up visit to verify delivery
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for wellen_submissions
+CREATE INDEX IF NOT EXISTS idx_wellen_submissions_welle ON wellen_submissions(welle_id);
+CREATE INDEX IF NOT EXISTS idx_wellen_submissions_gl ON wellen_submissions(gebietsleiter_id);
+CREATE INDEX IF NOT EXISTS idx_wellen_submissions_market ON wellen_submissions(market_id);
+CREATE INDEX IF NOT EXISTS idx_wellen_submissions_created ON wellen_submissions(created_at);
+CREATE INDEX IF NOT EXISTS idx_wellen_submissions_delivery_photo 
+    ON wellen_submissions(market_id, delivery_photo_url) 
+    WHERE delivery_photo_url IS NULL;
+
+-- RLS for wellen_submissions
+ALTER TABLE wellen_submissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "GLs can view their own submissions" ON wellen_submissions
+    FOR SELECT USING (gebietsleiter_id = auth.uid());
+
+CREATE POLICY "GLs can create their own submissions" ON wellen_submissions
+    FOR INSERT WITH CHECK (gebietsleiter_id = auth.uid());
+
+CREATE POLICY "Admins can do everything on wellen_submissions" ON wellen_submissions
     FOR ALL USING (EXISTS (
         SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'
     ));
