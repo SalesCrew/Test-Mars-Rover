@@ -1,5 +1,7 @@
 import React from 'react';
-import { Storefront, Receipt, CalendarCheck, Calculator, Warning, Clock, ClockCounterClockwise } from '@phosphor-icons/react';
+import { Storefront, Receipt, CalendarCheck, Calculator, Warning } from '@phosphor-icons/react';
+// TEMPORARILY DISABLED - Imports for zeiterfassung buttons (kept for reactivation)
+// import { Clock, ClockCounterClockwise } from '@phosphor-icons/react';
 import { useResponsive } from '../../hooks/useResponsive';
 import SpotlightCard from './SpotlightCard';
 import StarBorder from './StarBorder';
