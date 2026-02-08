@@ -15,8 +15,7 @@ import { PreorderNotification } from './PreorderNotification';
 import { VorbestellerModal } from './VorbestellerModal';
 import { ZusatzZeiterfassungModal } from './ZusatzZeiterfassungModal';
 import { ZeiterfassungVerlaufModal } from './ZeiterfassungVerlaufModal';
-// TEMPORARILY DISABLED - Imports kept for reactivation
-// import { DayTrackingButton } from './DayTrackingButton';
+import { DayTrackingButton } from './DayTrackingButton';
 import { DayTrackingModal } from './DayTrackingModal';
 import { dayTrackingService, type DayTrackingStatus } from '../../services/dayTrackingService';
 import { StatisticsContent } from './StatisticsContent';
@@ -198,8 +197,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     return () => clearInterval(interval);
   }, [dayTrackingStatus]);
 
-  // TEMPORARILY DISABLED - Reserved for day tracking reactivation
-  const _handleDayTrackingClick = async () => {
+  const handleDayTrackingClick = async () => {
     if (dayTrackingStatus === 'active') {
       // Show end modal
       if (user?.id) {
@@ -221,7 +219,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     }
     setIsDayTrackingModalOpen(true);
   };
-  void _handleDayTrackingClick; // Suppress unused warning
 
   // Handle start day
   const handleStartDay = async (skipFahrzeit: boolean) => {
@@ -554,42 +551,58 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   // If there's an active market visit, show the MarketVisitPage
   if (activeVisit) {
     return (
-      <MarketVisitPage
-        market={activeVisit.market}
-        modules={activeVisit.modules}
-        zeiterfassungActive={activeVisit.zeiterfassungActive}
-        onClose={() => setActiveVisit(null)}
-        onComplete={async (answers: Record<string, string>) => {
-          console.log('Visit completed with answers:', answers);
-          
-          // Save zeiterfassung data if it exists
-          if (answers.zeiterfassung && user?.id) {
-            try {
-              const zeitData = answers.zeiterfassung as any;
-              await fragebogenService.zeiterfassung.submit({
-                gebietsleiter_id: user.id,
-                market_id: activeVisit.market.id,
-                fahrzeit_von: zeitData.fahrzeitVon,
-                fahrzeit_bis: zeitData.fahrzeitBis,
-                besuchszeit_von: zeitData.besuchszeitVon,
-                besuchszeit_bis: zeitData.besuchszeitBis,
-                distanz_km: zeitData.distanzKm,
-                kommentar: zeitData.kommentar,
-                food_prozent: zeitData.foodProzent
-              });
-              console.log('✅ Zeiterfassung saved successfully');
-            } catch (error) {
-              console.error('Error saving zeiterfassung:', error);
-              // Don't block the flow if zeiterfassung fails
+      <>
+        <MarketVisitPage
+          market={activeVisit.market}
+          modules={activeVisit.modules}
+          zeiterfassungActive={activeVisit.zeiterfassungActive}
+          onClose={() => setActiveVisit(null)}
+          onComplete={async (answers: Record<string, string>) => {
+            console.log('Visit completed with answers:', answers);
+            
+            // Save zeiterfassung data if it exists
+            if (answers.zeiterfassung && user?.id) {
+              try {
+                const zeitData = answers.zeiterfassung as any;
+                await fragebogenService.zeiterfassung.submit({
+                  gebietsleiter_id: user.id,
+                  market_id: activeVisit.market.id,
+                  fahrzeit_von: zeitData.fahrzeitVon,
+                  fahrzeit_bis: zeitData.fahrzeitBis,
+                  besuchszeit_von: zeitData.besuchszeitVon,
+                  besuchszeit_bis: zeitData.besuchszeitBis,
+                  distanz_km: zeitData.distanzKm,
+                  kommentar: zeitData.kommentar,
+                  food_prozent: zeitData.foodProzent
+                });
+                console.log('✅ Zeiterfassung saved successfully');
+              } catch (error) {
+                console.error('Error saving zeiterfassung:', error);
+                // Don't block the flow if zeiterfassung fails
+              }
             }
-          }
-          
-          setActiveVisit(null);
-        }}
-        onOpenVorbesteller={() => setIsVorbestellerOpen(true)}
-        onOpenVorverkauf={() => setIsVorverkaufOpen(true)}
-        onOpenProduktrechner={() => setIsCalculatorOpen(true)}
-      />
+            
+            setActiveVisit(null);
+          }}
+          onOpenVorbesteller={() => setIsVorbestellerOpen(true)}
+          onOpenVorverkauf={() => setIsVorverkaufOpen(true)}
+          onOpenProduktrechner={() => setIsCalculatorOpen(true)}
+        />
+        
+        {/* Modals need to be rendered alongside MarketVisitPage */}
+        <ProductCalculator
+          isOpen={isCalculatorOpen}
+          onClose={() => setIsCalculatorOpen(false)}
+        />
+        <VorverkaufModal
+          isOpen={isVorverkaufOpen}
+          onClose={() => setIsVorverkaufOpen(false)}
+        />
+        <VorbestellerModal
+          isOpen={isVorbestellerOpen}
+          onClose={() => setIsVorbestellerOpen(false)}
+        />
+      </>
     );
   }
 
@@ -772,11 +785,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       {/* Chat Bubble */}
       <ChatBubble />
 
-      {/* TEMPORARILY HIDDEN - Day Tracking Button */}
-      {/* <DayTrackingButton
+      <DayTrackingButton
         isActive={dayTrackingStatus === 'active'}
         onClick={handleDayTrackingClick}
-      /> */}
+      />
 
       {/* Day Tracking Modal */}
       <DayTrackingModal

@@ -16,7 +16,11 @@ import {
   Timer,
   Car,
   ChatText,
-  ChartPie
+  ChartPie,
+  DotsThree,
+  CalendarCheck,
+  Receipt,
+  Calculator
 } from '@phosphor-icons/react';
 import Aurora from './Aurora';
 import type { Market } from '../../types/market-types';
@@ -86,16 +90,13 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   zeiterfassungActive = true,
   onClose: _onClose,
   onComplete,
-  onOpenVorbesteller: _onOpenVorbesteller,
-  onOpenVorverkauf: _onOpenVorverkauf,
-  onOpenProduktrechner: _onOpenProduktrechner
+  onOpenVorbesteller,
+  onOpenVorverkauf,
+  onOpenProduktrechner
 }) => {
-  // Props prefixed with _ are available for future use (action buttons, header)
+  // Props prefixed with _ are available for future use
   void _market;
   void _onClose;
-  void _onOpenVorbesteller;
-  void _onOpenVorverkauf;
-  void _onOpenProduktrechner;
   // Flatten all questions with module context
   const allQuestions = useMemo(() => 
     modules.flatMap(module => 
@@ -131,6 +132,10 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   // Elapsed time in seconds for live counter
   const [fahrzeitElapsed, setFahrzeitElapsed] = useState(0);
   const [besuchszeitElapsed, setBesuchszeitElapsed] = useState(0);
+  
+  // Quick actions button state
+  const [quickActionsExpanded, setQuickActionsExpanded] = useState(false);
+  const quickActionsRef = useRef<HTMLDivElement>(null);
   const fahrzeitStartRef = useRef<number | null>(null);
   const besuchszeitStartRef = useRef<number | null>(null);
   const [prevFahrzeitDisplay, setPrevFahrzeitDisplay] = useState('--:--:--');
@@ -179,33 +184,34 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     };
   }, [besuchszeitRunning]);
 
-  // TEMPORARILY DISABLED - Enhanced day tracking integration
-  // Will be reactivated in 2 days after GL training
-  // Function to start the market visit (records timestamp)
-  // const startMarketVisit = () => {
-  //   const now = new Date();
-  //   const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  //   setZeiterfassung(prev => ({
-  //     ...prev,
-  //     marketStartTime: startTime,
-  //     besuchszeitVon: startTime
-  //   }));
-  //   setVisitStarted(true);
-  // };
-
-  // TEMPORARY: Simple auto-start behavior (old system)
+  // Click outside handler for quick actions
   useEffect(() => {
-    if (!zeiterfassung.besuchszeitVon) {
-      const now = new Date();
-      const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      setZeiterfassung(prev => ({
-        ...prev,
-        besuchszeitVon: startTime,
-        marketStartTime: startTime
-      }));
-      setVisitStarted(true);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
+        setQuickActionsExpanded(false);
+      }
+    };
+
+    if (quickActionsExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  }, []); // Auto-set on component mount (old behavior)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [quickActionsExpanded]);
+
+  // Function to start the market visit (records timestamp)
+  const startMarketVisit = () => {
+    const now = new Date();
+    const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    setZeiterfassung(prev => ({
+      ...prev,
+      marketStartTime: startTime,
+      besuchszeitVon: startTime
+    }));
+    setVisitStarted(true);
+  };
 
   // Format elapsed seconds to HH:MM:SS
   const formatElapsed = (seconds: number): string => {
@@ -278,31 +284,19 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   };
   void _toggleFahrzeitTimer;
 
-  // TEMPORARILY DISABLED - Enhanced toggle with day tracking
-  // const toggleBesuchszeitTimer = () => {
-  //   const currentTime = getCurrentTime();
-  //   if (!besuchszeitRunning) {
-  //     // Start the visit - this creates the timestamp
-  //     if (!visitStarted) {
-  //       startMarketVisit();
-  //     } else {
-  //       // Resume - just update the start time for this session
-  //       setZeiterfassung(prev => ({ ...prev, besuchszeitVon: prev.besuchszeitVon || currentTime }));
-  //     }
-  //     setBesuchszeitRunning(true);
-  //   } else {
-  //     // Stop the timer and record end time
-  //     setZeiterfassung(prev => ({ ...prev, besuchszeitBis: currentTime, marketEndTime: currentTime }));
-  //     setBesuchszeitRunning(false);
-  //   }
-  // };
-
-  // TEMPORARY: Simple timer toggle (old behavior)
   const toggleBesuchszeitTimer = () => {
     const currentTime = getCurrentTime();
     if (!besuchszeitRunning) {
+      // Start the visit - this creates the timestamp
+      if (!visitStarted) {
+        startMarketVisit();
+      } else {
+        // Resume - just update the start time for this session
+        setZeiterfassung(prev => ({ ...prev, besuchszeitVon: prev.besuchszeitVon || currentTime }));
+      }
       setBesuchszeitRunning(true);
     } else {
+      // Stop the timer and record end time
       setZeiterfassung(prev => ({ ...prev, besuchszeitBis: currentTime, marketEndTime: currentTime }));
       setBesuchszeitRunning(false);
     }
@@ -698,12 +692,70 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   // Render Zeiterfassung End
   const renderZeiterfassungEnd = () => (
     <div className={styles.zeitContainer}>
-      <div className={styles.zeitHeader}>
-        <div className={styles.zeitIcon}>
-          <Timer size={28} weight="fill" />
+      <div className={styles.zeitHeaderWrapper}>
+        <div className={styles.zeitHeader}>
+          <div className={styles.zeitIcon}>
+            <Timer size={28} weight="fill" />
+          </div>
+          <h3 className={styles.zeitTitle}>Abschluss</h3>
+          <p className={styles.zeitSubtitle}>Besuchszeit und Aufteilung</p>
         </div>
-        <h3 className={styles.zeitTitle}>Abschluss</h3>
-        <p className={styles.zeitSubtitle}>Besuchszeit und Aufteilung</p>
+        
+        {/* Quick Actions Button */}
+        <div 
+          ref={quickActionsRef}
+          className={`${styles.quickActionsBtn} ${quickActionsExpanded ? styles.expanded : ''}`}
+        >
+          <button
+            type="button"
+            className={styles.quickActionsToggle}
+            onClick={() => setQuickActionsExpanded(!quickActionsExpanded)}
+          >
+            <DotsThree 
+              size={26} 
+              weight="bold" 
+              className={`${styles.dotsIcon} ${quickActionsExpanded ? styles.spinning : ''}`} 
+            />
+          </button>
+          <div className={styles.quickActionsPill}>
+            <button
+              type="button"
+              className={styles.quickActionItem}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuickActionsExpanded(false);
+                onOpenVorbesteller();
+              }}
+              title="Vorbesteller"
+            >
+              <CalendarCheck size={24} weight="fill" />
+            </button>
+            <button
+              type="button"
+              className={styles.quickActionItem}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuickActionsExpanded(false);
+                onOpenVorverkauf();
+              }}
+              title="Vorverkauf"
+            >
+              <Receipt size={24} weight="fill" />
+            </button>
+            <button
+              type="button"
+              className={styles.quickActionItem}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuickActionsExpanded(false);
+                onOpenProduktrechner();
+              }}
+              title="Produkttausch"
+            >
+              <Calculator size={24} weight="fill" />
+            </button>
+          </div>
+        </div>
       </div>
       
       <div className={styles.zeitFields}>
