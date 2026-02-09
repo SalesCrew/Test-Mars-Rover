@@ -3,8 +3,8 @@
  * Handles all API calls for the day time tracking system
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const DAY_TRACKING_API = `${API_BASE_URL}/api/fragebogen/day-tracking`;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const DAY_TRACKING_API = `${API_BASE_URL}/fragebogen/day-tracking`;
 
 // ============================================================================
 // TYPES

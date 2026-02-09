@@ -3,8 +3,8 @@
  * Handles all API calls for the Fragebogen system (Questions, Modules, Fragebogen, Responses)
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const FRAGEBOGEN_API = `${API_BASE_URL}/api/fragebogen`;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const FRAGEBOGEN_API = `${API_BASE_URL}/fragebogen`;
 
 // ============================================================================
 // TYPES
