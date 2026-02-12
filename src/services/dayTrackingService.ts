@@ -243,6 +243,35 @@ class DayTrackingService {
   }
 
   /**
+   * Update day tracking times (day_start_time or day_end_time)
+   */
+  async updateDayTimes(glId: string, date: string, times: { day_start_time?: string; day_end_time?: string }): Promise<DayTracking> {
+    try {
+      const response = await fetch(`${DAY_TRACKING_API}/update-times`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gebietsleiter_id: glId,
+          date,
+          ...times,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update day times');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error updating day times:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Helper: Format interval string (HH:MM:SS) to readable format (Xh Ym)
    */
   formatInterval(interval: string | null): string {

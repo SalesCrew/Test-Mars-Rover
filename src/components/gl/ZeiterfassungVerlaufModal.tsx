@@ -22,6 +22,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAuth } from '../../contexts/AuthContext';
 import fragebogenService from '../../services/fragebogenService';
+import { dayTrackingService } from '../../services/dayTrackingService';
 import styles from './ZeiterfassungVerlaufModal.module.css';
 
 // Time Picker Component
@@ -318,6 +319,12 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [dayTrackingMap, setDayTrackingMap] = useState<Record<string, DayTracking>>({});
+  
+  // Editing state for Anfahrt/Heimfahrt (day_start_time / day_end_time)
+  const [editingDayTime, setEditingDayTime] = useState<{ date: string; field: 'start' | 'end' } | null>(null);
+  const [editDayTimeValue, setEditDayTimeValue] = useState('');
+  const [editDayTimePicker, setEditDayTimePicker] = useState(false);
+  const [savingDayTime, setSavingDayTime] = useState(false);
 
   // Fetch real data when modal opens
   useEffect(() => {
@@ -685,6 +692,46 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
     setActiveTimePicker(null);
   };
 
+  // Save edited Anfahrt/Heimfahrt time
+  const handleSaveDayTime = async () => {
+    if (!editingDayTime || !user?.id || !editDayTimeValue) return;
+    
+    setSavingDayTime(true);
+    try {
+      const updatePayload = editingDayTime.field === 'start'
+        ? { day_start_time: editDayTimeValue }
+        : { day_end_time: editDayTimeValue };
+      
+      await dayTrackingService.updateDayTimes(user.id, editingDayTime.date, updatePayload);
+      
+      // Update local state
+      setDayTrackingMap(prev => ({
+        ...prev,
+        [editingDayTime.date]: {
+          ...prev[editingDayTime.date],
+          ...(editingDayTime.field === 'start' 
+            ? { day_start_time: editDayTimeValue } 
+            : { day_end_time: editDayTimeValue })
+        }
+      }));
+      
+      setEditingDayTime(null);
+      setEditDayTimeValue('');
+      setEditDayTimePicker(false);
+    } catch (error) {
+      console.error('Error saving day time:', error);
+      alert('Fehler beim Speichern');
+    } finally {
+      setSavingDayTime(false);
+    }
+  };
+
+  const handleCancelDayTimeEdit = () => {
+    setEditingDayTime(null);
+    setEditDayTimeValue('');
+    setEditDayTimePicker(false);
+  };
+
   const getChainColor = (chain: string) => {
     return chainColors[chain] || chainColors['default'];
   };
@@ -848,8 +895,9 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
                     // Add Anfahrt if day tracking exists and not skipped
                     if (dayTracking?.day_start_time && !dayTracking.skipped_first_fahrzeit && timelineItems.length > 0) {
                       const firstItem = timelineItems[0];
+                      const isEditingAnfahrt = editingDayTime?.date === group.date && editingDayTime?.field === 'start';
                       const anfahrtMinutes = calcGapMinutes(dayTracking.day_start_time, firstItem.startTime);
-                      if (anfahrtMinutes > 0) {
+                      if (anfahrtMinutes > 0 || isEditingAnfahrt) {
                         renderedItems.push(
                           <div key="anfahrt" className={styles.fahrzeitCard}>
                             <div className={styles.fahrzeitIcon}>
@@ -862,8 +910,61 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
                               </span>
                             </div>
                             <span className={styles.fahrzeitDuration}>({formatGapTime(anfahrtMinutes)})</span>
+                            {!isEditingAnfahrt && (
+                              <button 
+                                className={styles.editButton}
+                                onClick={() => {
+                                  setEditingDayTime({ date: group.date, field: 'start' });
+                                  setEditDayTimeValue(formatTimeShort(dayTracking.day_start_time));
+                                }}
+                              >
+                                <PencilSimple size={16} weight="regular" />
+                              </button>
+                            )}
                           </div>
                         );
+                        if (isEditingAnfahrt) {
+                          renderedItems.push(
+                            <div key="anfahrt-edit" className={styles.editForm}>
+                              <div className={styles.editRow}>
+                                <label>Startzeit:</label>
+                                <div className={styles.timeInputWrapper}>
+                                  <input
+                                    type="text"
+                                    className={styles.editTimeInput}
+                                    value={editDayTimeValue}
+                                    onChange={(e) => setEditDayTimeValue(formatTimeInput(e.target.value))}
+                                    placeholder="00:00"
+                                    maxLength={5}
+                                  />
+                                  <button 
+                                    className={styles.clockButton}
+                                    onClick={() => setEditDayTimePicker(!editDayTimePicker)}
+                                    type="button"
+                                  >
+                                    <Clock size={14} weight="regular" />
+                                  </button>
+                                  {editDayTimePicker && (
+                                    <TimePicker
+                                      value={editDayTimeValue}
+                                      onChange={(time) => setEditDayTimeValue(time)}
+                                      onClose={() => setEditDayTimePicker(false)}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                              <div className={styles.editActions}>
+                                <button className={styles.cancelBtn} onClick={handleCancelDayTimeEdit}>
+                                  Abbrechen
+                                </button>
+                                <button className={styles.saveBtn} onClick={handleSaveDayTime} disabled={savingDayTime}>
+                                  <Check size={14} weight="bold" />
+                                  Speichern
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
                       }
                     }
                     
@@ -1146,8 +1247,9 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
                     // Add Heimfahrt if day has ended
                     if (dayTracking?.day_end_time && timelineItems.length > 0) {
                       const lastItem = timelineItems[timelineItems.length - 1];
+                      const isEditingHeimfahrt = editingDayTime?.date === group.date && editingDayTime?.field === 'end';
                       const heimfahrtMinutes = calcGapMinutes(lastItem.endTime, dayTracking.day_end_time);
-                      if (heimfahrtMinutes > 0) {
+                      if (heimfahrtMinutes > 0 || isEditingHeimfahrt) {
                         renderedItems.push(
                           <div key="heimfahrt" className={styles.fahrzeitCard}>
                             <div className={styles.fahrzeitIcon}>
@@ -1160,8 +1262,61 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
                               </span>
                             </div>
                             <span className={styles.fahrzeitDuration}>({formatGapTime(heimfahrtMinutes)})</span>
+                            {!isEditingHeimfahrt && (
+                              <button 
+                                className={styles.editButton}
+                                onClick={() => {
+                                  setEditingDayTime({ date: group.date, field: 'end' });
+                                  setEditDayTimeValue(formatTimeShort(dayTracking.day_end_time));
+                                }}
+                              >
+                                <PencilSimple size={16} weight="regular" />
+                              </button>
+                            )}
                           </div>
                         );
+                        if (isEditingHeimfahrt) {
+                          renderedItems.push(
+                            <div key="heimfahrt-edit" className={styles.editForm}>
+                              <div className={styles.editRow}>
+                                <label>Endzeit:</label>
+                                <div className={styles.timeInputWrapper}>
+                                  <input
+                                    type="text"
+                                    className={styles.editTimeInput}
+                                    value={editDayTimeValue}
+                                    onChange={(e) => setEditDayTimeValue(formatTimeInput(e.target.value))}
+                                    placeholder="00:00"
+                                    maxLength={5}
+                                  />
+                                  <button 
+                                    className={styles.clockButton}
+                                    onClick={() => setEditDayTimePicker(!editDayTimePicker)}
+                                    type="button"
+                                  >
+                                    <Clock size={14} weight="regular" />
+                                  </button>
+                                  {editDayTimePicker && (
+                                    <TimePicker
+                                      value={editDayTimeValue}
+                                      onChange={(time) => setEditDayTimeValue(time)}
+                                      onClose={() => setEditDayTimePicker(false)}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                              <div className={styles.editActions}>
+                                <button className={styles.cancelBtn} onClick={handleCancelDayTimeEdit}>
+                                  Abbrechen
+                                </button>
+                                <button className={styles.saveBtn} onClick={handleSaveDayTime} disabled={savingDayTime}>
+                                  <Check size={14} weight="bold" />
+                                  Speichern
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
                       }
                     }
                     
