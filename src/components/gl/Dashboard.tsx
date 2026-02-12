@@ -19,6 +19,7 @@ import { DayTrackingButton } from './DayTrackingButton';
 import { DayTrackingModal } from './DayTrackingModal';
 import { dayTrackingService, type DayTrackingStatus } from '../../services/dayTrackingService';
 import { StatisticsContent } from './StatisticsContent';
+import { VorbestellerHistoryPage } from './VorbestellerHistoryPage';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from '../admin/AdminPanel';
 import { BugReportModal } from './BugReportModal';
@@ -44,7 +45,13 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
-  const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavigationTab>(() => {
+    const saved = sessionStorage.getItem('gl_active_tab');
+    if (saved && ['dashboard', 'statistics', 'vorbesteller', 'profile'].includes(saved)) {
+      return saved as NavigationTab;
+    }
+    return 'dashboard';
+  });
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isVorverkaufOpen, setIsVorverkaufOpen] = useState(false);
@@ -545,7 +552,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
 
   const handleTabChange = (tab: NavigationTab) => {
     setActiveTab(tab);
-    console.log('Navigate to:', tab);
+    sessionStorage.setItem('gl_active_tab', tab);
   };
 
   const handleProfileClick = () => {
@@ -687,6 +694,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
 
           {activeTab === 'statistics' && (
             <StatisticsContent />
+          )}
+
+          {activeTab === 'vorbesteller' && (
+            <VorbestellerHistoryPage />
           )}
 
           {activeTab === 'profile' && (

@@ -61,6 +61,18 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
       ),
     },
     {
+      id: 'vorbesteller',
+      label: 'Vorbesteller',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="4" y="3" width="16" height="18" rx="2" strokeLinejoin="round"/>
+          <path d="M9 7H15" strokeLinecap="round"/>
+          <path d="M9 11H15" strokeLinecap="round"/>
+          <path d="M9 15H13" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
       id: 'profile',
       label: 'Profil',
       icon: (
