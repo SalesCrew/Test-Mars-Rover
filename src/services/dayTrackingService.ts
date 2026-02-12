@@ -219,6 +219,8 @@ class DayTrackingService {
    */
   async recordMarketStart(glId: string, marketId: string): Promise<{ visit_order: number; calculated_fahrzeit: string | null }> {
     try {
+      const now = new Date();
+      const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const response = await fetch(`${DAY_TRACKING_API}/market-start`, {
         method: 'POST',
         headers: {
@@ -227,6 +229,7 @@ class DayTrackingService {
         body: JSON.stringify({
           gebietsleiter_id: glId,
           market_id: marketId,
+          start_time: startTime,
         }),
       });
 

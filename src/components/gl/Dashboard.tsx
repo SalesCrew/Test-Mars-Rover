@@ -230,7 +230,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
     console.log('🟡 handleStartDay called:', { userId: user.id, skipFahrzeit });
     
     try {
-      const result = await dayTrackingService.startDay(user.id, { skipFahrzeit });
+      const now = new Date();
+      const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const result = await dayTrackingService.startDay(user.id, { skipFahrzeit, startTime });
       console.log('✅ Day started successfully:', result);
       setDayTrackingStatus('active');
       setIsDayTrackingModalOpen(false);
