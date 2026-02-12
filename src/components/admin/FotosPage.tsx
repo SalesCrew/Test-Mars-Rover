@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Camera, CircleNotch, MagnifyingGlass, CaretLeft, CaretRight, Trash, X, Image as ImageIcon } from '@phosphor-icons/react';
+import { Camera, CircleNotch, CaretLeft, CaretRight, Trash, X, Image as ImageIcon } from '@phosphor-icons/react';
 import { wellenService, type WellePhoto, type Welle } from '../../services/wellenService';
 import styles from './FotosPage.module.css';
 

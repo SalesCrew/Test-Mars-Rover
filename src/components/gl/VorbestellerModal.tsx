@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { X, CalendarBlank, Package, Info, MagnifyingGlass, Check, Plus, Minus, Image as ImageIcon, CheckCircle, TrendUp, CaretDown, CaretRight, Cube, Camera } from '@phosphor-icons/react';
+import { X, CalendarBlank, Package, Info, MagnifyingGlass, Check, Plus, Minus, CheckCircle, TrendUp, CaretDown, CaretRight, Cube, Camera } from '@phosphor-icons/react';
 import { RingLoader } from 'react-spinners';
 import styles from './VorbestellerModal.module.css';
 import type { Market } from '../../types/market-types';
@@ -54,7 +54,7 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showMarketSelection, setShowMarketSelection] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [_showPhotoCapture, _setShowPhotoCapture] = useState(false); void _showPhotoCapture; void _setShowPhotoCapture;
   const [showFotoWelle, setShowFotoWelle] = useState(false);
   const [fotoWellePhotos, setFotoWellePhotos] = useState<Array<{ image: string; tags: string[] }>>([]);
   const [fotoTagsAllMode, setFotoTagsAllMode] = useState(true);
@@ -374,39 +374,31 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Legacy Mengenerhebung handlers (kept for potential future use)
+  const _handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setCapturedPhoto(reader.result as string);
-      };
+      reader.onloadend = () => { setCapturedPhoto(reader.result as string); };
       reader.readAsDataURL(file);
     }
-  };
+  }; void _handleFileSelect;
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
+  const _handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault(); event.stopPropagation();
+  }; void _handleDragOver;
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    
+  const _handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault(); event.stopPropagation();
     const file = event.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setCapturedPhoto(reader.result as string);
-      };
+      reader.onloadend = () => { setCapturedPhoto(reader.result as string); };
       reader.readAsDataURL(file);
     }
-  };
+  }; void _handleDrop;
 
-  const handleBrowseClick = () => {
-    fileInputRef.current?.click();
-  };
+  const _handleBrowseClick = () => { fileInputRef.current?.click(); }; void _handleBrowseClick;
 
   // Actual submission logic - can be called with or without creating a new visit
   const executeSubmission = async (createNewVisit: boolean) => {
