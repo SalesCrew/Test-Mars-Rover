@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled, Storefront, Stack, ShoppingBag, Cube } from '@phosphor-icons/react';
+import { CalendarPlus, X, CheckCircle, Package, Image as ImageIcon, ArrowLeft, ArrowRight, Plus, Trash, PencilSimple, Calendar, TrendUp, Clock, CheckCircle as CheckCircleFilled, Storefront, Stack, ShoppingBag, Cube, Camera } from '@phosphor-icons/react';
 import styles from './VorbestellerPage.module.css';
 import { CustomDatePicker } from './CustomDatePicker';
 import { WelleDetailModal } from './WelleDetailModal';
@@ -193,6 +193,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         setFotoHeader(waveToEdit.fotoHeader || '');
         setFotoDescription(waveToEdit.fotoDescription || '');
         setFotoTags((waveToEdit.fotoTags || []).map(t => ({ name: t.name, type: t.type })));
+        setIsFotoOnly(waveToEdit.fotoOnly || false);
         setCurrentStep(2); // Skip type selection when editing
         onOpenCreateWelleModal();
         // Clear the waveIdToEdit
@@ -269,11 +270,16 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   const [fotoTags, setFotoTags] = useState<{ name: string; type: 'fixed' | 'optional' }[]>([]);
   const [newFixedTag, setNewFixedTag] = useState('');
   const [newOptionalTag, setNewOptionalTag] = useState('');
+  const [isFotoOnly, setIsFotoOnly] = useState(false);
   
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
 
   const handleToggleType = (type: 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt') => {
+    // Deselect foto-only when a product type is selected
+    if (isFotoOnly) {
+      setIsFotoOnly(false);
+    }
     setSelectedTypes(prev => {
       if (prev.includes(type)) {
         return prev.filter(t => t !== type);
@@ -283,8 +289,21 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     });
   };
 
+  const handleToggleFotoOnly = () => {
+    if (isFotoOnly) {
+      // Deselect foto-only
+      setIsFotoOnly(false);
+      setFotoEnabled(false);
+    } else {
+      // Select foto-only: clear all product types
+      setIsFotoOnly(true);
+      setSelectedTypes([]);
+      setFotoEnabled(true);
+    }
+  };
+
   const handleNext = () => {
-    if (currentStep === 1 && selectedTypes.length === 0) return;
+    if (currentStep === 1 && selectedTypes.length === 0 && !isFotoOnly) return;
     setCurrentStep(prev => prev + 1);
   };
 
@@ -640,24 +659,25 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
         image: imageUrl,
         startDate,
         endDate,
-        types: selectedTypes,
-        goalType,
-        goalPercentage: goalType === 'percentage' ? parseFloat(goalPercentage) : null,
-        goalValue: goalType === 'value' ? parseFloat(goalValue) : null,
-        displays: processedDisplays,
-        kartonwareItems: processedKartonware,
-        paletteItems: processedPalettes,
-        schutteItems: processedSchuetten,
-        einzelproduktItems: processedEinzelprodukte,
+        types: isFotoOnly ? [] : selectedTypes,
+        goalType: isFotoOnly ? 'percentage' as const : goalType,
+        goalPercentage: isFotoOnly ? 100 : (goalType === 'percentage' ? parseFloat(goalPercentage) : null),
+        goalValue: isFotoOnly ? null : (goalType === 'value' ? parseFloat(goalValue) : null),
+        displays: isFotoOnly ? [] : processedDisplays,
+        kartonwareItems: isFotoOnly ? [] : processedKartonware,
+        paletteItems: isFotoOnly ? [] : processedPalettes,
+        schutteItems: isFotoOnly ? [] : processedSchuetten,
+        einzelproduktItems: isFotoOnly ? [] : processedEinzelprodukte,
         kwDays: kwDays.map(kw => ({
           kw: kw.kw,
           days: kw.days
         })),
         assignedMarketIds,
-        fotoEnabled,
-        fotoHeader: fotoEnabled ? fotoHeader : null,
-        fotoDescription: fotoEnabled ? fotoDescription : null,
-        fotoTags: fotoEnabled ? fotoTags : []
+        fotoEnabled: isFotoOnly ? true : fotoEnabled,
+        fotoHeader: (isFotoOnly || fotoEnabled) ? fotoHeader : null,
+        fotoDescription: (isFotoOnly || fotoEnabled) ? fotoDescription : null,
+        fotoTags: (isFotoOnly || fotoEnabled) ? fotoTags : [],
+        fotoOnly: isFotoOnly
       };
 
       if (editingWelle) {
@@ -763,6 +783,13 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     
     // Load KW days
     setKwDays(welle.kwDays || []);
+    
+    // Load foto settings
+    setFotoEnabled(welle.fotoEnabled || false);
+    setFotoHeader(welle.fotoHeader || '');
+    setFotoDescription(welle.fotoDescription || '');
+    setFotoTags((welle.fotoTags || []).map(t => ({ name: t.name, type: t.type })));
+    setIsFotoOnly(welle.fotoOnly || false);
     
     // Open the modal
     onOpenCreateWelleModal();
@@ -947,12 +974,14 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
     setFotoTags([]);
     setNewFixedTag('');
     setNewOptionalTag('');
+    setIsFotoOnly(false);
     setEditingWelle(null);
     setSelectedWelle(null);
     onCloseCreateWelleModal();
   };
 
   const getTotalSteps = () => {
+    if (isFotoOnly) return 3; // Type selection + Wave details + KW days
     let steps = 2; // Type selection + Wave details
     if (selectedTypes.includes('display')) steps++;
     if (selectedTypes.includes('kartonware')) steps++;
@@ -966,7 +995,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   const getStepTitle = () => {
     const prefix = editingWelle ? 'Welle bearbeiten' : 'Neue Welle erstellen';
     if (currentStep === 1) return prefix;
-    if (currentStep === 2) return editingWelle ? 'Welle bearbeiten - Details' : 'Welle Details';
+    if (currentStep === 2) {
+      if (isFotoOnly) return editingWelle ? 'Foto-Welle bearbeiten' : 'Foto-Welle Details';
+      return editingWelle ? 'Welle bearbeiten - Details' : 'Welle Details';
+    }
     
     // Calculate which step shows which type
     const getTypeForStep = (step: number): 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt' | 'kw' | null => {
@@ -1477,6 +1509,27 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                         </div>
                       )}
                     </button>
+
+                    <button
+                      className={`${styles.optionCard} ${isFotoOnly ? styles.optionCardActive : ''}`}
+                      onClick={handleToggleFotoOnly}
+                    >
+                      <div className={styles.optionIcon}>
+                        <Camera 
+                          size={48} 
+                          weight={isFotoOnly ? 'fill' : 'regular'} 
+                        />
+                      </div>
+                      <h4 className={styles.optionTitle}>Fotos</h4>
+                      <p className={styles.optionDescription}>
+                        Nur Foto-Sammlung ohne Produkte
+                      </p>
+                      {isFotoOnly && (
+                        <div className={styles.optionCheckmark}>
+                          <CheckCircle size={20} weight="fill" />
+                        </div>
+                      )}
+                    </button>
                   </div>
               </div>
               )}
@@ -1537,60 +1590,64 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Goal Type Selection */}
-                  <div className={styles.formSection}>
-                    <label className={styles.label}>Zieltyp für diese Welle</label>
-                    <div className={styles.goalTypeToggle}>
-                      <button
-                        type="button"
-                        className={`${styles.goalTypeButton} ${goalType === 'percentage' ? styles.goalTypeButtonActive : ''}`}
-                        onClick={() => setGoalType('percentage')}
-                      >
-                        Prozent %
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.goalTypeButton} ${goalType === 'value' ? styles.goalTypeButtonActive : ''}`}
-                        onClick={() => setGoalType('value')}
-                      >
-                        Wert €
-                      </button>
-                    </div>
-                  </div>
+                  {/* Goal Type Selection - hidden for foto-only waves */}
+                  {!isFotoOnly && (
+                    <>
+                      <div className={styles.formSection}>
+                        <label className={styles.label}>Zieltyp für diese Welle</label>
+                        <div className={styles.goalTypeToggle}>
+                          <button
+                            type="button"
+                            className={`${styles.goalTypeButton} ${goalType === 'percentage' ? styles.goalTypeButtonActive : ''}`}
+                            onClick={() => setGoalType('percentage')}
+                          >
+                            Prozent %
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.goalTypeButton} ${goalType === 'value' ? styles.goalTypeButtonActive : ''}`}
+                            onClick={() => setGoalType('value')}
+                          >
+                            Wert €
+                          </button>
+                        </div>
+                      </div>
 
-                  {/* Goal Input Based on Type */}
-                  {goalType === 'percentage' ? (
-                    <div className={styles.formSection}>
-                      <label className={styles.label}>Ziel Prozentsatz (%)</label>
-                      <input
-                        type="number"
-                        className={styles.input}
-                        placeholder="z.B. 80"
-                        value={goalPercentage}
-                        onChange={(e) => setGoalPercentage(e.target.value)}
-                        min="0"
-                        max="100"
-                      />
-                      <small className={styles.fieldHint}>
-                        Das Ziel ist, {goalPercentage || 0}% aller Displays/Kartonware zu verkaufen
-                      </small>
-                    </div>
-                  ) : (
-                    <div className={styles.formSection}>
-                      <label className={styles.label}>Zielwert (€)</label>
-                      <input
-                        type="number"
-                        className={styles.input}
-                        placeholder="z.B. 25000"
-                        value={goalValue}
-                        onChange={(e) => setGoalValue(e.target.value)}
-                        min="0"
-                        step="0.01"
-                      />
-                      <small className={styles.fieldHint}>
-                        Der Gesamtwert aller verkauften Displays/Kartonware soll {goalValue ? `€${parseFloat(goalValue).toLocaleString('de-DE')}` : '€0'} erreichen
-                      </small>
-                    </div>
+                      {/* Goal Input Based on Type */}
+                      {goalType === 'percentage' ? (
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Ziel Prozentsatz (%)</label>
+                          <input
+                            type="number"
+                            className={styles.input}
+                            placeholder="z.B. 80"
+                            value={goalPercentage}
+                            onChange={(e) => setGoalPercentage(e.target.value)}
+                            min="0"
+                            max="100"
+                          />
+                          <small className={styles.fieldHint}>
+                            Das Ziel ist, {goalPercentage || 0}% aller Displays/Kartonware zu verkaufen
+                          </small>
+                        </div>
+                      ) : (
+                        <div className={styles.formSection}>
+                          <label className={styles.label}>Zielwert (€)</label>
+                          <input
+                            type="number"
+                            className={styles.input}
+                            placeholder="z.B. 25000"
+                            value={goalValue}
+                            onChange={(e) => setGoalValue(e.target.value)}
+                            min="0"
+                            step="0.01"
+                          />
+                          <small className={styles.fieldHint}>
+                            Der Gesamtwert aller verkauften Displays/Kartonware soll {goalValue ? `€${parseFloat(goalValue).toLocaleString('de-DE')}` : '€0'} erreichen
+                          </small>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Market Assignment */}
@@ -1619,9 +1676,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                   <div className={styles.formSection} style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: fotoEnabled ? '16px' : '0' }}>
                       <div>
-                        <label className={styles.label} style={{ margin: 0 }}>Foto Welle</label>
-                        <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>Fotos von GLs sammeln</p>
+                        <label className={styles.label} style={{ margin: 0 }}>{isFotoOnly ? 'Foto Einstellungen' : 'Foto Welle'}</label>
+                        <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>{isFotoOnly ? 'Konfiguriere die Foto-Sammlung' : 'Fotos von GLs sammeln'}</p>
                       </div>
+                      {!isFotoOnly && (
                       <button
                         type="button"
                         onClick={() => setFotoEnabled(!fotoEnabled)}
@@ -1636,6 +1694,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                           left: fotoEnabled ? '22px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
                         }} />
                       </button>
+                      )}
                     </div>
 
                     {fotoEnabled && (
@@ -2452,10 +2511,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
               {currentStep < getTotalSteps() ? (
                 <button 
                   className={`${styles.nextButton} ${
-                    (currentStep === 1 && selectedTypes.length === 0) ||
+                    (currentStep === 1 && selectedTypes.length === 0 && !isFotoOnly) ||
                     (currentStep === 2 && (!waveName || !startDate || !endDate || 
-                      (goalType === 'percentage' && !goalPercentage) || 
-                      (goalType === 'value' && !goalValue))) ||
+                      (!isFotoOnly && ((goalType === 'percentage' && !goalPercentage) || 
+                      (goalType === 'value' && !goalValue))))) ||
                     (getTypeForStep(currentStep) === 'display' && displays.length === 0) ||
                     (getTypeForStep(currentStep) === 'kartonware' && kartonwareItems.length === 0) ||
                     (getTypeForStep(currentStep) === 'palette' && paletteItems.length === 0) ||
@@ -2464,10 +2523,10 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                   }`}
                   onClick={handleNext}
                   disabled={
-                    (currentStep === 1 && selectedTypes.length === 0) ||
+                    (currentStep === 1 && selectedTypes.length === 0 && !isFotoOnly) ||
                     (currentStep === 2 && (!waveName || !startDate || !endDate || 
-                      (goalType === 'percentage' && !goalPercentage) || 
-                      (goalType === 'value' && !goalValue))) ||
+                      (!isFotoOnly && ((goalType === 'percentage' && !goalPercentage) || 
+                      (goalType === 'value' && !goalValue))))) ||
                     (getTypeForStep(currentStep) === 'display' && displays.length === 0) ||
                     (getTypeForStep(currentStep) === 'kartonware' && kartonwareItems.length === 0) ||
                     (getTypeForStep(currentStep) === 'palette' && paletteItems.length === 0) ||

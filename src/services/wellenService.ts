@@ -105,6 +105,7 @@ export interface Welle {
   fotoHeader?: string | null;
   fotoDescription?: string | null;
   fotoTags?: WelleFotoTag[];
+  fotoOnly?: boolean;
 }
 
 export interface CreateWelleDTO {
@@ -165,6 +166,7 @@ export interface CreateWelleDTO {
   fotoHeader?: string | null;
   fotoDescription?: string | null;
   fotoTags?: WelleFotoTag[];
+  fotoOnly?: boolean;
 }
 
 export interface UpdateWelleDTO extends CreateWelleDTO {

@@ -265,6 +265,20 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
   const handleMarketWeiterClick = async () => {
     if (!selectedMarket) return;
     
+    // Foto-only waves: skip item selection, go straight to foto step
+    // Also detect foto-only by checking: no product types + foto enabled
+    const isFotoOnlyWave = selectedVorbesteller?.fotoOnly || (
+      selectedVorbesteller?.fotoEnabled &&
+      (!selectedVorbesteller?.types || selectedVorbesteller.types.length === 0) &&
+      (!selectedVorbesteller?.displays || selectedVorbesteller.displays.length === 0) &&
+      (!selectedVorbesteller?.kartonwareItems || selectedVorbesteller.kartonwareItems.length === 0)
+    );
+    
+    if (isFotoOnlyWave) {
+      setShowFotoWelle(true);
+      return;
+    }
+    
     // Check for pending delivery photos before proceeding
     setIsCheckingDeliveryPhotos(true);
     try {
@@ -295,7 +309,18 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
   const handleDeliveryPhotoComplete = () => {
     setShowDeliveryPhotoModal(false);
     setPendingDeliverySubmissions([]);
-    setShowItemSelection(true);
+    // Foto-only waves: skip item selection, go straight to foto step
+    const isFotoOnlyWave = selectedVorbesteller?.fotoOnly || (
+      selectedVorbesteller?.fotoEnabled &&
+      (!selectedVorbesteller?.types || selectedVorbesteller.types.length === 0) &&
+      (!selectedVorbesteller?.displays || selectedVorbesteller.displays.length === 0) &&
+      (!selectedVorbesteller?.kartonwareItems || selectedVorbesteller.kartonwareItems.length === 0)
+    );
+    if (isFotoOnlyWave) {
+      setShowFotoWelle(true);
+    } else {
+      setShowItemSelection(true);
+    }
   };
 
   const handleFertigClick = () => {
@@ -920,8 +945,17 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                               </button>
                               <div className={styles.cardOverlay}>
                                 <div className={styles.itemsBadge}>
-                                  <Package size={16} weight="fill" />
-                                  <span>{(welle.displays?.length || 0) + (welle.kartonwareItems?.length || 0) + (welle.einzelproduktItems?.length || 0)}</span>
+                                  {welle.fotoOnly ? (
+                                    <>
+                                      <Camera size={16} weight="fill" />
+                                      <span>Foto</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Package size={16} weight="fill" />
+                                      <span>{(welle.displays?.length || 0) + (welle.kartonwareItems?.length || 0) + (welle.einzelproduktItems?.length || 0)}</span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>

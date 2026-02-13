@@ -7,6 +7,7 @@
 ALTER TABLE wellen ADD COLUMN IF NOT EXISTS foto_enabled BOOLEAN DEFAULT FALSE;
 ALTER TABLE wellen ADD COLUMN IF NOT EXISTS foto_header VARCHAR(255);
 ALTER TABLE wellen ADD COLUMN IF NOT EXISTS foto_description TEXT;
+ALTER TABLE wellen ADD COLUMN IF NOT EXISTS foto_only BOOLEAN DEFAULT FALSE;
 
 -- ============================================================================
 -- PHOTO TAG DEFINITIONS (per wave)
