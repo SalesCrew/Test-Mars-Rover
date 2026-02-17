@@ -1,10 +1,54 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Camera, CircleNotch, CaretLeft, CaretRight, Trash, X, Image as ImageIcon, DownloadSimple, CheckCircle } from '@phosphor-icons/react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import { Camera, CircleNotch, CaretLeft, CaretRight, Trash, X, Image as ImageIcon, DownloadSimple, CheckCircle, CaretDown, MagnifyingGlass, Funnel } from '@phosphor-icons/react';
 import JSZip from 'jszip';
 import { wellenService, type WellePhoto, type Welle } from '../../services/wellenService';
+import { CustomDatePicker } from './CustomDatePicker';
 import styles from './FotosPage.module.css';
 
 interface GLOption { id: string; name: string; }
+
+const LazyImage: React.FC<{ src: string; className: string }> = memo(({ src, className }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
+      { rootMargin: '300px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={className}>
+      {isVisible && <img src={src} alt="" decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+    </div>
+  );
+});
+
+interface PhotoCardProps {
+  photo: WellePhoto;
+  onClick: () => void;
+  formatDate: (d: string) => string;
+}
+
+const PhotoCard = memo<PhotoCardProps>(({ photo, onClick, formatDate }) => (
+  <div className={styles.photoCard} onClick={onClick}>
+    <LazyImage src={photo.photoUrl} className={styles.photoThumb} />
+    <div className={styles.photoInfo}>
+      <p className={styles.photoGl}>{photo.glName}</p>
+      <p className={styles.photoMarket}>{photo.marketName} {photo.marketChain && `(${photo.marketChain})`}</p>
+      <span className={styles.photoDate}>{formatDate(photo.createdAt)}</span>
+      <div className={styles.photoTags}>
+        {photo.tags?.slice(0, 3).map(t => <span key={t} className={styles.photoTag}>{t}</span>)}
+        {(photo.tags?.length || 0) > 3 && <span className={styles.photoTagMore}>+{photo.tags!.length - 3}</span>}
+      </div>
+    </div>
+  </div>
+));
 
 export const FotosPage: React.FC = () => {
   const [photos, setPhotos] = useState<WellePhoto[]>([]);
@@ -20,6 +64,10 @@ export const FotosPage: React.FC = () => {
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+
+  // Custom dropdown states
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [marketSearch, setMarketSearch] = useState('');
 
   // Lightbox
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -77,6 +125,27 @@ export const FotosPage: React.FC = () => {
   };
 
   const hasFilters = filterWelle || filterGL || filterMarket || filterTags.length > 0 || filterStartDate || filterEndDate;
+
+  // Unique markets from photos for dropdown
+  const allMarkets = useMemo(() => {
+    const mMap = new Map<string, string>();
+    photos.forEach(p => { if (p.marketId && p.marketName) mMap.set(p.marketId, p.marketName); });
+    return Array.from(mMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [photos]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openDropdown) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`.${styles.customDropdown}`)) {
+        setOpenDropdown(null);
+        setMarketSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openDropdown]);
 
   // Delete photo
   const handleDelete = async (photoId: string) => {
@@ -202,24 +271,110 @@ export const FotosPage: React.FC = () => {
 
       {/* Filters */}
       <div className={styles.filters}>
-        <select className={styles.filterSelect} value={filterWelle} onChange={e => setFilterWelle(e.target.value)}>
-          <option value="">Alle Wellen</option>
-          {waves.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
-        <select className={styles.filterSelect} value={filterGL} onChange={e => setFilterGL(e.target.value)}>
-          <option value="">Alle GLs</option>
-          {gls.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
-        <input
-          type="text"
-          className={styles.filterInput}
-          placeholder="Markt suchen..."
-          value={filterMarket}
-          onChange={e => setFilterMarket(e.target.value)}
-        />
-        <input type="date" className={styles.filterDate} value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} />
-        <input type="date" className={styles.filterDate} value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} />
-        {hasFilters && <button className={styles.clearBtn} onClick={clearFilters}>Filter zurücksetzen</button>}
+        {/* Wave Dropdown */}
+        <div className={styles.customDropdown}>
+          <button
+            className={`${styles.dropdownButton} ${filterWelle ? styles.dropdownActive : ''}`}
+            onClick={() => setOpenDropdown(openDropdown === 'welle' ? null : 'welle')}
+          >
+            <Camera size={14} weight="bold" />
+            <span>{filterWelle ? waves.find(w => w.id === filterWelle)?.name || 'Welle' : 'Alle Wellen'}</span>
+            <CaretDown size={12} weight="bold" className={`${styles.dropdownCaret} ${openDropdown === 'welle' ? styles.caretOpen : ''}`} />
+          </button>
+          {openDropdown === 'welle' && (
+            <div className={styles.dropdownMenu}>
+              <button className={`${styles.dropdownItem} ${!filterWelle ? styles.dropdownItemActive : ''}`} onClick={() => { setFilterWelle(''); setOpenDropdown(null); }}>
+                Alle Wellen
+              </button>
+              {waves.map(w => (
+                <button key={w.id} className={`${styles.dropdownItem} ${filterWelle === w.id ? styles.dropdownItemActive : ''}`} onClick={() => { setFilterWelle(w.id); setOpenDropdown(null); }}>
+                  {w.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* GL Dropdown */}
+        <div className={styles.customDropdown}>
+          <button
+            className={`${styles.dropdownButton} ${filterGL ? styles.dropdownActive : ''}`}
+            onClick={() => setOpenDropdown(openDropdown === 'gl' ? null : 'gl')}
+          >
+            <span>{filterGL ? gls.find(g => g.id === filterGL)?.name || 'GL' : 'Alle GLs'}</span>
+            <CaretDown size={12} weight="bold" className={`${styles.dropdownCaret} ${openDropdown === 'gl' ? styles.caretOpen : ''}`} />
+          </button>
+          {openDropdown === 'gl' && (
+            <div className={styles.dropdownMenu}>
+              <button className={`${styles.dropdownItem} ${!filterGL ? styles.dropdownItemActive : ''}`} onClick={() => { setFilterGL(''); setOpenDropdown(null); }}>
+                Alle GLs
+              </button>
+              {gls.map(g => (
+                <button key={g.id} className={`${styles.dropdownItem} ${filterGL === g.id ? styles.dropdownItemActive : ''}`} onClick={() => { setFilterGL(g.id); setOpenDropdown(null); }}>
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Market Dropdown with Search */}
+        <div className={styles.customDropdown}>
+          <button
+            className={`${styles.dropdownButton} ${filterMarket ? styles.dropdownActive : ''}`}
+            onClick={() => setOpenDropdown(openDropdown === 'market' ? null : 'market')}
+          >
+            <MagnifyingGlass size={14} weight="bold" />
+            <span>{filterMarket ? allMarkets.find(m => m.id === filterMarket)?.name || 'Markt' : 'Markt suchen'}</span>
+            <CaretDown size={12} weight="bold" className={`${styles.dropdownCaret} ${openDropdown === 'market' ? styles.caretOpen : ''}`} />
+          </button>
+          {openDropdown === 'market' && (
+            <div className={styles.dropdownMenu}>
+              <div className={styles.dropdownSearch}>
+                <MagnifyingGlass size={14} weight="bold" className={styles.searchIcon} />
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="Markt suchen..."
+                  value={marketSearch}
+                  onChange={e => setMarketSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className={styles.dropdownScroll}>
+                <button className={`${styles.dropdownItem} ${!filterMarket ? styles.dropdownItemActive : ''}`} onClick={() => { setFilterMarket(''); setMarketSearch(''); setOpenDropdown(null); }}>
+                  Alle Märkte
+                </button>
+                {allMarkets.filter(m => m.name.toLowerCase().includes(marketSearch.toLowerCase())).map(m => (
+                  <button key={m.id} className={`${styles.dropdownItem} ${filterMarket === m.id ? styles.dropdownItemActive : ''}`} onClick={() => { setFilterMarket(m.id); setMarketSearch(''); setOpenDropdown(null); }}>
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.filterDivider} />
+
+        {/* Date From */}
+        <div className={styles.datePickerWrap}>
+          <CustomDatePicker value={filterStartDate} onChange={setFilterStartDate} placeholder="Von" />
+        </div>
+
+        <span className={styles.dateSeparator}>–</span>
+
+        {/* Date To */}
+        <div className={styles.datePickerWrap}>
+          <CustomDatePicker value={filterEndDate} onChange={setFilterEndDate} placeholder="Bis" />
+        </div>
+
+        {hasFilters && (
+          <button className={styles.clearBtn} onClick={clearFilters}>
+            <Funnel size={13} weight="bold" />
+            Zurücksetzen
+          </button>
+        )}
       </div>
 
       {/* Tag filter pills (multi-select) */}
@@ -251,18 +406,7 @@ export const FotosPage: React.FC = () => {
       ) : (
         <div className={styles.grid}>
           {photos.map((photo, idx) => (
-            <div key={photo.id} className={styles.photoCard} onClick={() => setLightboxIndex(idx)}>
-              <img src={photo.photoUrl} alt="" className={styles.photoThumb} loading="lazy" />
-              <div className={styles.photoInfo}>
-                <p className={styles.photoGl}>{photo.glName}</p>
-                <p className={styles.photoMarket}>{photo.marketName} {photo.marketChain && `(${photo.marketChain})`}</p>
-                <span className={styles.photoDate}>{formatDate(photo.createdAt)}</span>
-                <div className={styles.photoTags}>
-                  {photo.tags?.slice(0, 3).map(t => <span key={t} className={styles.photoTag}>{t}</span>)}
-                  {(photo.tags?.length || 0) > 3 && <span className={styles.photoTagMore}>+{photo.tags!.length - 3}</span>}
-                </div>
-              </div>
-            </div>
+            <PhotoCard key={photo.id} photo={photo} onClick={() => setLightboxIndex(idx)} formatDate={formatDate} />
           ))}
         </div>
       )}
