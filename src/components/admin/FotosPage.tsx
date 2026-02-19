@@ -191,12 +191,11 @@ export const FotosPage: React.FC = () => {
         const photo = photos[i];
         setExportProgress(Math.round(((i + 1) / photos.length) * 100));
 
-        // Build filename from tags + date
+        const wellePart = (photo.welleName || 'Welle').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g, '_');
         const tagPart = (photo.tags && photo.tags.length > 0)
-          ? photo.tags.join('-').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, '_')
+          ? photo.tags.join(' + ').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_+ ]/g, '_')
           : 'foto';
-        const datePart = new Date(photo.createdAt).toISOString().split('T')[0];
-        let baseName = `${tagPart}-${datePart}`;
+        let baseName = `${wellePart} + ${tagPart}`;
 
         // Handle duplicate names
         if (nameCount[baseName] !== undefined) {
