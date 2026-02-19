@@ -16,7 +16,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, openUp: false });
   const pickerRef = useRef<HTMLDivElement>(null);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -52,10 +52,13 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   const updateDropdownPosition = () => {
     if (inputWrapperRef.current) {
       const rect = inputWrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < 300;
       setDropdownPosition({
-        top: rect.bottom + 8,
+        top: openUp ? rect.top - 8 : rect.bottom + 8,
         left: rect.left,
-        width: rect.width
+        width: rect.width,
+        openUp
       });
     }
   };
@@ -159,10 +162,12 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       {isOpen && ReactDOM.createPortal(
         <div 
           ref={pickerRef}
-          className={styles.calendarDropdown}
+          className={`${styles.calendarDropdown} ${dropdownPosition.openUp ? styles.calendarDropdownUp : ''}`}
           style={{
             position: 'fixed',
-            top: `${dropdownPosition.top}px`,
+            ...(dropdownPosition.openUp
+              ? { bottom: `${window.innerHeight - dropdownPosition.top}px` }
+              : { top: `${dropdownPosition.top}px` }),
             left: `${dropdownPosition.left}px`,
             minWidth: `${dropdownPosition.width}px`
           }}
@@ -173,7 +178,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               className={styles.navButton} 
               onClick={handlePrevMonth}
             >
-              <CaretLeft size={18} weight="bold" />
+              <CaretLeft size={14} weight="bold" />
             </button>
             <div className={styles.monthYear}>
               {months[currentMonth.getMonth()]} {currentMonth.getFullYear()}
@@ -183,7 +188,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               className={styles.navButton} 
               onClick={handleNextMonth}
             >
-              <CaretRight size={18} weight="bold" />
+              <CaretRight size={14} weight="bold" />
             </button>
           </div>
 

@@ -1,9 +1,114 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { X, CalendarBlank, Camera, TrendUp, User, Package, CheckCircle, Clock, CalendarDots, Users, Plus, Minus, Trash, CaretDown, CaretLeft, CaretRight, Check } from '@phosphor-icons/react';
+import { X, CalendarBlank, Camera, TrendUp, User, Package, CheckCircle, Clock, CalendarDots, Users, Plus, Minus, Trash, CaretDown, CaretLeft, CaretRight, Check, MagnifyingGlass, Storefront, PaperPlaneTilt } from '@phosphor-icons/react';
 import { API_BASE_URL } from '../../config/database';
-import { wellenService } from '../../services/wellenService';
+import { wellenService, type Welle } from '../../services/wellenService';
+import { gebietsleiterService, type Gebietsleiter } from '../../services/gebietsleiterService';
+import { marketService } from '../../services/marketService';
+import type { AdminMarket } from '../../types/market-types';
+import { CustomDatePicker } from './CustomDatePicker';
 import styles from './WaveProgressDetailModal.module.css';
+
+const AdminTimePicker: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => {
+  const [open, setOpen] = useState<'hour' | 'minute' | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const parts = value.split(':');
+  const hour = parts[0] || '00';
+  const minute = parts[1] || '00';
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const list = ref.current?.querySelector(`.${styles.atpList}`) as HTMLElement | null;
+    if (!list) return;
+    const active = list.querySelector(`.${styles.atpOptionActive}`) as HTMLElement | null;
+    if (active) active.scrollIntoView({ block: 'center' });
+  }, [open]);
+
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+
+  const pick = (type: 'hour' | 'minute', v: string) => {
+    onChange(type === 'hour' ? `${v}:${minute}` : `${hour}:${v}`);
+    setOpen(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value.replace(/[^0-9:]/g, '');
+    if (raw.length === 2 && !raw.includes(':')) raw += ':';
+    if (raw.length > 5) raw = raw.slice(0, 5);
+    const m = raw.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (m) {
+      const h = Math.min(23, parseInt(m[1] || '0')).toString().padStart(2, '0');
+      const min = m[2] ? Math.min(59, parseInt(m[2] || '0')).toString().padStart(2, '0') : minute;
+      onChange(`${h}:${min}`);
+    }
+  };
+
+  const displayValue = `${hour} : ${minute}`;
+
+  return (
+    <div className={styles.atpWrapper} ref={ref}>
+      <div className={styles.atpInputWrapper}>
+        <input
+          type="text"
+          className={styles.atpInput}
+          value={displayValue}
+          onChange={handleInputChange}
+          onFocus={e => {
+            e.target.value = `${hour}:${minute}`;
+            e.target.select();
+          }}
+          onBlur={e => {
+            e.target.value = displayValue;
+          }}
+        />
+        <Clock
+          size={16}
+          weight="regular"
+          className={styles.atpIcon}
+          onClick={() => setOpen(open ? null : 'hour')}
+          style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+        />
+      </div>
+      {open && (
+        <div className={styles.atpDropdown}>
+          <div className={styles.atpDropdownHeader}>
+            <button
+              type="button"
+              className={`${styles.atpTab} ${open === 'hour' ? styles.atpTabActive : ''}`}
+              onClick={() => setOpen('hour')}
+            >Stunde</button>
+            <button
+              type="button"
+              className={`${styles.atpTab} ${open === 'minute' ? styles.atpTabActive : ''}`}
+              onClick={() => setOpen('minute')}
+            >Minute</button>
+          </div>
+          <div className={styles.atpList}>
+            {(open === 'hour' ? hours : minutes).map(v => (
+              <button
+                key={v}
+                type="button"
+                className={`${styles.atpOption} ${v === (open === 'hour' ? hour : minute) ? styles.atpOptionActive : ''}`}
+                onClick={() => pick(open, v)}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface WaveProgressDetailModalProps {
   welle: {
@@ -76,6 +181,29 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
   // Foto-only states
   const [fotoEntries, setFotoEntries] = useState<FotoEntry[]>([]);
   const [fotoLightboxIndex, setFotoLightboxIndex] = useState<number | null>(null);
+
+  // Admin submission states
+  const [adminStep, setAdminStep] = useState<null | 1 | 2 | 3 | 4>(null);
+  const [adminFullWave, setAdminFullWave] = useState<Welle | null>(null);
+  const [adminGLs, setAdminGLs] = useState<Gebietsleiter[]>([]);
+  const [adminMarkets, setAdminMarkets] = useState<AdminMarket[]>([]);
+  const [adminSelectedGL, setAdminSelectedGL] = useState<{ id: string; name: string } | null>(null);
+  const [adminSelectedMarket, setAdminSelectedMarket] = useState<AdminMarket | null>(null);
+  const [adminItemQty, setAdminItemQty] = useState<Record<string, number>>({});
+  const [adminFotoPhotos, setAdminFotoPhotos] = useState<Array<{ image: string; tags: string[]; comment?: string }>>([]);
+  const [adminFotoComment, setAdminFotoComment] = useState('');
+  const [adminFotoSelectedTags, setAdminFotoSelectedTags] = useState<Set<string>>(new Set());
+  const [adminSubmitDate, setAdminSubmitDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [adminSubmitTime, setAdminSubmitTime] = useState(() => {
+    const n = new Date();
+    return `${n.getHours().toString().padStart(2, '0')}:${n.getMinutes().toString().padStart(2, '0')}`;
+  });
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
+  const [adminGLSearch, setAdminGLSearch] = useState('');
+  const [adminMarketSearch, setAdminMarketSearch] = useState('');
+  const [adminLoadingData, setAdminLoadingData] = useState(false);
+  const [adminSuccess, setAdminSuccess] = useState(false);
+  const adminFotoInputRef = useRef<HTMLInputElement>(null);
 
   const toggleGL = (glName: string) => {
     setCollapsedGLs(prev => {
@@ -353,6 +481,232 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
     setEditQuantity(prev => Math.max(0, prev + delta));
   };
 
+  // --- Admin Submission Helpers ---
+  const openAdminSubmit = async () => {
+    setAdminLoadingData(true);
+    setAdminStep(1);
+    try {
+      const [fullWave, gls, markets] = await Promise.all([
+        wellenService.getWelleById(welle.id),
+        gebietsleiterService.getAllGebietsleiter(),
+        marketService.getAllMarkets(),
+      ]);
+      setAdminFullWave(fullWave);
+      setAdminGLs(gls.filter(g => !g.is_test));
+      setAdminMarkets(markets);
+    } catch (err) {
+      console.error('Error loading admin submit data:', err);
+      setAdminStep(null);
+    } finally {
+      setAdminLoadingData(false);
+    }
+  };
+
+  const resetAdminSubmit = () => {
+    setAdminStep(null);
+    setAdminSelectedGL(null);
+    setAdminSelectedMarket(null);
+    setAdminItemQty({});
+    setAdminFotoPhotos([]);
+    setAdminFotoComment('');
+    setAdminFotoSelectedTags(new Set());
+    setAdminGLSearch('');
+    setAdminMarketSearch('');
+    setAdminSubmitting(false);
+    setAdminSuccess(false);
+    setAdminSubmitDate(new Date().toISOString().split('T')[0]);
+    const n = new Date();
+    setAdminSubmitTime(`${n.getHours().toString().padStart(2, '0')}:${n.getMinutes().toString().padStart(2, '0')}`);
+  };
+
+  const adminGoBack = () => {
+    if (adminStep === 1) { resetAdminSubmit(); return; }
+    if (adminStep === 2) { setAdminSelectedGL(null); setAdminMarketSearch(''); setAdminStep(1); return; }
+    if (adminStep === 3) { setAdminSelectedMarket(null); setAdminItemQty({}); setAdminFotoPhotos([]); setAdminFotoSelectedTags(new Set()); setAdminFotoComment(''); setAdminStep(2); return; }
+    if (adminStep === 4) { setAdminStep(3); return; }
+  };
+
+  const filteredAdminGLs = useMemo(() => {
+    if (!adminGLSearch.trim()) return adminGLs;
+    const q = adminGLSearch.toLowerCase().trim();
+    return adminGLs.filter(gl => gl.name.toLowerCase().includes(q) || gl.email.toLowerCase().includes(q));
+  }, [adminGLs, adminGLSearch]);
+
+  const filteredAdminMarkets = useMemo(() => {
+    if (!adminFullWave?.assignedMarketIds) return { myMarkets: [] as AdminMarket[], otherMarkets: [] as AdminMarket[] };
+    const waveMarketIds = new Set(adminFullWave.assignedMarketIds);
+    let waveMarkets = adminMarkets.filter(m => waveMarketIds.has(m.id));
+
+    if (adminMarketSearch.trim()) {
+      const words = adminMarketSearch.toLowerCase().trim().split(/\s+/);
+      waveMarkets = waveMarkets.filter(m => {
+        const hay = `${m.name} ${m.address} ${m.city} ${m.postalCode} ${m.chain}`.toLowerCase();
+        return words.every(w => hay.includes(w));
+      });
+    }
+
+    const myMarkets = adminSelectedGL ? waveMarkets.filter(m => m.gebietsleiter === adminSelectedGL.id) : [];
+    const myIds = new Set(myMarkets.map(m => m.id));
+    const otherMarkets = waveMarkets.filter(m => !myIds.has(m.id));
+    return { myMarkets, otherMarkets };
+  }, [adminMarkets, adminFullWave, adminSelectedGL, adminMarketSearch]);
+
+  const adminItemsTotal = useMemo(() => {
+    let count = 0;
+    let value = 0;
+    if (!adminFullWave) return { count, value };
+
+    const addSimple = (items: Array<{ id: string; itemValue?: number | null }> | undefined) => {
+      items?.forEach(item => {
+        const qty = adminItemQty[item.id] || 0;
+        if (qty > 0) {
+          count += qty;
+          value += qty * (item.itemValue || 0);
+        }
+      });
+    };
+    addSimple(adminFullWave.displays);
+    addSimple(adminFullWave.kartonwareItems);
+    addSimple(adminFullWave.einzelproduktItems);
+
+    const addNested = (groups: Array<{ id: string; products: Array<{ id: string; valuePerVE: number }> }> | undefined) => {
+      groups?.forEach(group => {
+        group.products.forEach(prod => {
+          const qty = adminItemQty[`${group.id}__${prod.id}`] || 0;
+          if (qty > 0) {
+            count += qty;
+            value += qty * prod.valuePerVE;
+          }
+        });
+      });
+    };
+    addNested(adminFullWave.paletteItems);
+    addNested(adminFullWave.schutteItems);
+    return { count, value };
+  }, [adminItemQty, adminFullWave]);
+
+  const canProceedStep3 = adminFullWave?.fotoOnly ? adminFotoPhotos.length > 0 : adminItemsTotal.count > 0;
+
+  const handleAdminFotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setAdminFotoPhotos(prev => [...prev, {
+          image: base64,
+          tags: Array.from(adminFotoSelectedTags),
+          comment: adminFotoComment || undefined,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const removeAdminFoto = (idx: number) => {
+    setAdminFotoPhotos(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleAdminSubmit = async () => {
+    if (!adminSelectedGL || !adminSelectedMarket || !adminFullWave) return;
+    setAdminSubmitting(true);
+    try {
+      const ts = new Date(`${adminSubmitDate}T${adminSubmitTime}:00`).toISOString();
+
+      if (adminFullWave.fotoOnly) {
+        for (const foto of adminFotoPhotos) {
+          await wellenService.uploadPhotos({
+            welle_id: adminFullWave.id,
+            gebietsleiter_id: adminSelectedGL.id,
+            market_id: adminSelectedMarket.id,
+            photos: [{ image: foto.image, tags: foto.tags, comment: foto.comment || '' }],
+          });
+        }
+      } else {
+        type ItemType = 'display' | 'kartonware' | 'palette' | 'schuette' | 'einzelprodukt';
+        const items: Array<{ item_type: ItemType; item_id: string; current_number: number; value_per_unit?: number }> = [];
+
+        const addSimple = (type: ItemType, list: Array<{ id: string; itemValue?: number | null }> | undefined) => {
+          list?.forEach(item => {
+            const qty = adminItemQty[item.id] || 0;
+            if (qty > 0) {
+              items.push({ item_type: type, item_id: item.id, current_number: qty, value_per_unit: item.itemValue || 0 });
+            }
+          });
+        };
+        addSimple('display', adminFullWave.displays);
+        addSimple('kartonware', adminFullWave.kartonwareItems);
+        addSimple('einzelprodukt', adminFullWave.einzelproduktItems);
+
+        const addNested = (type: ItemType, groups: Array<{ id: string; products: Array<{ id: string; valuePerVE: number }> }> | undefined) => {
+          groups?.forEach(group => {
+            group.products.forEach(prod => {
+              const qty = adminItemQty[`${group.id}__${prod.id}`] || 0;
+              if (qty > 0) {
+                items.push({ item_type: type, item_id: prod.id, current_number: qty, value_per_unit: prod.valuePerVE });
+              }
+            });
+          });
+        };
+        addNested('palette', adminFullWave.paletteItems);
+        addNested('schuette', adminFullWave.schutteItems);
+
+        if (items.length > 0) {
+          await wellenService.updateProgressBatch(adminFullWave.id, {
+            gebietsleiter_id: adminSelectedGL.id,
+            market_id: adminSelectedMarket.id,
+            items,
+            timestamp: ts,
+            skipVisitUpdate: true,
+          });
+        }
+      }
+
+      setAdminSuccess(true);
+      setTimeout(() => {
+        resetAdminSubmit();
+        // Refetch progress data
+        (async () => {
+          setIsLoading(true);
+          try {
+            const response = await fetch(`${API_BASE_URL}/wellen/${welle.id}/all-progress`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.type === 'foto') {
+                setFotoEntries(data.photos || []);
+              } else if (Array.isArray(data)) {
+                setProgressData(data);
+              } else {
+                setProgressData(data.entries || []);
+              }
+            }
+          } catch (error) {
+            console.error('Error refetching:', error);
+          } finally {
+            setIsLoading(false);
+          }
+        })();
+      }, 1500);
+    } catch (err) {
+      console.error('Admin submit error:', err);
+      alert('Fehler beim Absenden. Bitte erneut versuchen.');
+    } finally {
+      setAdminSubmitting(false);
+    }
+  };
+
+  const adminStepTitle = () => {
+    switch (adminStep) {
+      case 1: return 'Gebietsleiter wählen';
+      case 2: return 'Markt wählen';
+      case 3: return adminFullWave?.fotoOnly ? 'Fotos hinzufügen' : 'Produkte auswählen';
+      case 4: return 'Zusammenfassung';
+      default: return '';
+    }
+  };
+
   // Render a single progress entry (used in both views)
   const renderProgressEntry = (progress: GLProgress, idx: number, showGLName: boolean = false) => {
     const isEditing = editingId === progress.id;
@@ -582,59 +936,436 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            {welle.fotoOnly ? <Camera size={28} weight="duotone" /> : <CalendarBlank size={28} weight="duotone" />}
-            <div className={styles.headerInfo}>
-              <h2 className={styles.title}>{welle.name}</h2>
-              <p className={styles.subtitle}>{welle.startDate} - {welle.endDate}</p>
-            </div>
+            {adminStep ? (
+              <>
+                <button className={styles.adminBackBtn} onClick={adminGoBack}>
+                  <CaretLeft size={22} weight="bold" />
+                </button>
+                <div className={styles.headerInfo}>
+                  <h2 className={styles.title}>{adminStepTitle()}</h2>
+                  <p className={styles.subtitle}>Schritt {adminStep} von 4</p>
+                </div>
+              </>
+            ) : (
+              <>
+                {welle.fotoOnly ? <Camera size={28} weight="duotone" /> : <CalendarBlank size={28} weight="duotone" />}
+                <div className={styles.headerInfo}>
+                  <h2 className={styles.title}>{welle.name}</h2>
+                  <p className={styles.subtitle}>{welle.startDate} - {welle.endDate}</p>
+                </div>
+              </>
+            )}
           </div>
           <div className={styles.headerRight}>
-            {!welle.fotoOnly && (
-              <div className={styles.viewToggle}>
-                <button 
-                  className={`${styles.viewToggleBtn} ${viewMode === 'gl' ? styles.viewToggleBtnActive : ''}`}
-                  onClick={() => setViewMode('gl')}
-                  title="Nach Gebietsleiter"
-                >
-                  <Users size={18} weight={viewMode === 'gl' ? 'fill' : 'regular'} />
+            {!adminStep && (
+              <>
+                <button className={styles.adminAddBtn} onClick={openAdminSubmit} title="Vorbesteller für GL einreichen">
+                  <Plus size={18} weight="bold" />
                 </button>
-                <button 
-                  className={`${styles.viewToggleBtn} ${viewMode === 'days' ? styles.viewToggleBtnActive : ''}`}
-                  onClick={() => setViewMode('days')}
-                  title="Nach Tagen"
-                >
-                  <CalendarDots size={18} weight={viewMode === 'days' ? 'fill' : 'regular'} />
-                </button>
-              </div>
+                {!welle.fotoOnly && (
+                  <div className={styles.viewToggle}>
+                    <button 
+                      className={`${styles.viewToggleBtn} ${viewMode === 'gl' ? styles.viewToggleBtnActive : ''}`}
+                      onClick={() => setViewMode('gl')}
+                      title="Nach Gebietsleiter"
+                    >
+                      <Users size={18} weight={viewMode === 'gl' ? 'fill' : 'regular'} />
+                    </button>
+                    <button 
+                      className={`${styles.viewToggleBtn} ${viewMode === 'days' ? styles.viewToggleBtnActive : ''}`}
+                      onClick={() => setViewMode('days')}
+                      title="Nach Tagen"
+                    >
+                      <CalendarDots size={18} weight={viewMode === 'days' ? 'fill' : 'regular'} />
+                    </button>
+                  </div>
+                )}
+              </>
             )}
-            <button className={styles.closeButton} onClick={onClose}>
+            <button className={styles.closeButton} onClick={adminStep ? resetAdminSubmit : onClose}>
               <X size={24} weight="bold" />
             </button>
           </div>
         </div>
 
-        {/* Goal / Type Display */}
-        <div className={`${styles.goalBanner} ${welle.fotoOnly ? styles.goalBannerFoto : ''}`}>
-          {welle.fotoOnly ? (
-            <>
-              <Camera size={20} weight="bold" />
-              <span>Fotowelle</span>
-            </>
-          ) : (
-            <>
-              <TrendUp size={20} weight="bold" />
-              <span>
-                Ziel: {welle.goalType === 'percentage' 
-                  ? `${welle.goalPercentage}%` 
-                  : `€${(welle.goalValue || 0).toLocaleString('de-DE')}`}
-              </span>
-            </>
-          )}
-        </div>
+        {/* Goal / Type Display - only shown when not in admin submit */}
+        {!adminStep && (
+          <div className={`${styles.goalBanner} ${welle.fotoOnly ? styles.goalBannerFoto : ''}`}>
+            {welle.fotoOnly ? (
+              <>
+                <Camera size={20} weight="bold" />
+                <span>Fotowelle</span>
+              </>
+            ) : (
+              <>
+                <TrendUp size={20} weight="bold" />
+                <span>
+                  Ziel: {welle.goalType === 'percentage' 
+                    ? `${welle.goalPercentage}%` 
+                    : `€${(welle.goalValue || 0).toLocaleString('de-DE')}`}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Admin Submission Steps Indicator */}
+        {adminStep && (
+          <div className={styles.adminStepsBar}>
+            {[1, 2, 3, 4].map(s => (
+              <div key={s} className={`${styles.adminStepDot} ${s === adminStep ? styles.adminStepDotActive : ''} ${s < (adminStep || 0) ? styles.adminStepDotDone : ''}`}>
+                {s < (adminStep || 0) ? <Check size={12} weight="bold" /> : s}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Content */}
         <div className={styles.content}>
-          {isLoading ? (
+          {adminStep ? (
+            /* ===== Admin Submission Flow ===== */
+            adminLoadingData ? (
+              <div className={styles.loadingState}>
+                <div className={styles.spinner} />
+                <p>Lade Daten...</p>
+              </div>
+            ) : adminSuccess ? (
+              <div className={styles.adminSuccessState}>
+                <CheckCircle size={56} weight="duotone" />
+                <p>Erfolgreich eingereicht!</p>
+              </div>
+            ) : adminStep === 1 ? (
+              /* Step 1: Select GL */
+              <div className={styles.adminStepContent}>
+                <div className={styles.adminSearchWrapper}>
+                  <MagnifyingGlass size={18} weight="regular" />
+                  <input
+                    type="text"
+                    className={styles.adminSearchInput}
+                    placeholder="Gebietsleiter suchen..."
+                    value={adminGLSearch}
+                    onChange={e => setAdminGLSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className={styles.adminList}>
+                  {filteredAdminGLs.length === 0 ? (
+                    <p className={styles.adminNoResults}>Keine Ergebnisse</p>
+                  ) : filteredAdminGLs.map(gl => (
+                    <div
+                      key={gl.id}
+                      className={styles.adminListItem}
+                      onClick={() => {
+                        setAdminSelectedGL({ id: gl.id, name: gl.name });
+                        setAdminStep(2);
+                      }}
+                    >
+                      <User size={20} weight="duotone" />
+                      <div className={styles.adminListItemInfo}>
+                        <span className={styles.adminListItemName}>{gl.name}</span>
+                        <span className={styles.adminListItemSub}>{gl.email}</span>
+                      </div>
+                      <CaretRight size={16} weight="bold" className={styles.adminListItemArrow} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : adminStep === 2 ? (
+              /* Step 2: Select Market */
+              <div className={styles.adminStepContent}>
+                <div className={styles.adminSearchWrapper}>
+                  <MagnifyingGlass size={18} weight="regular" />
+                  <input
+                    type="text"
+                    className={styles.adminSearchInput}
+                    placeholder="Markt suchen (Name, PLZ, Kette...)"
+                    value={adminMarketSearch}
+                    onChange={e => setAdminMarketSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className={styles.adminList}>
+                  {filteredAdminMarkets.myMarkets.length > 0 && (
+                    <>
+                      <div className={styles.adminListSectionHeader}>
+                        <Storefront size={16} weight="duotone" />
+                        Märkte von {adminSelectedGL?.name}
+                      </div>
+                      {filteredAdminMarkets.myMarkets.map(m => (
+                        <div
+                          key={m.id}
+                          className={`${styles.adminListItem} ${styles.adminListItemHighlight}`}
+                          onClick={() => { setAdminSelectedMarket(m); setAdminStep(3); }}
+                        >
+                          <Storefront size={20} weight="duotone" />
+                          <div className={styles.adminListItemInfo}>
+                            <span className={styles.adminListItemName}>{m.chain} – {m.name}</span>
+                            <span className={styles.adminListItemSub}>{m.address}, {m.postalCode} {m.city}</span>
+                          </div>
+                          <CaretRight size={16} weight="bold" className={styles.adminListItemArrow} />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {filteredAdminMarkets.otherMarkets.length > 0 && (
+                    <>
+                      <div className={styles.adminListSectionHeader}>
+                        Andere Märkte
+                      </div>
+                      {filteredAdminMarkets.otherMarkets.map(m => (
+                        <div
+                          key={m.id}
+                          className={styles.adminListItem}
+                          onClick={() => { setAdminSelectedMarket(m); setAdminStep(3); }}
+                        >
+                          <Storefront size={20} weight="regular" />
+                          <div className={styles.adminListItemInfo}>
+                            <span className={styles.adminListItemName}>{m.chain} – {m.name}</span>
+                            <span className={styles.adminListItemSub}>{m.address}, {m.postalCode} {m.city}</span>
+                          </div>
+                          <CaretRight size={16} weight="bold" className={styles.adminListItemArrow} />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {filteredAdminMarkets.myMarkets.length === 0 && filteredAdminMarkets.otherMarkets.length === 0 && (
+                    <p className={styles.adminNoResults}>Keine Märkte gefunden</p>
+                  )}
+                </div>
+              </div>
+            ) : adminStep === 3 ? (
+              /* Step 3: Items / Foto */
+              <div className={styles.adminStepContent}>
+                {adminFullWave?.fotoOnly ? (
+                  /* Foto Upload */
+                  <div className={styles.adminFotoArea}>
+                    {adminFullWave.fotoTags && adminFullWave.fotoTags.length > 0 && (
+                      <div className={styles.adminFotoTagSection}>
+                        <p className={styles.adminFotoTagLabel}>Tags für nächstes Foto auswählen:</p>
+                        <div className={styles.adminFotoTagGrid}>
+                          {adminFullWave.fotoTags.map(tag => (
+                            <button
+                              key={tag.id || tag.name}
+                              className={`${styles.adminFotoTagBtn} ${adminFotoSelectedTags.has(tag.name) ? styles.adminFotoTagBtnActive : ''} ${tag.type === 'fixed' ? styles.adminFotoTagBtnFixed : ''}`}
+                              onClick={() => {
+                                setAdminFotoSelectedTags(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(tag.name)) next.delete(tag.name);
+                                  else next.add(tag.name);
+                                  return next;
+                                });
+                              }}
+                            >
+                              {tag.name}
+                              {tag.type === 'fixed' && <span className={styles.adminFotoTagFixed}>Pflicht</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className={styles.adminFotoCommentRow}>
+                      <input
+                        type="text"
+                        className={styles.adminFotoCommentInput}
+                        placeholder="Kommentar (optional)"
+                        value={adminFotoComment}
+                        onChange={e => setAdminFotoComment(e.target.value)}
+                      />
+                    </div>
+                    <input ref={adminFotoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleAdminFotoUpload} />
+                    <button className={styles.adminFotoUploadBtn} onClick={() => adminFotoInputRef.current?.click()}>
+                      <Camera size={20} weight="bold" />
+                      Foto hinzufügen
+                    </button>
+                    {adminFotoPhotos.length > 0 && (
+                      <div className={styles.adminFotoPreviewGrid}>
+                        {adminFotoPhotos.map((foto, idx) => (
+                          <div key={idx} className={styles.adminFotoPreviewCard}>
+                            <img src={foto.image} alt="" />
+                            <button className={styles.adminFotoRemoveBtn} onClick={() => removeAdminFoto(idx)}>
+                              <X size={12} weight="bold" />
+                            </button>
+                            {foto.tags.length > 0 && (
+                              <div className={styles.adminFotoPreviewTags}>
+                                {foto.tags.map(t => <span key={t}>{t}</span>)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Product Selection */
+                  <div className={styles.adminItemsList}>
+                    {adminFullWave?.displays && adminFullWave.displays.length > 0 && (
+                      <div className={styles.adminItemGroup}>
+                        <h4 className={styles.adminItemGroupTitle}>Displays</h4>
+                        {adminFullWave.displays.map(item => (
+                          <div key={item.id} className={styles.adminItemRow}>
+                            <div className={styles.adminItemRowInfo}>
+                              <span className={styles.adminItemRowName}>{item.name}</span>
+                              {(item.itemValue || 0) > 0 && <span className={styles.adminItemRowValue}>€{(item.itemValue || 0).toFixed(2)}/Stk</span>}
+                            </div>
+                            <div className={styles.adminItemRowControls}>
+                              <button onClick={() => setAdminItemQty(p => ({ ...p, [item.id]: Math.max(0, (p[item.id] || 0) - 1) }))} disabled={(adminItemQty[item.id] || 0) <= 0}><Minus size={14} weight="bold" /></button>
+                              <input type="number" value={adminItemQty[item.id] || 0} onChange={e => setAdminItemQty(p => ({ ...p, [item.id]: Math.max(0, parseInt(e.target.value) || 0) }))} min={0} />
+                              <button onClick={() => setAdminItemQty(p => ({ ...p, [item.id]: (p[item.id] || 0) + 1 }))}><Plus size={14} weight="bold" /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {adminFullWave?.kartonwareItems && adminFullWave.kartonwareItems.length > 0 && (
+                      <div className={styles.adminItemGroup}>
+                        <h4 className={styles.adminItemGroupTitle}>Kartonware</h4>
+                        {adminFullWave.kartonwareItems.map(item => (
+                          <div key={item.id} className={styles.adminItemRow}>
+                            <div className={styles.adminItemRowInfo}>
+                              <span className={styles.adminItemRowName}>{item.name}</span>
+                              {(item.itemValue || 0) > 0 && <span className={styles.adminItemRowValue}>€{(item.itemValue || 0).toFixed(2)}/Stk</span>}
+                            </div>
+                            <div className={styles.adminItemRowControls}>
+                              <button onClick={() => setAdminItemQty(p => ({ ...p, [item.id]: Math.max(0, (p[item.id] || 0) - 1) }))} disabled={(adminItemQty[item.id] || 0) <= 0}><Minus size={14} weight="bold" /></button>
+                              <input type="number" value={adminItemQty[item.id] || 0} onChange={e => setAdminItemQty(p => ({ ...p, [item.id]: Math.max(0, parseInt(e.target.value) || 0) }))} min={0} />
+                              <button onClick={() => setAdminItemQty(p => ({ ...p, [item.id]: (p[item.id] || 0) + 1 }))}><Plus size={14} weight="bold" /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {adminFullWave?.einzelproduktItems && adminFullWave.einzelproduktItems.length > 0 && (
+                      <div className={styles.adminItemGroup}>
+                        <h4 className={styles.adminItemGroupTitle}>Einzelprodukte</h4>
+                        {adminFullWave.einzelproduktItems.map(item => (
+                          <div key={item.id} className={styles.adminItemRow}>
+                            <div className={styles.adminItemRowInfo}>
+                              <span className={styles.adminItemRowName}>{item.name}</span>
+                              {(item.itemValue || 0) > 0 && <span className={styles.adminItemRowValue}>€{(item.itemValue || 0).toFixed(2)}/Stk</span>}
+                            </div>
+                            <div className={styles.adminItemRowControls}>
+                              <button onClick={() => setAdminItemQty(p => ({ ...p, [item.id]: Math.max(0, (p[item.id] || 0) - 1) }))} disabled={(adminItemQty[item.id] || 0) <= 0}><Minus size={14} weight="bold" /></button>
+                              <input type="number" value={adminItemQty[item.id] || 0} onChange={e => setAdminItemQty(p => ({ ...p, [item.id]: Math.max(0, parseInt(e.target.value) || 0) }))} min={0} />
+                              <button onClick={() => setAdminItemQty(p => ({ ...p, [item.id]: (p[item.id] || 0) + 1 }))}><Plus size={14} weight="bold" /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {adminFullWave?.paletteItems && adminFullWave.paletteItems.length > 0 && (
+                      <div className={styles.adminItemGroup}>
+                        <h4 className={styles.adminItemGroupTitle}>Palette</h4>
+                        {adminFullWave.paletteItems.map(pal => (
+                          <div key={pal.id} className={styles.adminNestedGroup}>
+                            <p className={styles.adminNestedGroupName}>{pal.name}</p>
+                            {pal.products.map(prod => {
+                              const qKey = `${pal.id}__${prod.id}`;
+                              return (
+                                <div key={prod.id} className={styles.adminItemRow}>
+                                  <div className={styles.adminItemRowInfo}>
+                                    <span className={styles.adminItemRowName}>{prod.name}</span>
+                                    <span className={styles.adminItemRowValue}>€{prod.valuePerVE.toFixed(2)}/VE</span>
+                                  </div>
+                                  <div className={styles.adminItemRowControls}>
+                                    <button onClick={() => setAdminItemQty(p => ({ ...p, [qKey]: Math.max(0, (p[qKey] || 0) - 1) }))} disabled={(adminItemQty[qKey] || 0) <= 0}><Minus size={14} weight="bold" /></button>
+                                    <input type="number" value={adminItemQty[qKey] || 0} onChange={e => setAdminItemQty(p => ({ ...p, [qKey]: Math.max(0, parseInt(e.target.value) || 0) }))} min={0} />
+                                    <button onClick={() => setAdminItemQty(p => ({ ...p, [qKey]: (p[qKey] || 0) + 1 }))}><Plus size={14} weight="bold" /></button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {adminFullWave?.schutteItems && adminFullWave.schutteItems.length > 0 && (
+                      <div className={styles.adminItemGroup}>
+                        <h4 className={styles.adminItemGroupTitle}>Schütten</h4>
+                        {adminFullWave.schutteItems.map(sch => (
+                          <div key={sch.id} className={styles.adminNestedGroup}>
+                            <p className={styles.adminNestedGroupName}>{sch.name}</p>
+                            {sch.products.map(prod => {
+                              const qKey = `${sch.id}__${prod.id}`;
+                              return (
+                                <div key={prod.id} className={styles.adminItemRow}>
+                                  <div className={styles.adminItemRowInfo}>
+                                    <span className={styles.adminItemRowName}>{prod.name}</span>
+                                    <span className={styles.adminItemRowValue}>€{prod.valuePerVE.toFixed(2)}/VE</span>
+                                  </div>
+                                  <div className={styles.adminItemRowControls}>
+                                    <button onClick={() => setAdminItemQty(p => ({ ...p, [qKey]: Math.max(0, (p[qKey] || 0) - 1) }))} disabled={(adminItemQty[qKey] || 0) <= 0}><Minus size={14} weight="bold" /></button>
+                                    <input type="number" value={adminItemQty[qKey] || 0} onChange={e => setAdminItemQty(p => ({ ...p, [qKey]: Math.max(0, parseInt(e.target.value) || 0) }))} min={0} />
+                                    <button onClick={() => setAdminItemQty(p => ({ ...p, [qKey]: (p[qKey] || 0) + 1 }))}><Plus size={14} weight="bold" /></button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Bottom bar: summary + continue */}
+                <div className={styles.adminStep3Footer}>
+                  <div className={styles.adminStep3Summary}>
+                    {adminFullWave?.fotoOnly
+                      ? <span>{adminFotoPhotos.length} Foto{adminFotoPhotos.length !== 1 ? 's' : ''}</span>
+                      : <span>{adminItemsTotal.count} Artikel – €{adminItemsTotal.value.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>}
+                  </div>
+                  <button className={styles.adminContinueBtn} disabled={!canProceedStep3} onClick={() => setAdminStep(4)}>
+                    Weiter
+                    <CaretRight size={16} weight="bold" />
+                  </button>
+                </div>
+              </div>
+            ) : adminStep === 4 ? (
+              /* Step 4: Date/Time + Confirm */
+              <div className={styles.adminStepContent}>
+                <div className={styles.adminSummaryCard}>
+                  <div className={styles.adminSummaryRow}>
+                    <span className={styles.adminSummaryLabel}>Gebietsleiter</span>
+                    <span className={styles.adminSummaryValue}>{adminSelectedGL?.name}</span>
+                  </div>
+                  <div className={styles.adminSummaryRow}>
+                    <span className={styles.adminSummaryLabel}>Markt</span>
+                    <span className={styles.adminSummaryValue}>{adminSelectedMarket?.chain} – {adminSelectedMarket?.name}</span>
+                  </div>
+                  <div className={styles.adminSummaryRow}>
+                    <span className={styles.adminSummaryLabel}>{adminFullWave?.fotoOnly ? 'Fotos' : 'Artikel'}</span>
+                    <span className={styles.adminSummaryValue}>
+                      {adminFullWave?.fotoOnly
+                        ? `${adminFotoPhotos.length} Foto${adminFotoPhotos.length !== 1 ? 's' : ''}`
+                        : `${adminItemsTotal.count} Stk – €${adminItemsTotal.value.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles.adminDateTimeRow}>
+                  <div className={styles.adminDateField}>
+                    <label className={styles.adminFieldLabel}>Datum</label>
+                    <CustomDatePicker value={adminSubmitDate} onChange={setAdminSubmitDate} />
+                  </div>
+                  <div className={styles.adminTimeField}>
+                    <label className={styles.adminFieldLabel}>Uhrzeit</label>
+                    <AdminTimePicker value={adminSubmitTime} onChange={setAdminSubmitTime} />
+                  </div>
+                </div>
+
+                <button
+                  className={styles.adminSubmitBtn}
+                  onClick={handleAdminSubmit}
+                  disabled={adminSubmitting}
+                >
+                  {adminSubmitting ? (
+                    <><div className={styles.adminSubmitSpinner} /> Wird eingereicht...</>
+                  ) : (
+                    <><PaperPlaneTilt size={20} weight="bold" /> Absenden</>
+                  )}
+                </button>
+              </div>
+            ) : null
+          ) : isLoading ? (
             <div className={styles.loadingState}>
               <div className={styles.spinner} />
               <p>{welle.fotoOnly ? 'Lade Fotos...' : 'Lade Fortschritt...'}</p>
@@ -743,7 +1474,7 @@ export const WaveProgressDetailModal: React.FC<WaveProgressDetailModalProps> = (
         </div>
 
         {/* Footer Summary */}
-        {!isLoading && (welle.fotoOnly ? fotoEntries.length > 0 : progressData.length > 0) && (
+        {!adminStep && !isLoading && (welle.fotoOnly ? fotoEntries.length > 0 : progressData.length > 0) && (
           <div className={styles.footer}>
             <div className={styles.footerStat}>
               <User size={20} weight="bold" />
