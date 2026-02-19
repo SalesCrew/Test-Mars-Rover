@@ -187,10 +187,12 @@
   border: 1px solid rgba(226, 232, 240, 0.6);
   border-radius: 12px;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .marketCard:hover {
   border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(241, 245, 249, 0.9);
 }
 
 .marketCardVisited {
@@ -240,6 +242,29 @@
   font-size: 12px;
   font-weight: 500;
   color: #64748B;
+}
+
+.marketStatusArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.miniRing {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.miniRingText {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .marketStatus {
@@ -294,6 +319,289 @@
   font-weight: 500;
   color: #94A3B8;
   border-radius: 0 0 20px 20px;
+}
+
+/* Detail View Header */
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.backButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: rgba(241, 245, 249, 0.8);
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3B82F6;
+}
+
+.detailHeaderInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detailTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detailMeta {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+/* Detail Body */
+.detailBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detailBody::-webkit-scrollbar {
+  width: 4px;
+}
+
+.detailBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detailBody::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 2px;
+}
+
+/* Loading / Empty */
+.loadingState,
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Visit Groups */
+.visitGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.visitDateRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.visitDateText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.visitEntries {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+/* Submission Cards */
+.submissionCard {
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.submissionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(241, 245, 249, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.4);
+}
+
+.submissionTypeBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.typeBadgeVorbesteller {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563EB;
+}
+
+.typeBadgeVorverkauf {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7C3AED;
+}
+
+.typeBadgeProdukttausch {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+}
+
+.submissionWave {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  text-align: right;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.submissionContent {
+  padding: 10px 12px;
+}
+
+/* Product Rows */
+.productList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.productRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.productName {
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productQty {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  flex-shrink: 0;
+}
+
+.productMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.reasonBadge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+.totalRow {
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  text-align: right;
+}
+
+.noItems {
+  font-size: 12px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.notesRow {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(226, 232, 240, 0.4);
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+/* Produkttausch Sections */
+.tauschSection {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tauschSection + .tauschSection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(226, 232, 240, 0.6);
+}
+
+.tauschLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94A3B8;
+  margin-bottom: 2px;
 }
 
 /* Responsive */

@@ -841,6 +841,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       <MarketsVisitedModal
         isOpen={isMarketsVisitedOpen}
         markets={realMarkets}
+        userId={user?.id || ''}
         onClose={() => setIsMarketsVisitedOpen(false)}
       />
     </div>
