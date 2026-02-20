@@ -51,6 +51,14 @@ class NaraIncentiveService {
     return await response.json();
   }
 
+  async deleteSubmission(id: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/${id}`, { method: 'DELETE' });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete NARA-Incentive submission: ${response.statusText}`);
+    }
+  }
+
   async getAllSubmissions(glId?: string): Promise<NaraIncentiveSubmission[]> {
     const params = new URLSearchParams();
     if (glId) params.append('glId', glId);

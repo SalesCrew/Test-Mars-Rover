@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MagnifyingGlass, User, Storefront, CaretDown, CaretUp, X, Calendar, Package, Gift } from '@phosphor-icons/react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
+import { MagnifyingGlass, User, Storefront, CaretDown, CaretUp, X, Calendar, Package, Gift, Trash, Warning } from '@phosphor-icons/react';
 import { naraIncentiveService, type NaraIncentiveSubmission, type NaraIncentiveItem } from '../../services/naraIncentiveService';
 import { gebietsleiterService } from '../../services/gebietsleiterService';
 import styles from './NaraIncentivePage.module.css';
@@ -11,6 +12,7 @@ interface GL {
 
 interface GroupedEntry {
   key: string;
+  submissionIds: string[];
   glId: string;
   glName: string;
   marketId: string;
@@ -48,6 +50,9 @@ export const NaraIncentivePage: React.FC = () => {
   const [availableGLs, setAvailableGLs] = useState<GL[]>([]);
   const [isGLDropdownOpen, setIsGLDropdownOpen] = useState(false);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: GroupedEntry } | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<GroupedEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const glDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -86,10 +91,35 @@ export const NaraIncentivePage: React.FC = () => {
       if (glDropdownRef.current && !glDropdownRef.current.contains(e.target as Node)) {
         setIsGLDropdownOpen(false);
       }
+      if (contextMenu) {
+        setContextMenu(null);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [contextMenu]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, entry: GroupedEntry) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, entry });
   }, []);
+
+  const handleDeleteEntry = useCallback(async () => {
+    if (!entryToDelete) return;
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        entryToDelete.submissionIds.map(id => naraIncentiveService.deleteSubmission(id))
+      );
+      setSubmissions(prev => prev.filter(s => !entryToDelete.submissionIds.includes(s.id)));
+      setEntryToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete NARA-Incentive entry:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [entryToDelete]);
 
   const groupedEntries = useMemo(() => {
     const groups = new Map<string, GroupedEntry>();
@@ -100,11 +130,13 @@ export const NaraIncentivePage: React.FC = () => {
 
       if (groups.has(groupKey)) {
         const existing = groups.get(groupKey)!;
+        existing.submissionIds.push(sub.id);
         existing.items.push(...sub.items);
         existing.totalValue += sub.totalValue;
       } else {
         groups.set(groupKey, {
           key: groupKey,
+          submissionIds: [sub.id],
           glId: sub.glId,
           glName: sub.glName,
           marketId: sub.marketId,
@@ -230,6 +262,7 @@ export const NaraIncentivePage: React.FC = () => {
                 key={entry.key}
                 className={`${styles.entryCard} ${expandedKey === entry.key ? styles.entryCardExpanded : ''}`}
                 onClick={() => setExpandedKey(expandedKey === entry.key ? null : entry.key)}
+                onContextMenu={(e) => handleContextMenu(e, entry)}
               >
                 <div className={styles.entryHeader}>
                   <div className={styles.entryMain}>
@@ -294,6 +327,85 @@ export const NaraIncentivePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {contextMenu && (
+        <div
+          className={styles.contextMenu}
+          style={{
+            position: 'fixed',
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+            zIndex: 100002
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className={`${styles.contextMenuItem} ${styles.contextMenuItemDanger}`}
+            onClick={() => {
+              setEntryToDelete(contextMenu.entry);
+              setContextMenu(null);
+            }}
+          >
+            <Trash size={16} weight="bold" />
+            <span>Eintrag löschen</span>
+          </button>
+        </div>
+      )}
+
+      {entryToDelete && ReactDOM.createPortal(
+        <div className={styles.modalOverlay} onClick={() => setEntryToDelete(null)}>
+          <div className={styles.deleteConfirmModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.deleteModalHeader}>
+              <Warning size={32} weight="fill" className={styles.warningIcon} />
+              <h2>Eintrag löschen</h2>
+            </div>
+
+            <p className={styles.deleteModalText}>
+              Möchten Sie den NaRa-Incentive Eintrag für <strong>{entryToDelete.marketChain} {entryToDelete.marketName}</strong> vom <strong>{formatDate(entryToDelete.date)}</strong> wirklich löschen?
+            </p>
+
+            <div className={styles.deleteModalInfo}>
+              <div className={styles.deleteModalInfoRow}>
+                <User size={14} weight="bold" />
+                <span>{entryToDelete.glName}</span>
+              </div>
+              <div className={styles.deleteModalInfoRow}>
+                <Storefront size={14} />
+                <span>{entryToDelete.marketChain} · {entryToDelete.marketName}</span>
+              </div>
+              <div className={styles.deleteModalInfoRow}>
+                <Package size={14} />
+                <span>{entryToDelete.items.length} {entryToDelete.items.length === 1 ? 'Produkt' : 'Produkte'} · {formatPrice(entryToDelete.totalValue)}</span>
+              </div>
+            </div>
+
+            <div className={styles.deleteModalActions}>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setEntryToDelete(null)}
+              >
+                Abbrechen
+              </button>
+              <button
+                className={styles.confirmDeleteButton}
+                onClick={handleDeleteEntry}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <div className={styles.deleteSpinner} />
+                ) : (
+                  <>
+                    <Trash size={16} weight="bold" />
+                    Löschen
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
