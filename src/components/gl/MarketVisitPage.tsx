@@ -130,13 +130,21 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     marketEndTime: resumeData?.besuchszeitBis || ''
   }));
   const [submissionId, setSubmissionId] = useState<string | null>(resumeData?.submissionId || null);
+  const hasVonNoBis = !!(resumeData?.besuchszeitVon && !resumeData?.besuchszeitBis);
   const [fahrzeitRunning, setFahrzeitRunning] = useState(false);
-  const [besuchszeitRunning, setBesuchszeitRunning] = useState(false);
+  const [besuchszeitRunning, setBesuchszeitRunning] = useState(hasVonNoBis);
   const [visitStarted, setVisitStarted] = useState(!!resumeData?.besuchszeitVon);
   
-  // Elapsed time in seconds for live counter
+  // Elapsed time: if resuming an ongoing visit, calculate elapsed from VON
   const [fahrzeitElapsed, setFahrzeitElapsed] = useState(0);
-  const [besuchszeitElapsed, setBesuchszeitElapsed] = useState(0);
+  const [besuchszeitElapsed, setBesuchszeitElapsed] = useState(() => {
+    if (hasVonNoBis && resumeData?.besuchszeitVon) {
+      const [h, m] = resumeData.besuchszeitVon.split(':').map(Number);
+      const vonMs = new Date().setHours(h, m, 0, 0);
+      return Math.max(0, Math.floor((Date.now() - vonMs) / 1000));
+    }
+    return 0;
+  });
   
   // Quick actions button state
   const [quickActionsExpanded, setQuickActionsExpanded] = useState(false);
@@ -957,24 +965,33 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
 
         {/* Marktbesuch Button at bottom */}
         <div className={styles.timerButtonWrapper}>
-          <button 
-            type="button"
-            className={besuchszeitRunning ? styles.marktbesuchButtonStop : styles.marktbesuchButtonStart}
-            onClick={toggleBesuchszeitTimer}
-          >
-            {besuchszeitRunning ? (
-              <>
-                <span>Marktbesuch beenden</span>
-                <span className={styles.marktbesuchTimer}>
-                  {formatElapsed(besuchszeitElapsed).split('').map((char, idx) => (
-                    <span key={`${idx}-${char}`} className={styles.timerDigit}>{char}</span>
-                  ))}
-                </span>
-              </>
-            ) : (
-              <span>{visitStarted && !besuchszeitRunning ? 'Marktbesuch fortsetzen' : 'Marktbesuch starten'}</span>
-            )}
-          </button>
+          {zeiterfassung.besuchszeitVon && zeiterfassung.besuchszeitBis ? (
+            <button type="button" className={styles.marktbesuchButtonDone}>
+              <span>Marktbesuch beendet</span>
+              <span className={styles.marktbesuchButtonDoneHint}>Besuchszeit oben noch änderbar</span>
+            </button>
+          ) : zeiterfassung.besuchszeitVon && !zeiterfassung.besuchszeitBis ? (
+            <button 
+              type="button"
+              className={styles.marktbesuchButtonStop}
+              onClick={toggleBesuchszeitTimer}
+            >
+              <span>Marktbesuch beenden</span>
+              <span className={styles.marktbesuchTimer}>
+                {formatElapsed(besuchszeitElapsed).split('').map((char, idx) => (
+                  <span key={`${idx}-${char}`} className={styles.timerDigit}>{char}</span>
+                ))}
+              </span>
+            </button>
+          ) : (
+            <button 
+              type="button"
+              className={styles.marktbesuchButtonStart}
+              onClick={toggleBesuchszeitTimer}
+            >
+              <span>Marktbesuch starten</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1139,23 +1156,31 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
             {/* Marktbesuch Timer Button - fixed at bottom above footer */}
             {zeiterfassungStep === 'questions' && zeiterfassungActive && (
               <div className={styles.marktbesuchButtonWrapper}>
-                <button 
-                  className={besuchszeitRunning ? styles.marktbesuchButtonStop : styles.marktbesuchButtonStart}
-                  onClick={toggleBesuchszeitTimer}
-                >
-                  {besuchszeitRunning ? (
-                    <>
-                      <span>Marktbesuch beenden</span>
-                      <span className={styles.marktbesuchTimer}>
-                        {formatElapsed(besuchszeitElapsed).split('').map((char, idx) => (
-                          <span key={`${idx}-${char}`} className={styles.timerDigit}>{char}</span>
-                        ))}
-                      </span>
-                    </>
-                  ) : (
-                    <span>{visitStarted && !besuchszeitRunning ? 'Marktbesuch fortsetzen' : 'Marktbesuch starten'}</span>
-                  )}
-                </button>
+                {zeiterfassung.besuchszeitVon && zeiterfassung.besuchszeitBis ? (
+                  <button className={styles.marktbesuchButtonDone}>
+                    <span>Marktbesuch beendet</span>
+                    <span className={styles.marktbesuchButtonDoneHint}>Besuchszeit oben noch änderbar</span>
+                  </button>
+                ) : zeiterfassung.besuchszeitVon && !zeiterfassung.besuchszeitBis ? (
+                  <button 
+                    className={styles.marktbesuchButtonStop}
+                    onClick={toggleBesuchszeitTimer}
+                  >
+                    <span>Marktbesuch beenden</span>
+                    <span className={styles.marktbesuchTimer}>
+                      {formatElapsed(besuchszeitElapsed).split('').map((char, idx) => (
+                        <span key={`${idx}-${char}`} className={styles.timerDigit}>{char}</span>
+                      ))}
+                    </span>
+                  </button>
+                ) : (
+                  <button 
+                    className={styles.marktbesuchButtonStart}
+                    onClick={toggleBesuchszeitTimer}
+                  >
+                    <span>Marktbesuch starten</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

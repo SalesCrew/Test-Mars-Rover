@@ -537,6 +537,29 @@
   box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
+.marktbesuchButtonDone {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  border: none;
+  border-radius: 14px;
+  color: #475569;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: none;
+}
+
+.marktbesuchButtonDoneHint {
+  font-size: 12px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
 .marktbesuchTimer {
   display: flex;
   align-items: center;
