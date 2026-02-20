@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus, Plus, Stack, SignOut, Receipt, TrendUp, DownloadSimple, Clock, Camera } from '@phosphor-icons/react';
+import { House, MapPin, Users, CalendarCheck, ClipboardText, Package, Upload, X, CheckCircle, WarningCircle, ClockCounterClockwise, ArrowRight, ArrowsClockwise, UserMinus, UserPlus, CalendarPlus, Plus, Stack, SignOut, Receipt, TrendUp, DownloadSimple, Clock, Camera, Gift } from '@phosphor-icons/react';
 import { AdminDashboard } from './AdminDashboard';
 import { MarketsPage } from './MarketsPage';
 import { GebietsleiterPage } from './GebietsleiterPage';
@@ -11,6 +11,7 @@ import { FragebogenPage } from './FragebogenPage';
 import { ProductsPage } from './ProductsPage';
 import { FotosPage } from './FotosPage';
 import { ZeiterfassungPage } from './ZeiterfassungPage';
+import { NaraIncentivePage } from './NaraIncentivePage';
 import { CreateDisplayModal } from './CreateDisplayModal';
 import { CreatePaletteModal } from './CreatePaletteModal';
 import { CreateSchutteModal } from './CreateSchutteModal';
@@ -31,7 +32,7 @@ interface AdminPanelProps {
   onClose?: () => void;
 }
 
-type AdminPage = 'dashboard' | 'markets' | 'gebietsleiter' | 'vorbesteller' | 'vorverkauf' | 'produktersatz' | 'fragebogen' | 'produkte' | 'zeiterfassung' | 'fotos';
+type AdminPage = 'dashboard' | 'markets' | 'gebietsleiter' | 'vorbesteller' | 'vorverkauf' | 'produktersatz' | 'nara-incentive' | 'fragebogen' | 'produkte' | 'zeiterfassung' | 'fotos';
 
 interface MenuItem {
   id: AdminPage;
@@ -187,6 +188,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
     { id: 'vorbesteller', label: 'Vorbesteller', icon: <CalendarCheck size={20} weight="regular" /> },
     { id: 'vorverkauf', label: 'Vorverkauf', icon: <TrendUp size={20} weight="regular" /> },
     { id: 'produktersatz', label: 'Produktersatz', icon: <Receipt size={20} weight="regular" /> },
+    { id: 'nara-incentive', label: 'NaRa Incentive', icon: <Gift size={20} weight="regular" /> },
     { id: 'fragebogen', label: 'Fragebogen', icon: <ClipboardText size={20} weight="regular" /> },
     { id: 'zeiterfassung', label: 'Zeiterfassung', icon: <Clock size={20} weight="regular" /> },
     { id: 'fotos', label: 'Fotos', icon: <Camera size={20} weight="regular" /> },
@@ -582,6 +584,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           {selectedPage === 'vorbesteller' && <VorbestellerPage isCreateWelleModalOpen={isCreateWelleModalOpen} onCloseCreateWelleModal={() => setIsCreateWelleModalOpen(false)} onOpenCreateWelleModal={() => setIsCreateWelleModalOpen(true)} waveIdToEdit={waveIdToEdit} onClearWaveIdToEdit={() => setWaveIdToEdit(null)} />}
           {selectedPage === 'vorverkauf' && <VorverkaufAdminPage />}
           {selectedPage === 'produktersatz' && <ProduktErsatzPage />}
+          {selectedPage === 'nara-incentive' && <NaraIncentivePage />}
           {selectedPage === 'fragebogen' && <FragebogenPage isCreateModuleModalOpen={isCreateModuleModalOpen} onCloseCreateModuleModal={() => setIsCreateModuleModalOpen(false)} isCreateFragebogenModalOpen={isCreateFragebogenModalOpen} onCloseCreateFragebogenModal={() => setIsCreateFragebogenModalOpen(false)} />}
           {selectedPage === 'zeiterfassung' && <ZeiterfassungPage viewMode={zeiterfassungViewMode} />}
           {selectedPage === 'fotos' && <FotosPage />}

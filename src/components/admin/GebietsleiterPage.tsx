@@ -4,6 +4,7 @@ import { User, Phone, Envelope, MapPin, X, Image } from '@phosphor-icons/react';
 import { GLDetailModal } from './GLDetailModal';
 import { gebietsleiterService } from '../../services/gebietsleiterService';
 import type { AdminMarket } from '../../types/market-types';
+import { API_BASE_URL } from '../../config/database';
 import styles from './GebietsleiterPage.module.css';
 
 interface GebietsleiterPageProps {
@@ -112,7 +113,34 @@ Das Mars Rover Team`;
     setIsSending(true);
     
     try {
-      // Create GL account in database
+      let uploadedUrl: string | null = null;
+
+      if (formData.profilePicture) {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]);
+          };
+          reader.readAsDataURL(formData.profilePicture!);
+        });
+
+        const uploadRes = await fetch(`${API_BASE_URL}/gebietsleiter/upload-profile-picture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base64,
+            contentType: formData.profilePicture.type,
+            fileName: formData.profilePicture.name,
+          }),
+        });
+
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          uploadedUrl = data.url;
+        }
+      }
+
       await gebietsleiterService.createGebietsleiter({
       name: formData.name,
       address: formData.address,
@@ -121,7 +149,7 @@ Das Mars Rover Team`;
       phone: formData.phone,
       email: formData.email,
       password: generatedPassword,
-        profilePictureUrl: profilePictureUrl,
+        profilePictureUrl: uploadedUrl,
         isTest: formData.isTest,
       });
       
@@ -176,13 +204,17 @@ Das Mars Rover Team`;
             >
               {/* Profile Picture */}
               <div className={styles.glAvatar}>
-                {gl.profile_picture_url ? (
-                  <img src={gl.profile_picture_url} alt={gl.name} className={styles.glAvatarImage} />
-                ) : (
-                  <div className={styles.glAvatarPlaceholder}>
-                    <User size={32} weight="regular" />
-                  </div>
-                )}
+                {gl.profile_picture_url && !gl.profile_picture_url.startsWith('blob:') ? (
+                  <img
+                    src={gl.profile_picture_url}
+                    alt={gl.name}
+                    className={styles.glAvatarImage}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('div')!.style.display = 'flex'; }}
+                  />
+                ) : null}
+                <div className={styles.glAvatarPlaceholder} style={{ display: gl.profile_picture_url && !gl.profile_picture_url.startsWith('blob:') ? 'none' : 'flex' }}>
+                  <User size={32} weight="regular" />
+                </div>
               </div>
 
               {/* GL Info */}

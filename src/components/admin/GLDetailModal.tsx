@@ -623,8 +623,8 @@ export const GLDetailModal: React.FC<GLDetailModalProps> = ({ gl, onClose, onDel
         <div className={styles.modalHeader}>
           <div className={styles.headerLeft}>
             <div className={styles.headerAvatar}>
-              {gl.profilePicture ? (
-                <img src={gl.profilePicture} alt={gl.name} />
+              {gl.profile_picture_url && !gl.profile_picture_url.startsWith('blob:') ? (
+                <img src={gl.profile_picture_url} alt={gl.name} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               ) : (
                 <User size={24} weight="regular" />
               )}

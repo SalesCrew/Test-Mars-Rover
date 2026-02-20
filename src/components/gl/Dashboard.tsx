@@ -6,6 +6,8 @@ import { BottomNav } from './BottomNav';
 import { MarketSelectionModal } from './MarketSelectionModal';
 import { MarketDetailModal } from './MarketDetailModal';
 import { ProductCalculator } from './ProductCalculator';
+import { ProductActionSelector } from './ProductActionSelector';
+import { NaraIncentiveModal } from './NaraIncentiveModal';
 import { VorverkaufModal } from './VorverkaufModal';
 import { TourPage } from './TourPage';
 import { MarketVisitPage } from './MarketVisitPage';
@@ -54,6 +56,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   });
   const [isMarketModalOpen, setIsMarketModalOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isActionSelectorOpen, setIsActionSelectorOpen] = useState(false);
+  const [isNaraIncentiveOpen, setIsNaraIncentiveOpen] = useState(false);
   const [isVorverkaufOpen, setIsVorverkaufOpen] = useState(false);
   const [isVorbestellerOpen, setIsVorbestellerOpen] = useState(false);
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
@@ -529,7 +533,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   };
 
   const handleCalculator = () => {
-    setIsCalculatorOpen(true);
+    setIsActionSelectorOpen(true);
   };
 
   const handleViewAllFrequencies = () => {
@@ -602,13 +606,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           }}
           onOpenVorbesteller={() => setIsVorbestellerOpen(true)}
           onOpenVorverkauf={() => setIsVorverkaufOpen(true)}
-          onOpenProduktrechner={() => setIsCalculatorOpen(true)}
+          onOpenProduktrechner={() => setIsActionSelectorOpen(true)}
         />
         
         {/* Modals need to be rendered alongside MarketVisitPage */}
+        <ProductActionSelector
+          isOpen={isActionSelectorOpen}
+          onClose={() => setIsActionSelectorOpen(false)}
+          onSelectProdukttausch={() => {
+            setIsActionSelectorOpen(false);
+            setIsCalculatorOpen(true);
+          }}
+          onSelectNaraIncentive={() => {
+            setIsActionSelectorOpen(false);
+            setIsNaraIncentiveOpen(true);
+          }}
+        />
         <ProductCalculator
           isOpen={isCalculatorOpen}
           onClose={() => setIsCalculatorOpen(false)}
+        />
+        <NaraIncentiveModal
+          isOpen={isNaraIncentiveOpen}
+          onClose={() => setIsNaraIncentiveOpen(false)}
         />
         <VorverkaufModal
           isOpen={isVorverkaufOpen}
@@ -736,10 +756,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         />
       )}
 
+      {/* Product Action Selector */}
+      <ProductActionSelector
+        isOpen={isActionSelectorOpen}
+        onClose={() => setIsActionSelectorOpen(false)}
+        onSelectProdukttausch={() => {
+          setIsActionSelectorOpen(false);
+          setIsCalculatorOpen(true);
+        }}
+        onSelectNaraIncentive={() => {
+          setIsActionSelectorOpen(false);
+          setIsNaraIncentiveOpen(true);
+        }}
+      />
+
       {/* Product Calculator */}
       <ProductCalculator
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
+      />
+
+      {/* NARA-Incentive Modal */}
+      <NaraIncentiveModal
+        isOpen={isNaraIncentiveOpen}
+        onClose={() => setIsNaraIncentiveOpen(false)}
       />
 
       {/* Vorverkauf Modal */}
