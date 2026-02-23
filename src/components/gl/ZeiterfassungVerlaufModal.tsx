@@ -556,74 +556,52 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
     })).filter(group => group.entries.length > 0);
   }, [dayGroups, searchQuery]);
 
-  // Calculate statistics
+  // Calculate statistics using per-day reineArbeitszeit from dayGroups
   const stats = useMemo(() => {
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const day = now.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const kwStart = new Date(now);
+    kwStart.setDate(now.getDate() + mondayOffset);
+    kwStart.setHours(0, 0, 0, 0);
+    const kwEnd = new Date(kwStart);
+    kwEnd.setDate(kwStart.getDate() + 7);
+
+    const getISOWeek = (d: Date) => {
+      const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+      return Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    };
+    const kwNumber = getISOWeek(now);
 
     let totalMinutes = 0;
     let totalMarkets = 0;
-    let mtdMinutes = 0;
-    let mtdMarkets = 0;
+    let kwMinutes = 0;
+    let kwMarkets = 0;
+    let totalDays = 0;
+    let kwDays = 0;
 
-    // Calculate average workday from day tracking data
-    let totalWorkdayMinutes = 0;
-    let workdayCount = 0;
-    let mtdWorkdayMinutes = 0;
-    let mtdWorkdayCount = 0;
+    dayGroups.forEach(group => {
+      const entryDate = new Date(group.date + 'T00:00:00');
+      const isKw = entryDate >= kwStart && entryDate < kwEnd;
 
-    // Get unique dates from entries
-    const uniqueDates = [...new Set(entries.map(e => e.date))];
-    
-    uniqueDates.forEach(date => {
-      const tracking = dayTrackingMap[date];
-      const entryDate = new Date(date);
-      const isMtd = entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
-      
-      if (tracking?.day_start_time && tracking?.day_end_time) {
-        const startMins = parseTimeToMinutes(tracking.day_start_time);
-        const endMins = parseTimeToMinutes(tracking.day_end_time);
-        const dayDuration = endMins - startMins;
-        
-        if (dayDuration > 0) {
-          totalWorkdayMinutes += dayDuration;
-          workdayCount += 1;
-          
-          if (isMtd) {
-            mtdWorkdayMinutes += dayDuration;
-            mtdWorkdayCount += 1;
-          }
-        }
+      const reineMins = parseDuration(group.reineArbeitszeit || '0:00');
+      const dayMarkets = group.entries.filter(e => e.type === 'market').length;
+
+      totalMinutes += reineMins;
+      totalMarkets += dayMarkets;
+      totalDays += 1;
+
+      if (isKw) {
+        kwMinutes += reineMins;
+        kwMarkets += dayMarkets;
+        kwDays += 1;
       }
     });
 
-    entries.forEach(entry => {
-      const entryDate = new Date(entry.date);
-      const isMtd = entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
-
-      if (entry.type === 'market') {
-        const visitMins = parseDuration(entry.besuchszeit.duration);
-        totalMinutes += visitMins;
-        totalMarkets += 1;
-
-        if (isMtd) {
-          mtdMinutes += visitMins;
-          mtdMarkets += 1;
-        }
-      } else {
-        const zusatzMins = parseDuration(entry.duration);
-        totalMinutes += zusatzMins;
-        if (isMtd) {
-          mtdMinutes += zusatzMins;
-        }
-      }
-    });
-
-    const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
-
-    const avgWorkday = workdayCount > 0 ? Math.round(totalWorkdayMinutes / workdayCount) : 0;
-    const mtdAvgWorkday = mtdWorkdayCount > 0 ? Math.round(mtdWorkdayMinutes / mtdWorkdayCount) : 0;
+    const avgWorkday = totalDays > 0 ? Math.round(totalMinutes / totalDays) : 0;
+    const kwAvgWorkday = kwDays > 0 ? Math.round(kwMinutes / kwDays) : 0;
 
     return {
       total: {
@@ -632,13 +610,13 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
         avgWorkday: formatMinutes(avgWorkday),
       },
       mtd: {
-        label: `MTD (${monthNames[currentMonth]} ${currentYear})`,
-        arbeitszeit: formatMinutes(mtdMinutes),
-        markets: mtdMarkets,
-        avgWorkday: formatMinutes(mtdAvgWorkday),
+        label: `KW ${kwNumber}`,
+        arbeitszeit: formatMinutes(kwMinutes),
+        markets: kwMarkets,
+        avgWorkday: formatMinutes(kwAvgWorkday),
       },
     };
-  }, [entries, dayTrackingMap]);
+  }, [dayGroups]);
 
   // Edit handlers
   const handleEditClick = (id: string, entry: TimeEntry) => {

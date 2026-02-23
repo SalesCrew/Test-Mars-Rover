@@ -988,13 +988,20 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
     const glProfiles: GLProfileData[] = Object.keys(glGroups).map(glId => {
       const { gl, entries: glEntries } = glGroups[glId];
       
-      // Group entries by date
+      // Group entries by date (market visits + zusatz-only days)
       const dateGroups: { [date: string]: ZeiterfassungEntry[] } = {};
       glEntries.forEach(entry => {
         const date = entry.created_at.split('T')[0];
         if (!dateGroups[date]) dateGroups[date] = [];
         dateGroups[date].push(entry);
       });
+      zusatzEntries
+        .filter(z => z.gebietsleiter_id === glId)
+        .forEach(z => {
+          if (z.entry_date && !dateGroups[z.entry_date]) {
+            dateGroups[z.entry_date] = [];
+          }
+        });
 
       let totalReineArbeitszeit = 0;
       let totalErsteLetzteSpan = 0;
@@ -1045,7 +1052,29 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
 
         const glZusatzForDay = allGlZusatzForDayProfile.filter(z => z.is_work_time_deduction);
         const unterbrechungMinutes = glZusatzForDay.reduce((sum, z) => sum + parseInterval(z.zeit_diff), 0);
-        const netDayMinutes = Math.max(0, dayTotalMinutes - unterbrechungMinutes);
+        const dtKey1 = `${glId}-${date}`;
+        const dtKey2 = `${date}-${glId}`;
+        const dayTrack = dayTrackingData[dtKey1] || dayTrackingData[dtKey2];
+        const parseT = (t: string) => { const p = t.split(':').map(Number); return p[0] * 60 + p[1]; };
+
+        const ersteAktionStr = earliestTime
+          ? `${(earliestTime as Date).getHours().toString().padStart(2, '0')}:${(earliestTime as Date).getMinutes().toString().padStart(2, '0')}`
+          : null;
+        const letzteAktionStr = latestTime
+          ? `${(latestTime as Date).getHours().toString().padStart(2, '0')}:${(latestTime as Date).getMinutes().toString().padStart(2, '0')}`
+          : null;
+
+        const effectiveStart = dayTrack?.day_start_time || ersteAktionStr;
+        const effectiveEnd = dayTrack?.day_end_time || letzteAktionStr;
+
+        let netDayMinutes: number;
+        if (effectiveStart && effectiveEnd) {
+          const daySpan = parseT(effectiveEnd) - parseT(effectiveStart);
+          netDayMinutes = Math.max(0, daySpan - unterbrechungMinutes);
+        } else {
+          netDayMinutes = Math.max(0, dayTotalMinutes - unterbrechungMinutes);
+        }
+
 
         const ersteAktion = earliestTime
           ? `${(earliestTime as Date).getHours().toString().padStart(2, '0')}:${(earliestTime as Date).getMinutes().toString().padStart(2, '0')}`
