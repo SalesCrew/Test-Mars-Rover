@@ -317,7 +317,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
     }
   };
 
-  const renderTimeEdit = (editKey: string, von: string, bis: string, deleteInfo?: { id: string; type: 'market' | 'zusatz'; label: string }) => {
+  const renderTimeEdit = (editKey: string, _von: string, _bis: string, deleteInfo?: { id: string; type: 'market' | 'zusatz'; label: string }) => {
     const isEditing = editingTimeId === editKey;
     if (isEditing) {
       return (
@@ -363,7 +363,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
     return null;
   };
 
-  const renderAnfahrtTimeEdit = (editKey: string, startTime: string) => {
+  const renderAnfahrtTimeEdit = (editKey: string, _startTime: string) => {
     const isEditing = editingTimeId === editKey;
     if (isEditing) {
       return (
