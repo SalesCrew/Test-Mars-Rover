@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CaretDown, CaretRight, CaretLeft, Storefront, Car, CalendarCheck, TrendUp, Receipt, User, MagnifyingGlass, Pause, Star, FirstAidKit, House, GraduationCap, Warehouse, Path, Bed } from '@phosphor-icons/react';
+import ReactDOM from 'react-dom';
+import { CaretDown, CaretRight, CaretLeft, Storefront, Car, CalendarCheck, TrendUp, Receipt, User, MagnifyingGlass, Pause, Star, FirstAidKit, House, GraduationCap, Warehouse, Path, Bed, Check, X, Trash, Warning } from '@phosphor-icons/react';
 import XLSX from 'xlsx-js-style';
 import fragebogenService from '../../services/fragebogenService';
 import styles from './ZeiterfassungPage.module.css';
@@ -201,8 +202,14 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
   // Profile view state
   const [selectedGLId, setSelectedGLId] = useState<string | null>(null);
   const [timeframeFilter, _setTimeframeFilter] = useState<'all' | 'mtd' | 'kw'>('all');
-  void _setTimeframeFilter; // Reserved for future timeframe filter UI
+  void _setTimeframeFilter;
   const [glSearchQuery, setGlSearchQuery] = useState('');
+
+  // Inline time editing state
+  const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
+  const [editTimeData, setEditTimeData] = useState<{ von: string; bis: string }>({ von: '', bis: '' });
+  const [confirmDeleteTime, setConfirmDeleteTime] = useState<{ id: string; type: 'market' | 'zusatz'; label: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -211,17 +218,209 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
   const loadData = async () => {
     try {
       setLoading(true);
-      const [zeitData, zusatzData] = await Promise.all([
+      const [zeitData, zusatzData, dayTrackingAll] = await Promise.all([
         fragebogenService.zeiterfassung.getForAdmin(),
-        fetch(`${fragebogenService.API_URL}/zusatz-zeiterfassung-all`).then(r => r.ok ? r.json() : [])
+        fetch(`${fragebogenService.API_URL}/zusatz-zeiterfassung-all`).then(r => r.ok ? r.json() : []),
+        fetch(`${fragebogenService.API_URL}/day-tracking-all`).then(r => r.ok ? r.json() : [])
       ]);
       setEntries(zeitData);
       setZusatzEntries(zusatzData);
+      
+      if (dayTrackingAll && dayTrackingAll.length > 0) {
+        const dtMap: Record<string, { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean }> = {};
+        dayTrackingAll.forEach((dt: any) => {
+          const val = {
+            day_start_time: dt.day_start_time || null,
+            day_end_time: dt.day_end_time || null,
+            skipped_first_fahrzeit: dt.skipped_first_fahrzeit || false
+          };
+          dtMap[`${dt.tracking_date}-${dt.gebietsleiter_id}`] = val;
+          dtMap[`${dt.gebietsleiter_id}-${dt.tracking_date}`] = val;
+        });
+        setDayTrackingData(prev => ({ ...dtMap, ...prev }));
+      }
     } catch (error) {
       console.error('Error loading zeiterfassung:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const startTimeEdit = (editKey: string, von: string, bis: string) => {
+    setEditingTimeId(editKey);
+    const strip = (t: string) => t ? t.replace(/:00$/, '').substring(0, 5) : '';
+    setEditTimeData({ von: strip(von), bis: strip(bis) });
+  };
+
+  const cancelTimeEdit = () => {
+    setEditingTimeId(null);
+    setEditTimeData({ von: '', bis: '' });
+  };
+
+  const calcEditDuration = (von: string, bis: string): string => {
+    if (!von || !bis || von.length < 4 || bis.length < 4) return '--:--';
+    const [vH, vM] = von.split(':').map(Number);
+    const [bH, bM] = bis.split(':').map(Number);
+    if (isNaN(vH) || isNaN(vM) || isNaN(bH) || isNaN(bM)) return '--:--';
+    let diff = (bH * 60 + bM) - (vH * 60 + vM);
+    if (diff < 0) diff += 24 * 60;
+    return `${Math.floor(diff / 60)}:${(diff % 60).toString().padStart(2, '0')}`;
+  };
+
+  const handleSaveTimeEdit = async () => {
+    if (!editingTimeId || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      const [type, id] = editingTimeId.split('|');
+      if (type === 'market') {
+        await fragebogenService.zeiterfassung.update(id, {
+          besuchszeit_von: editTimeData.von,
+          besuchszeit_bis: editTimeData.bis
+        });
+      } else if (type === 'zusatz') {
+        await fragebogenService.zeiterfassung.updateZusatz(id, {
+          zeit_von: editTimeData.von,
+          zeit_bis: editTimeData.bis
+        });
+      } else if (type === 'anfahrt') {
+        const [glId, date] = id.split('::');
+        await fragebogenService.zeiterfassung.updateDayTimes(glId, date, { day_start_time: editTimeData.von });
+      } else if (type === 'heimfahrt') {
+        const [glId, date] = id.split('::');
+        await fragebogenService.zeiterfassung.updateDayTimes(glId, date, { day_end_time: editTimeData.bis });
+      }
+      cancelTimeEdit();
+      await loadData();
+    } catch (error) {
+      console.error('Error saving time edit:', error);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteTimeEntry = async () => {
+    if (!confirmDeleteTime) return;
+    setSavingEdit(true);
+    try {
+      if (confirmDeleteTime.type === 'market') {
+        await fragebogenService.zeiterfassung.deleteEntry(confirmDeleteTime.id);
+      } else if (confirmDeleteTime.type === 'zusatz') {
+        await fragebogenService.zeiterfassung.deleteZusatz(confirmDeleteTime.id);
+      }
+      setConfirmDeleteTime(null);
+      cancelTimeEdit();
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const renderTimeEdit = (editKey: string, von: string, bis: string, deleteInfo?: { id: string; type: 'market' | 'zusatz'; label: string }) => {
+    const isEditing = editingTimeId === editKey;
+    if (isEditing) {
+      return (
+        <div className={styles.inlineEditForm}>
+          <div className={styles.inlineEditRow}>
+            <input
+              type="text"
+              className={styles.editTimeInput}
+              value={editTimeData.von}
+              onChange={(e) => setEditTimeData(prev => ({ ...prev, von: e.target.value }))}
+              placeholder="HH:MM"
+              maxLength={5}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <span className={styles.editTimeSep}>-</span>
+            <input
+              type="text"
+              className={styles.editTimeInput}
+              value={editTimeData.bis}
+              onChange={(e) => setEditTimeData(prev => ({ ...prev, bis: e.target.value }))}
+              placeholder="HH:MM"
+              maxLength={5}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <span className={styles.editTimeDuration}>{calcEditDuration(editTimeData.von, editTimeData.bis)}</span>
+            <div className={styles.inlineEditActions}>
+              <button className={styles.editSaveBtn} onClick={(e) => { e.stopPropagation(); handleSaveTimeEdit(); }} disabled={savingEdit} title="Speichern">
+                <Check size={14} weight="bold" />
+              </button>
+              <button className={styles.editCancelBtn} onClick={(e) => { e.stopPropagation(); cancelTimeEdit(); }} title="Abbrechen">
+                <X size={14} weight="bold" />
+              </button>
+              {deleteInfo && (
+                <button className={styles.editDeleteBtn} onClick={(e) => { e.stopPropagation(); setConfirmDeleteTime(deleteInfo); }} title="Löschen">
+                  <Trash size={14} weight="regular" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderAnfahrtTimeEdit = (editKey: string, startTime: string) => {
+    const isEditing = editingTimeId === editKey;
+    if (isEditing) {
+      return (
+        <div className={styles.inlineEditForm}>
+          <div className={styles.inlineEditRow}>
+            <input
+              type="text"
+              className={styles.editTimeInput}
+              value={editTimeData.von}
+              onChange={(e) => setEditTimeData(prev => ({ ...prev, von: e.target.value }))}
+              placeholder="HH:MM"
+              maxLength={5}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className={styles.inlineEditActions}>
+              <button className={styles.editSaveBtn} onClick={(e) => { e.stopPropagation(); handleSaveTimeEdit(); }} disabled={savingEdit} title="Speichern">
+                <Check size={14} weight="bold" />
+              </button>
+              <button className={styles.editCancelBtn} onClick={(e) => { e.stopPropagation(); cancelTimeEdit(); }} title="Abbrechen">
+                <X size={14} weight="bold" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderHeimfahrtTimeEdit = (editKey: string) => {
+    const isEditing = editingTimeId === editKey;
+    if (isEditing) {
+      return (
+        <div className={styles.inlineEditForm}>
+          <div className={styles.inlineEditRow}>
+            <input
+              type="text"
+              className={styles.editTimeInput}
+              value={editTimeData.bis}
+              onChange={(e) => setEditTimeData(prev => ({ ...prev, bis: e.target.value }))}
+              placeholder="HH:MM"
+              maxLength={5}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className={styles.inlineEditActions}>
+              <button className={styles.editSaveBtn} onClick={(e) => { e.stopPropagation(); handleSaveTimeEdit(); }} disabled={savingEdit} title="Speichern">
+                <Check size={14} weight="bold" />
+              </button>
+              <button className={styles.editCancelBtn} onClick={(e) => { e.stopPropagation(); cancelTimeEdit(); }} title="Abbrechen">
+                <X size={14} weight="bold" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   // DEV: Test data generation
@@ -679,49 +878,42 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         let totalMinutes = 0;
 
         glEntries.forEach(entry => {
-          // Check fahrzeit_von
           if (entry.fahrzeit_von) {
             const time = parseTime(entry.fahrzeit_von);
-            if (time && (!earliestTime || time < earliestTime)) {
-              earliestTime = time;
-            }
+            if (time && (!earliestTime || time < earliestTime)) earliestTime = time;
           }
-
-          // Check fahrzeit_bis
           if (entry.fahrzeit_bis) {
             const time = parseTime(entry.fahrzeit_bis);
-            if (time && (!latestTime || time > latestTime)) {
-              latestTime = time;
-            }
+            if (time && (!latestTime || time > latestTime)) latestTime = time;
           }
-
-          // Check besuchszeit_von
           if (entry.besuchszeit_von) {
             const time = parseTime(entry.besuchszeit_von);
-            if (time && (!earliestTime || time < earliestTime)) {
-              earliestTime = time;
-            }
+            if (time && (!earliestTime || time < earliestTime)) earliestTime = time;
           }
-
-          // Check besuchszeit_bis
           if (entry.besuchszeit_bis) {
             const time = parseTime(entry.besuchszeit_bis);
-            if (time && (!latestTime || time > latestTime)) {
-              latestTime = time;
-            }
+            if (time && (!latestTime || time > latestTime)) latestTime = time;
           }
-
-          // Add durations (use calculated_fahrzeit if available, fallback to manual fahrzeit_diff)
           totalMinutes += parseInterval(entry.calculated_fahrzeit || entry.fahrzeit_diff);
           totalMinutes += parseInterval(entry.besuchszeit_diff);
         });
 
-        // Subtract Unterbrechung time (work time deductions)
-        const glZusatzForDay = zusatzEntries.filter(z => 
-          z.gebietsleiter_id === glId && 
-          z.entry_date === date && 
-          z.is_work_time_deduction
+        // Include zusatz entry times in erste/letzte computation
+        const allGlZusatzForDay = zusatzEntries.filter(z => 
+          z.gebietsleiter_id === glId && z.entry_date === date
         );
+        allGlZusatzForDay.forEach(z => {
+          if (z.zeit_von) {
+            const time = parseTime(z.zeit_von);
+            if (time && (!earliestTime || time < earliestTime)) earliestTime = time;
+          }
+          if (z.zeit_bis) {
+            const time = parseTime(z.zeit_bis);
+            if (time && (!latestTime || time > latestTime)) latestTime = time;
+          }
+        });
+
+        const glZusatzForDay = allGlZusatzForDay.filter(z => z.is_work_time_deduction);
         const unterbrechungMinutes = glZusatzForDay.reduce((sum, z) => sum + parseInterval(z.zeit_diff), 0);
         const netMinutes = Math.max(0, totalMinutes - unterbrechungMinutes);
 
@@ -836,12 +1028,22 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           dayTotalMinutes += parseInterval(entry.besuchszeit_diff);
         });
 
-        // Subtract Unterbrechung time (work time deductions)
-        const glZusatzForDay = zusatzEntries.filter(z => 
-          z.gebietsleiter_id === glId && 
-          z.entry_date === date && 
-          z.is_work_time_deduction
+        // Include zusatz entry times in erste/letzte computation
+        const allGlZusatzForDayProfile = zusatzEntries.filter(z => 
+          z.gebietsleiter_id === glId && z.entry_date === date
         );
+        allGlZusatzForDayProfile.forEach(z => {
+          if (z.zeit_von) {
+            const time = parseTime(z.zeit_von);
+            if (time && (!earliestTime || time < earliestTime)) earliestTime = time;
+          }
+          if (z.zeit_bis) {
+            const time = parseTime(z.zeit_bis);
+            if (time && (!latestTime || time > latestTime)) latestTime = time;
+          }
+        });
+
+        const glZusatzForDay = allGlZusatzForDayProfile.filter(z => z.is_work_time_deduction);
         const unterbrechungMinutes = glZusatzForDay.reduce((sum, z) => sum + parseInterval(z.zeit_diff), 0);
         const netDayMinutes = Math.max(0, dayTotalMinutes - unterbrechungMinutes);
 
@@ -1106,6 +1308,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       const currentKW = getWeekNumber(now);
 
       return (
+        <>
         <div className={styles.profileContainer}>
           {/* Header with back button */}
           <div className={styles.glDetailHeader}>
@@ -1327,20 +1530,23 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                               if (dayTracking?.day_start_time && !dayTracking.skipped_first_fahrzeit && timelineItems.length > 0) {
                                 const firstItem = timelineItems[0];
                                 const anfahrtMinutes = calcGapMinutes(dayTracking.day_start_time, firstItem.startTime);
+                                const anfahrtEditKey = `anfahrt|${selectedGL.glId}::${day.date}`;
                                 if (anfahrtMinutes > 0) {
                                   renderedItems.push(
                                     <div key="anfahrt" className={styles.fahrzeitLine}>
                                       <div className={styles.fahrzeitInfo}>
                                         <Car size={16} weight="fill" />
                                         <span className={styles.fahrzeitLabel}>Anfahrt</span>
-                                        <div className={styles.fahrzeitTimeRight}>
-                                          <span className={styles.fahrzeitTime}>
-                                            {dayTracking.day_start_time} - {firstItem.startTime}
-                                          </span>
-                                          <span className={styles.duration}>
-                                            {formatGap(anfahrtMinutes)}
-                                          </span>
-                                        </div>
+                                        {editingTimeId === anfahrtEditKey ? renderAnfahrtTimeEdit(anfahrtEditKey, dayTracking.day_start_time) : (
+                                          <div className={`${styles.fahrzeitTimeRight} ${styles.editableTime}`} onClick={() => startTimeEdit(anfahrtEditKey, dayTracking.day_start_time!, '')}>
+                                            <span className={styles.fahrzeitTime}>
+                                              {dayTracking.day_start_time} - {firstItem.startTime}
+                                            </span>
+                                            <span className={styles.duration}>
+                                              {formatGap(anfahrtMinutes)}
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -1390,20 +1596,28 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                           <span className={styles.marketAddress}>
                                             {entry.market.address || ''}{entry.market.postal_code ? `, ${entry.market.postal_code}` : ''}{entry.market.city ? ` ${entry.market.city}` : ''}
                                           </span>
-                                          <div className={styles.marketTimeRight}>
-                                            <span className={styles.besuchszeit}>
-                                              {entry.besuchszeit_von || '--:--'} - {entry.besuchszeit_bis || '--:--'}
-                                            </span>
-                                            <span 
-                                              className={styles.duration}
-                                              style={{ 
-                                                backgroundColor: getVisitDurationColor(entry.besuchszeit_diff, 0.12),
-                                                color: getVisitDurationColor(entry.besuchszeit_diff)
-                                              }}
-                                            >
-                                              {formatInterval(entry.besuchszeit_diff)}
-                                            </span>
-                                          </div>
+                                          {(() => {
+                                            const marketEditKey = `market|${entry.id}`;
+                                            if (editingTimeId === marketEditKey) {
+                                              return renderTimeEdit(marketEditKey, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', { id: entry.id, type: 'market', label: `${entry.market.chain} ${entry.market.name}` });
+                                            }
+                                            return (
+                                              <div className={`${styles.marketTimeRight} ${styles.editableTime}`} onClick={(e) => { e.stopPropagation(); startTimeEdit(marketEditKey, entry.besuchszeit_von || '', entry.besuchszeit_bis || ''); }}>
+                                                <span className={styles.besuchszeit}>
+                                                  {entry.besuchszeit_von || '--:--'} - {entry.besuchszeit_bis || '--:--'}
+                                                </span>
+                                                <span 
+                                                  className={styles.duration}
+                                                  style={{ 
+                                                    backgroundColor: getVisitDurationColor(entry.besuchszeit_diff, 0.12),
+                                                    color: getVisitDurationColor(entry.besuchszeit_diff)
+                                                  }}
+                                                >
+                                                  {formatInterval(entry.besuchszeit_diff)}
+                                                </span>
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       </div>
                                     </React.Fragment>
@@ -1411,6 +1625,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                 } else {
                                   const zusatz = item.entry;
                                   const ZusatzIcon = zusatzReasonIcons[zusatz.reason] || Pause;
+                                  const zusatzEditKey = `zusatz|${zusatz.id}`;
                                   renderedItems.push(
                                     <React.Fragment key={zusatz.id}>
                                       {showFahrzeit ? (
@@ -1450,14 +1665,16 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                             )}
                                             {zusatz.kommentar && <span style={{ color: '#64748B', fontWeight: 400, marginLeft: '8px' }}>{zusatz.kommentar}</span>}
                                           </span>
-                                          <div className={styles.fahrzeitTimeRight}>
-                                            <span className={styles.fahrzeitTime}>
-                                              {zusatz.zeit_von} - {zusatz.zeit_bis}
-                                            </span>
-                                            <span className={styles.duration}>
-                                              {formatInterval(zusatz.zeit_diff)}
-                                            </span>
-                                          </div>
+                                          {editingTimeId === zusatzEditKey ? renderTimeEdit(zusatzEditKey, zusatz.zeit_von, zusatz.zeit_bis, { id: zusatz.id, type: 'zusatz', label: zusatz.reason_label }) : (
+                                            <div className={`${styles.fahrzeitTimeRight} ${styles.editableTime}`} onClick={() => startTimeEdit(zusatzEditKey, zusatz.zeit_von, zusatz.zeit_bis)}>
+                                              <span className={styles.fahrzeitTime}>
+                                                {zusatz.zeit_von} - {zusatz.zeit_bis}
+                                              </span>
+                                              <span className={styles.duration}>
+                                                {formatInterval(zusatz.zeit_diff)}
+                                              </span>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </React.Fragment>
@@ -1469,20 +1686,23 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                               if (dayTracking?.day_end_time && timelineItems.length > 0) {
                                 const lastItem = timelineItems[timelineItems.length - 1];
                                 const heimfahrtMinutes = calcGapMinutes(lastItem.endTime, dayTracking.day_end_time);
+                                const heimfahrtEditKey = `heimfahrt|${selectedGL.glId}::${day.date}`;
                                 if (heimfahrtMinutes > 0) {
                                   renderedItems.push(
                                     <div key="heimfahrt" className={styles.fahrzeitLine}>
                                       <div className={styles.fahrzeitInfo}>
                                         <Car size={16} weight="fill" />
                                         <span className={styles.fahrzeitLabel}>Heimfahrt</span>
-                                        <div className={styles.fahrzeitTimeRight}>
-                                          <span className={styles.fahrzeitTime}>
-                                            {lastItem.endTime} - {dayTracking.day_end_time}
-                                          </span>
-                                          <span className={styles.duration}>
-                                            {formatGap(heimfahrtMinutes)}
-                                          </span>
-                                        </div>
+                                        {editingTimeId === heimfahrtEditKey ? renderHeimfahrtTimeEdit(heimfahrtEditKey) : (
+                                          <div className={`${styles.fahrzeitTimeRight} ${styles.editableTime}`} onClick={() => startTimeEdit(heimfahrtEditKey, '', dayTracking.day_end_time!)}>
+                                            <span className={styles.fahrzeitTime}>
+                                              {lastItem.endTime} - {dayTracking.day_end_time}
+                                            </span>
+                                            <span className={styles.duration}>
+                                              {formatGap(heimfahrtMinutes)}
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -1568,6 +1788,25 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
             })}
           </div>
         </div>
+        {confirmDeleteTime && ReactDOM.createPortal(
+          <div className={styles.deleteConfirmOverlay} onClick={() => setConfirmDeleteTime(null)}>
+            <div className={styles.deleteConfirmModal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.deleteConfirmTitle}>
+                <Warning size={18} weight="fill" style={{ color: '#EF4444', marginRight: '8px', verticalAlign: 'middle' }} />
+                Eintrag wirklich löschen?
+              </div>
+              <div className={styles.deleteConfirmText}>
+                „{confirmDeleteTime.label}" wird unwiderruflich gelöscht.
+              </div>
+              <div className={styles.deleteConfirmActions}>
+                <button className={styles.deleteConfirmCancel} onClick={() => setConfirmDeleteTime(null)}>Abbrechen</button>
+                <button className={styles.deleteConfirmDelete} onClick={handleDeleteTimeEntry} disabled={savingEdit}>Löschen</button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+        </>
       );
     }
 
@@ -1803,20 +2042,23 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                             if (dayTracking?.day_start_time && !dayTracking.skipped_first_fahrzeit && timelineItems.length > 0) {
                               const firstItem = timelineItems[0];
                               const anfahrtMinutes = calcGapMinutes(dayTracking.day_start_time, firstItem.startTime);
+                              const anfahrtEditKey = `anfahrt|${gl.glId}::${dayGroup.date}`;
                               if (anfahrtMinutes > 0) {
                                 renderedItems.push(
                                   <div key="anfahrt" className={styles.fahrzeitLine}>
                                     <div className={styles.fahrzeitInfo}>
                                       <Car size={16} weight="fill" />
                                       <span className={styles.fahrzeitLabel}>Anfahrt</span>
-                                      <div className={styles.fahrzeitTimeRight}>
-                                        <span className={styles.fahrzeitTime}>
-                                          {dayTracking.day_start_time} - {firstItem.startTime}
-                                        </span>
-                                        <span className={styles.duration}>
-                                          {formatGap(anfahrtMinutes)}
-                                        </span>
-                                      </div>
+                                      {editingTimeId === anfahrtEditKey ? renderAnfahrtTimeEdit(anfahrtEditKey, dayTracking.day_start_time) : (
+                                        <div className={`${styles.fahrzeitTimeRight} ${styles.editableTime}`} onClick={() => startTimeEdit(anfahrtEditKey, dayTracking.day_start_time!, '')}>
+                                          <span className={styles.fahrzeitTime}>
+                                            {dayTracking.day_start_time} - {firstItem.startTime}
+                                          </span>
+                                          <span className={styles.duration}>
+                                            {formatGap(anfahrtMinutes)}
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 );
@@ -1824,16 +2066,15 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                             }
                             
                             timelineItems.forEach((item, idx) => {
-                              // Calculate Fahrzeit as gap from previous item's end to this item's start
                               const prevItem = idx > 0 ? timelineItems[idx - 1] : null;
                               const gapMinutes = prevItem ? calcGapMinutes(prevItem.endTime, item.startTime) : 0;
                               const showFahrzeit = gapMinutes > 0;
                               
                               if (item.type === 'market') {
                                 const entry = item.entry;
+                                const marketEditKey = `market|${entry.id}`;
                                 renderedItems.push(
                                   <React.Fragment key={entry.id}>
-                                    {/* Fahrzeit Line - calculated from gap between previous action and this one */}
                                     {showFahrzeit ? (
                                       <div className={styles.fahrzeitLine}>
                                         <div className={styles.fahrzeitInfo}>
@@ -1851,7 +2092,6 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                       </div>
                                     ) : null}
 
-                                    {/* Market Card */}
                                     <div 
                                       className={styles.marketCard}
                                       style={{ 
@@ -1866,20 +2106,27 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                         <span className={styles.marketAddress}>
                                           {entry.market.address || ''}{entry.market.postal_code ? `, ${entry.market.postal_code}` : ''}{entry.market.city ? ` ${entry.market.city}` : ''}
                                         </span>
-                                        <div className={styles.marketTimeRight}>
-                                          <span className={styles.besuchszeit}>
-                                            {entry.besuchszeit_von || '--:--'} - {entry.besuchszeit_bis || '--:--'}
-                                          </span>
-                                          <span 
-                                            className={styles.duration}
-                                            style={{ 
-                                              backgroundColor: getVisitDurationColor(entry.besuchszeit_diff, 0.12),
-                                              color: getVisitDurationColor(entry.besuchszeit_diff)
-                                            }}
-                                          >
-                                            {formatInterval(entry.besuchszeit_diff)}
-                                          </span>
-                                        </div>
+                                        {(() => {
+                                          if (editingTimeId === marketEditKey) {
+                                            return renderTimeEdit(marketEditKey, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', { id: entry.id, type: 'market', label: `${entry.market.chain} ${entry.market.name}` });
+                                          }
+                                          return (
+                                            <div className={`${styles.marketTimeRight} ${styles.editableTime}`} onClick={(e) => { e.stopPropagation(); startTimeEdit(marketEditKey, entry.besuchszeit_von || '', entry.besuchszeit_bis || ''); }}>
+                                              <span className={styles.besuchszeit}>
+                                                {entry.besuchszeit_von || '--:--'} - {entry.besuchszeit_bis || '--:--'}
+                                              </span>
+                                              <span 
+                                                className={styles.duration}
+                                                style={{ 
+                                                  backgroundColor: getVisitDurationColor(entry.besuchszeit_diff, 0.12),
+                                                  color: getVisitDurationColor(entry.besuchszeit_diff)
+                                                }}
+                                              >
+                                                {formatInterval(entry.besuchszeit_diff)}
+                                              </span>
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
                                     </div>
                                   </React.Fragment>
@@ -1887,6 +2134,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                               } else {
                                 const zusatz = item.entry;
                                 const ZusatzIcon = zusatzReasonIcons[zusatz.reason] || Pause;
+                                const zusatzEditKey = `zusatz|${zusatz.id}`;
                                 renderedItems.push(
                                   <React.Fragment key={zusatz.id}>
                                     {showFahrzeit ? (
@@ -1926,14 +2174,16 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                           )}
                                           {zusatz.kommentar && <span style={{ color: '#64748B', fontWeight: 400, marginLeft: '8px' }}>{zusatz.kommentar}</span>}
                                         </span>
-                                        <div className={styles.fahrzeitTimeRight}>
-                                          <span className={styles.fahrzeitTime}>
-                                            {zusatz.zeit_von} - {zusatz.zeit_bis}
-                                          </span>
-                                          <span className={styles.duration}>
-                                            {formatInterval(zusatz.zeit_diff)}
-                                          </span>
-                                        </div>
+                                        {editingTimeId === zusatzEditKey ? renderTimeEdit(zusatzEditKey, zusatz.zeit_von, zusatz.zeit_bis, { id: zusatz.id, type: 'zusatz', label: zusatz.reason_label }) : (
+                                          <div className={`${styles.fahrzeitTimeRight} ${styles.editableTime}`} onClick={() => startTimeEdit(zusatzEditKey, zusatz.zeit_von, zusatz.zeit_bis)}>
+                                            <span className={styles.fahrzeitTime}>
+                                              {zusatz.zeit_von} - {zusatz.zeit_bis}
+                                            </span>
+                                            <span className={styles.duration}>
+                                              {formatInterval(zusatz.zeit_diff)}
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   </React.Fragment>
@@ -1945,20 +2195,23 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                             if (dayTracking?.day_end_time && timelineItems.length > 0) {
                               const lastItem = timelineItems[timelineItems.length - 1];
                               const heimfahrtMinutes = calcGapMinutes(lastItem.endTime, dayTracking.day_end_time);
+                              const heimfahrtEditKey = `heimfahrt|${gl.glId}::${dayGroup.date}`;
                               if (heimfahrtMinutes > 0) {
                                 renderedItems.push(
                                   <div key="heimfahrt" className={styles.fahrzeitLine}>
                                     <div className={styles.fahrzeitInfo}>
                                       <Car size={16} weight="fill" />
                                       <span className={styles.fahrzeitLabel}>Heimfahrt</span>
-                                      <div className={styles.fahrzeitTimeRight}>
-                                        <span className={styles.fahrzeitTime}>
-                                          {lastItem.endTime} - {dayTracking.day_end_time}
-                                        </span>
-                                        <span className={styles.duration}>
-                                          {formatGap(heimfahrtMinutes)}
-                                        </span>
-                                      </div>
+                                      {editingTimeId === heimfahrtEditKey ? renderHeimfahrtTimeEdit(heimfahrtEditKey) : (
+                                        <div className={`${styles.fahrzeitTimeRight} ${styles.editableTime}`} onClick={() => startTimeEdit(heimfahrtEditKey, '', dayTracking.day_end_time!)}>
+                                          <span className={styles.fahrzeitTime}>
+                                            {lastItem.endTime} - {dayTracking.day_end_time}
+                                          </span>
+                                          <span className={styles.duration}>
+                                            {formatGap(heimfahrtMinutes)}
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 );
@@ -2046,6 +2299,24 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           })}
         </div>
       ))}
+      {confirmDeleteTime && ReactDOM.createPortal(
+        <div className={styles.deleteConfirmOverlay} onClick={() => setConfirmDeleteTime(null)}>
+          <div className={styles.deleteConfirmModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.deleteConfirmTitle}>
+              <Warning size={18} weight="fill" style={{ color: '#EF4444', marginRight: '8px', verticalAlign: 'middle' }} />
+              Eintrag wirklich löschen?
+            </div>
+            <div className={styles.deleteConfirmText}>
+              „{confirmDeleteTime.label}" wird unwiderruflich gelöscht.
+            </div>
+            <div className={styles.deleteConfirmActions}>
+              <button className={styles.deleteConfirmCancel} onClick={() => setConfirmDeleteTime(null)}>Abbrechen</button>
+              <button className={styles.deleteConfirmDelete} onClick={handleDeleteTimeEntry} disabled={savingEdit}>Löschen</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

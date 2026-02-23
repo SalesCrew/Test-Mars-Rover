@@ -939,3 +939,203 @@
     gap: 12px;
   }
 }
+
+/* Inline Time Editing */
+.editableTime {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin-top: -2px;
+  margin-bottom: -2px;
+  transition: background 0.15s ease;
+}
+
+.editableTime:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.inlineEditForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.inlineEditRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editTimeInput {
+  width: 58px;
+  height: 30px;
+  padding: 0 8px;
+  background: white;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editTimeInput:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.editTimeSep {
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.editTimeDuration {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  margin-left: 4px;
+}
+
+.inlineEditActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.editSaveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editSaveBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}
+
+.editCancelBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #E2E8F0;
+  border-radius: 7px;
+  background: white;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editCancelBtn:hover {
+  background: #F1F5F9;
+  color: #475569;
+}
+
+.editDeleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 7px;
+  background: rgba(239, 68, 68, 0.05);
+  color: #EF4444;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editDeleteBtn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.deleteConfirmOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.deleteConfirmModal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.deleteConfirmTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 8px;
+}
+
+.deleteConfirmText {
+  font-size: 13px;
+  color: #64748B;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.deleteConfirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.deleteConfirmCancel {
+  padding: 9px 18px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deleteConfirmCancel:hover {
+  background: #F8FAFC;
+}
+
+.deleteConfirmDelete {
+  padding: 9px 18px;
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deleteConfirmDelete:hover {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}

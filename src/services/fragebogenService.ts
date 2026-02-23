@@ -706,6 +706,52 @@ export const zeiterfassungApi = {
     const response = await fetch(`${FRAGEBOGEN_API}/zeiterfassung/gl/${glId}/date/${date}`);
     if (!response.ok) throw new Error('Failed to fetch GL day details');
     return response.json();
+  },
+
+  async updateZusatz(id: string, data: { zeit_von?: string; zeit_bis?: string }): Promise<any> {
+    const response = await fetch(`${FRAGEBOGEN_API}/zusatz-zeiterfassung/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update zusatz zeiterfassung');
+    }
+    return response.json();
+  },
+
+  async deleteZusatz(id: string): Promise<void> {
+    const response = await fetch(`${FRAGEBOGEN_API}/zusatz-zeiterfassung/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete zusatz zeiterfassung');
+    }
+  },
+
+  async updateDayTimes(glId: string, date: string, data: { day_start_time?: string; day_end_time?: string }): Promise<any> {
+    const response = await fetch(`${FRAGEBOGEN_API}/day-tracking/update-times`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gebietsleiter_id: glId, date, ...data })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update day times');
+    }
+    return response.json();
+  },
+
+  async deleteEntry(id: string): Promise<void> {
+    const response = await fetch(`${FRAGEBOGEN_API}/zeiterfassung/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete zeiterfassung');
+    }
   }
 };
 
