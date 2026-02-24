@@ -28,6 +28,8 @@ import { BugReportModal } from './BugReportModal';
 import { VorgemerktModal } from './VorgemerktModal';
 import { OnboardingModal } from './OnboardingModal';
 import { MarketsVisitedModal } from './MarketsVisitedModal';
+import { WochenCheckModal } from './WochenCheckModal';
+import { DevPanel } from './DevPanel';
 import Aurora from './Aurora';
 import { produktersatzService } from '../../services/produktersatzService';
 import fragebogenService from '../../services/fragebogenService';
@@ -41,6 +43,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { gebietsleiterService } from '../../services/gebietsleiterService';
 import { marketService } from '../../services/marketService';
 import { API_BASE_URL } from '../../config/database';
+import { wochenCheckService } from '../../services/wochenCheckService';
 import styles from './Dashboard.module.css';
 
 interface DashboardProps {
@@ -67,6 +70,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [isZusatzZeiterfassungOpen, setIsZusatzZeiterfassungOpen] = useState(false);
   const [isZeiterfassungVerlaufOpen, setIsZeiterfassungVerlaufOpen] = useState(false);
   const [isMarketsVisitedOpen, setIsMarketsVisitedOpen] = useState(false);
+  const [isWochenCheckOpen, setIsWochenCheckOpen] = useState(false);
   const [pendingProdukttauschCount, setPendingProdukttauschCount] = useState(0);
   
   // Day tracking state
@@ -94,6 +98,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [realAlerts, setRealAlerts] = useState<MarketFrequencyAlert[]>([]);
   const { isMobile } = useResponsive();
   const { logout, user } = useAuth();
+
+  // Listen for dev panel Wochen-Check trigger
+  useEffect(() => {
+    const handler = () => setIsWochenCheckOpen(true);
+    window.addEventListener('dev:openWochenCheck', handler);
+    return () => window.removeEventListener('dev:openWochenCheck', handler);
+  }, []);
+
+  // Auto-open Wochen-Check if last week is unconfirmed and has entries
+  useEffect(() => {
+    if (!user?.id) return;
+    const checkWochenCheck = async () => {
+      try {
+        const now = new Date();
+        const day = now.getDay();
+        const mondayOffset = day === 0 ? -6 : 1 - day;
+        const thisMonday = new Date(now);
+        thisMonday.setDate(now.getDate() + mondayOffset);
+        thisMonday.setHours(0, 0, 0, 0);
+        const lastMonday = new Date(thisMonday);
+        lastMonday.setDate(thisMonday.getDate() - 7);
+        const lastSunday = new Date(lastMonday);
+        lastSunday.setDate(lastMonday.getDate() + 6);
+        const fmt = (d: Date) => `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+        const weekStartDate = fmt(lastMonday);
+        const weekEndDate = fmt(lastSunday);
+
+        const confirmed = await wochenCheckService.isWeekConfirmed(user.id, weekStartDate);
+        if (confirmed) return;
+
+        const [zeitRes, zusatzRes] = await Promise.all([
+          fragebogenService.zeiterfassung.getByGL(user.id),
+          fetch(`${API_BASE_URL}/fragebogen/zusatz-zeiterfassung/${user.id}`).then(r => r.ok ? r.json() : []),
+        ]);
+        const hasMarketEntries = (zeitRes || []).some((e: any) => {
+          const d = e.created_at?.split('T')[0];
+          return d && d >= weekStartDate && d <= weekEndDate;
+        });
+        const hasZusatzEntries = (zusatzRes || []).some((e: any) => {
+          return e.entry_date && e.entry_date >= weekStartDate && e.entry_date <= weekEndDate;
+        });
+
+        if (hasMarketEntries || hasZusatzEntries) {
+          setIsWochenCheckOpen(true);
+        }
+      } catch (err) {
+        console.error('Wochen-Check auto-open failed:', err);
+      }
+    };
+    checkWochenCheck();
+  }, [user?.id]);
 
   // Fetch GL profile data on mount
   useEffect(() => {
@@ -956,6 +1011,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         userId={user?.id || ''}
         onClose={() => setIsMarketsVisitedOpen(false)}
       />
+
+      {/* Wochen-Check Modal */}
+      <WochenCheckModal
+        isOpen={isWochenCheckOpen}
+        onClose={() => setIsWochenCheckOpen(false)}
+      />
+
+      {/* Dev Panel */}
+      <DevPanel onCompleteNextMarket={() => {}} />
     </div>
   );
 };

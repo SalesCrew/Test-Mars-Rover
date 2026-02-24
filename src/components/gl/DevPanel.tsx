@@ -139,11 +139,19 @@ export const DevPanel: React.FC<DevPanelProps> = ({ onCompleteNextMarket, onTogg
         >
           Clear Test Data
         </button>
+
+        <button 
+          className={styles.devButton} 
+          onClick={() => window.dispatchEvent(new CustomEvent('dev:openWochenCheck'))}
+          style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' }}
+        >
+          Wochen-Check öffnen
+        </button>
         
         {/* Placeholder buttons for future functionality */}
-        {Array.from({ length: 14 }, (_, i) => (
+        {Array.from({ length: 13 }, (_, i) => (
           <button key={i} className={styles.devButton} disabled>
-            Function {i + 7}
+            Function {i + 8}
           </button>
         ))}
       </div>

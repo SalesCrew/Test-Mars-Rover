@@ -1,0 +1,1151 @@
+/* Overlay - non-dismissable */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  padding: 20px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal */
+.modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #F1F5F9;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* Warning Banner */
+.warningBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-left: 3px solid #F59E0B;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.warningIcon {
+  color: #D97706;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.warningText {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #92400E;
+  font-weight: 500;
+}
+
+/* Content */
+.content {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Entries List */
+.entriesList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Day Group */
+.dayGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dayHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dayLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.dayLine {
+  flex: 1;
+  height: 1px;
+  background: #E2E8F0;
+}
+
+.dayStats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+}
+
+.dayStatItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dayStatLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.dayStatValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: #F59E0B;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: #94A3B8;
+  font-size: 14px;
+}
+
+.dayEntries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Entry Group */
+.entryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Fahrzeit Card */
+.fahrzeitCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+}
+
+.fahrzeitIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #E2E8F0;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fahrzeitInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.fahrzeitLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fahrzeitTimes {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+}
+
+.fahrzeitDuration {
+  font-size: 12px;
+  color: #64748B;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Market Card */
+.marketCard {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-left: 3px solid #3B82F6;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.marketCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Highlighted entry (>3h) */
+.highlighted {
+  border-left: 3px solid #F59E0B !important;
+  background: rgba(245, 158, 11, 0.04) !important;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.highlightBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.1);
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.marketHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chainBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.marketName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  flex: 1;
+}
+
+.editButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s ease;
+}
+
+.editButton:hover {
+  opacity: 1;
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.marketTimes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.visitLabel {
+  color: #64748B;
+}
+
+.visitTimes {
+  font-weight: 500;
+  color: #1E293B;
+  font-variant-numeric: tabular-nums;
+}
+
+.visitDuration {
+  color: #64748B;
+  font-variant-numeric: tabular-nums;
+}
+
+.marketAddress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.submissionBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.submissionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+.submissionBadge[data-type="vorbesteller"] {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.submissionBadge[data-type="vorverkauf"] {
+  background: rgba(59, 130, 246, 0.08);
+  color: #2563EB;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.submissionBadge[data-type="produkttausch"] {
+  background: rgba(139, 92, 246, 0.08);
+  color: #7C3AED;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+/* Zusatz Card */
+.zusatzCard {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(37, 99, 235, 0.01) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.zusatzCard:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.zusatzIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.zusatzContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zusatzHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zusatzLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.zusatzMarket {
+  font-weight: 400;
+  color: #64748B;
+  font-size: 12px;
+}
+
+.zusatzTimes {
+  font-size: 13px;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.zusatzDuration {
+  color: #64748B;
+  margin-left: 6px;
+}
+
+.zusatzComment {
+  font-size: 12px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+/* Edit Form */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #F8FAFC;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editRow label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  min-width: 80px;
+}
+
+.editRow input {
+  height: 36px;
+  padding: 0 12px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1E293B;
+  width: 80px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.editRow input:focus {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.editRow span {
+  color: #94A3B8;
+}
+
+.editFullWidth {
+  flex: 1 !important;
+  width: auto !important;
+  text-align: left !important;
+}
+
+/* Time Input with Clock */
+.timeInputWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.editTimeInput {
+  width: 90px !important;
+  padding-right: 32px !important;
+  padding-left: 10px !important;
+}
+
+.clockButton {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #94A3B8;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clockButton:hover {
+  opacity: 1;
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* Time Picker Dropdown */
+.timePicker {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  z-index: 500;
+  min-width: 180px;
+  animation: pickerSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pickerSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.timePickerDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.timePickerDigit {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E293B;
+  background: #F8FAFC;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.timePickerDigit:hover {
+  background: #F1F5F9;
+}
+
+.timePickerDigitActive {
+  border-color: #3B82F6;
+  background: rgba(59, 130, 246, 0.05);
+  color: #3B82F6;
+}
+
+.timePickerColon {
+  font-size: 24px;
+  font-weight: 700;
+  color: #CBD5E1;
+}
+
+.timePickerSlider {
+  margin-bottom: 16px;
+}
+
+.timePickerSliderLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.timePickerRange {
+  display: block;
+  width: 100% !important;
+  min-width: 100%;
+  max-width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #E2E8F0 0%, #CBD5E1 100%);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+.timePickerRange::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, #E2E8F0 0%, #CBD5E1 100%);
+  border-radius: 4px;
+}
+
+.timePickerRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: transform 0.15s ease;
+  margin-top: -7px;
+}
+
+.timePickerRange::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.timePickerRange::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, #E2E8F0 0%, #CBD5E1 100%);
+  border-radius: 4px;
+}
+
+.timePickerRange::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.timePickerRangeLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #94A3B8;
+}
+
+.timePickerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.timePickerNow {
+  flex: 1;
+  padding: 8px 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timePickerNow:hover {
+  background: #F1F5F9;
+  color: #3B82F6;
+}
+
+.timePickerConfirm {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timePickerConfirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Edit Actions */
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cancelBtn {
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelBtn:hover {
+  background: #F8FAFC;
+  color: #1E293B;
+}
+
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Delete entry button */
+.deleteEntryBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.06);
+  color: #F87171;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: auto;
+}
+
+.deleteEntryBtn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+}
+
+/* Confirm delete row */
+@keyframes slideInConfirm {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  50% { opacity: 1; transform: translateY(2px) scale(1.01); }
+  75% { transform: translateY(-1px) scale(0.995); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.confirmDeleteRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(254, 242, 242, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(254, 202, 202, 0.5);
+  border-radius: 10px;
+  margin-top: 8px;
+  animation: slideInConfirm 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.confirmDeleteText {
+  font-size: 12px;
+  color: #B91C1C;
+  font-weight: 500;
+}
+
+.confirmDeleteYes {
+  padding: 5px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #DC2626;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.confirmDeleteYes:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.confirmDeleteYes:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.confirmDeleteNo {
+  padding: 5px 14px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #94A3B8;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.confirmDeleteNo:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: #64748B;
+}
+
+/* Confirm Bar (sticky bottom) */
+.confirmBar {
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid #F1F5F9;
+  flex-shrink: 0;
+}
+
+.confirmButton {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.confirmButton:disabled {
+  background: #F1F5F9;
+  color: #94A3B8;
+  cursor: not-allowed;
+}
+
+.confirmButton:not(:disabled) {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.confirmButton:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.confirmButton:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Fahrzeit Card Edit */
+.fahrzeitCardEdit {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #F8FAFC;
+  border: 1px solid #3B82F6;
+  border-radius: 10px;
+}
+
+.fahrzeitEditContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fahrzeitEditContent .editRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fahrzeitEditContent .editActions {
+  margin-top: 4px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .header {
+    padding: 16px 20px;
+  }
+
+  .content {
+    padding: 16px 20px;
+  }
+
+  .confirmBar {
+    padding: 12px 20px;
+  }
+
+  .editRow {
+    flex-wrap: wrap;
+  }
+
+  .editRow label {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+}
+
+/* ── Confirmation Dialog ── */
+.confirmOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100010;
+  animation: confirmFadeIn 0.2s ease;
+  padding: 20px;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.confirmDialog {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  animation: confirmSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes confirmSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirmDialogHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.confirmDialogIcon {
+  color: #10B981;
+}
+
+.confirmDialogTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.confirmDialogText {
+  font-size: 15px;
+  color: #475569;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.confirmDialogInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+  border: 1px solid #BBF7D0;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.confirmDialogInfoIcon {
+  color: #16A34A;
+  flex-shrink: 0;
+}
+
+.confirmDialogActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirmDialogCancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirmDialogCancel:hover {
+  background: #E2E8F0;
+  border-color: #CBD5E1;
+}
+
+.confirmDialogConfirm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.confirmDialogConfirm:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+}
