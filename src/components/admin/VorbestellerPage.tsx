@@ -208,8 +208,7 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const products = await getAllProducts();
-        // Filter by productType
+        const products = (await getAllProducts()).filter(p => p.isActive !== false);
         setProductDisplays(products.filter(p => p.productType === 'display'));
         setProductPalettes(products.filter(p => p.productType === 'palette'));
         setProductSchuetten(products.filter(p => p.productType === 'schuette'));

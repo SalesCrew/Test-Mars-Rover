@@ -186,7 +186,7 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
       if (selectedVorbesteller?.types?.includes('einzelprodukt')) {
         try {
           const products = await getAllProducts();
-          setMasterProducts(products);
+          setMasterProducts(products.filter(p => p.isActive !== false));
         } catch (error) {
           console.error('Error loading master products:', error);
         }

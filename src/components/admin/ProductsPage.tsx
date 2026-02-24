@@ -373,7 +373,7 @@ export const ProductsPage: React.FC = () => {
     handleCloseModal();
   };
 
-  const handleInputChange = (field: keyof Product, value: string | number) => {
+  const handleInputChange = (field: keyof Product, value: string | number | boolean) => {
     if (editedProduct) {
       setEditedProduct({
         ...editedProduct,
@@ -707,7 +707,7 @@ export const ProductsPage: React.FC = () => {
             filteredProducts.map((product) => (
               <div 
                 key={product.id} 
-                className={styles.productRow}
+                className={`${styles.productRow} ${product.isActive === false ? styles.productRowInactive : ''}`}
                 onClick={() => handleProductClick(product)}
               >
                 {/* Name */}
@@ -970,6 +970,25 @@ export const ProductsPage: React.FC = () => {
                     onChange={(e) => handleInputChange('artikelNr', e.target.value)}
                     placeholder="Eindeutige Artikelnummer"
                   />
+                </div>
+
+                {/* Active Toggle */}
+                <div className={styles.detailItemFull}>
+                  <div className={styles.activeToggleRow}>
+                    <div>
+                      <label className={styles.detailLabel} style={{ marginBottom: 0 }}>Status</label>
+                      <span className={styles.activeToggleHint}>
+                        {editedProduct.isActive !== false ? 'Produkt ist aktiv und sichtbar' : 'Produkt ist deaktiviert und ausgeblendet'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`${styles.activeToggle} ${editedProduct.isActive !== false ? styles.activeToggleOn : ''}`}
+                      onClick={() => handleInputChange('isActive', editedProduct.isActive === false)}
+                    >
+                      <span className={styles.activeToggleKnob} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

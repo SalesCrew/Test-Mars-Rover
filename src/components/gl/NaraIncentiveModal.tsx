@@ -67,7 +67,7 @@ export const NaraIncentiveModal: React.FC<NaraIncentiveModalProps> = ({ isOpen, 
           getAllProducts()
         ]);
         setAllMarkets(markets as unknown as Market[]);
-        setAllProducts(products);
+        setAllProducts(products.filter(p => p.isActive !== false));
       } catch (err) {
         console.error('Error loading data:', err);
       }

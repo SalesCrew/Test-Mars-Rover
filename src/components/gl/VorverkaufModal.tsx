@@ -126,7 +126,7 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
       try {
         setIsLoadingProducts(true);
         const products = await getAllProducts();
-        setAllProducts(products);
+        setAllProducts(products.filter(p => p.isActive !== false));
       } catch (error) {
         console.error('Error loading products:', error);
       } finally {
