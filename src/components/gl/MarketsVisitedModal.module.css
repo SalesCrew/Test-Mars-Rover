@@ -154,6 +154,68 @@
   color: #059669;
 }
 
+/* Search */
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+  margin-top: 12px;
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 36px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 36px 10px 36px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+  background: rgba(249, 250, 251, 0.6);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.searchInput::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.searchInput:focus {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.searchClear {
+  position: absolute;
+  right: 36px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.searchClear:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+}
+
 /* Markets List */
 .marketsList {
   flex: 1;

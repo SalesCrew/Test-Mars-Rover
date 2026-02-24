@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { X, Storefront, MapPin, Check, Clock, CaretLeft, Package, ArrowsLeftRight, ShoppingCart, Spinner, CalendarBlank } from '@phosphor-icons/react';
+import { X, Storefront, MapPin, Check, Clock, CaretLeft, Package, ArrowsLeftRight, ShoppingCart, Spinner, CalendarBlank, MagnifyingGlass } from '@phosphor-icons/react';
 import type { Market } from '../../types/market-types';
 import { API_BASE_URL } from '../../config/database';
 import styles from './MarketsVisitedModal.module.css';
@@ -112,11 +112,13 @@ export const MarketsVisitedModal: React.FC<MarketsVisitedModalProps> = ({
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [history, setHistory] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedMarket(null);
       setHistory([]);
+      setSearchTerm('');
     }
   }, [isOpen]);
 
@@ -155,6 +157,20 @@ export const MarketsVisitedModal: React.FC<MarketsVisitedModalProps> = ({
 
   const freshCount = sortedMarkets.filter(m => isVisitFresh(m)).length;
   const pendingCount = sortedMarkets.length - freshCount;
+
+  const filteredMarkets = useMemo(() => {
+    if (!searchTerm.trim()) return sortedMarkets;
+    const q = searchTerm.toLowerCase().trim();
+    return sortedMarkets.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      m.chain?.toLowerCase().includes(q) ||
+      m.city?.toLowerCase().includes(q) ||
+      m.address?.toLowerCase().includes(q) ||
+      m.postalCode?.toLowerCase().includes(q) ||
+      String(m.frequency || '').includes(q) ||
+      String(m.currentVisits || '').includes(q)
+    );
+  }, [sortedMarkets, searchTerm]);
 
   const visitGroups = useMemo(() => groupByVisitDate(history), [history]);
   const submissionGroups = useMemo(() => {
@@ -200,8 +216,24 @@ export const MarketsVisitedModal: React.FC<MarketsVisitedModalProps> = ({
               </div>
             </div>
 
+            <div className={styles.searchWrapper}>
+              <MagnifyingGlass size={16} weight="bold" className={styles.searchIcon} />
+              <input
+                type="text"
+                className={styles.searchInput}
+                placeholder="Markt, Handelskette, Ort, PLZ ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button className={styles.searchClear} onClick={() => setSearchTerm('')}>
+                  <X size={14} weight="bold" />
+                </button>
+              )}
+            </div>
+
             <div className={styles.marketsList}>
-              {sortedMarkets.map((market) => {
+              {filteredMarkets.map((market) => {
                 const isFresh = isVisitFresh(market);
                 const daysSince = getDaysSinceVisit(market.lastVisitDate);
                 return (
