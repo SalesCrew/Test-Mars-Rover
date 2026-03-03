@@ -1271,33 +1271,6 @@
   justify-content: center;
 }
 
-.distanzFieldInline {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 0 0 auto;
-  width: 100px;
-  min-width: 0;
-}
-
-.distanzInputInline {
-  padding: 10px 8px;
-  background: white;
-  border: 1px solid var(--color-stroke);
-  border-radius: var(--radius-md);
-  color: #1E293B;
-  font-size: 15px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  height: 44px;
-  box-sizing: border-box;
-}
-
-.distanzInputInline:focus {
-  outline: none;
-  border-color: #3B82F6;
-  background: white;
-}
 
 .distanzRow {
   display: flex;

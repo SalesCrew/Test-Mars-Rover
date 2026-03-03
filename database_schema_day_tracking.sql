@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS fb_day_tracking (
     day_end_time TIME,                      -- When GL pressed "End Day"
     skipped_first_fahrzeit BOOLEAN DEFAULT FALSE,  -- If GL was already at market
     
+    -- KM Stand (odometer readings)
+    km_stand_start DECIMAL(10,1),           -- Odometer reading at day start
+    km_stand_end DECIMAL(10,1),             -- Odometer reading at day end
+    
     -- Calculated totals (updated on day end)
     total_fahrzeit INTERVAL,                -- Sum of all Fahrzeiten
     total_besuchszeit INTERVAL,             -- Sum of all market visit times

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Play, House, Car, Clock, MapPin, Timer, Check, Warning, ArrowRight } from '@phosphor-icons/react';
+import { X, Play, House, Car, Clock, MapPin, Timer, Check, Warning, ArrowRight, Gauge } from '@phosphor-icons/react';
 import styles from './DayTrackingModal.module.css';
 
 type ModalMode = 'start' | 'end' | 'force_close';
@@ -8,8 +8,8 @@ interface DayTrackingModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: ModalMode;
-  onStartDay: (skipFahrzeit: boolean) => void;
-  onEndDay: (endTime: string) => void;
+  onStartDay: (skipFahrzeit: boolean, kmStandStart?: string) => void;
+  onEndDay: (endTime: string, kmStandEnd?: string) => void;
   summary?: {
     totalFahrzeit: string;
     totalBesuchszeit: string;
@@ -134,7 +134,13 @@ export const DayTrackingModal: React.FC<DayTrackingModalProps> = ({
   const [endTime, setEndTime] = useState('');
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
-  const [endStep, setEndStep] = useState<'confirm' | 'manual'>('confirm'); // New: two-step end flow
+  const [endStep, setEndStep] = useState<'confirm' | 'manual'>('confirm');
+  const [startStep, setStartStep] = useState<'options' | 'km'>('options');
+  const [endKmStep, setEndKmStep] = useState(false);
+  const [pendingSkipFahrzeit, setPendingSkipFahrzeit] = useState(false);
+  const [pendingEndTime, setPendingEndTime] = useState('');
+  const [kmStand, setKmStand] = useState('');
+  const kmInputRef = useRef<HTMLInputElement>(null);
 
   // Update current time every second
   useEffect(() => {
@@ -149,34 +155,61 @@ export const DayTrackingModal: React.FC<DayTrackingModalProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Pre-fill end time with current time when modal opens in end mode
   useEffect(() => {
-    if (isOpen && (mode === 'end' || mode === 'force_close')) {
-      const now = new Date();
-      setEndTime(
-        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-      );
-      // Reset to confirm step when opening
-      if (mode === 'end') {
-        setEndStep('confirm');
+    if (isOpen) {
+      setKmStand('');
+      setStartStep('options');
+      setEndKmStep(false);
+      setPendingSkipFahrzeit(false);
+      setPendingEndTime('');
+      if (mode === 'end' || mode === 'force_close') {
+        const now = new Date();
+        setEndTime(
+          `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+        );
+        if (mode === 'end') {
+          setEndStep('confirm');
+        }
       }
     }
   }, [isOpen, mode]);
 
+  useEffect(() => {
+    if ((startStep === 'km' || endKmStep) && kmInputRef.current) {
+      kmInputRef.current.focus();
+    }
+  }, [startStep, endKmStep]);
+
   if (!isOpen) return null;
 
-  const handleStartWithDrive = () => {
-    onStartDay(false);
+  const handleStartOptionClick = (skipFahrzeit: boolean) => {
+    setPendingSkipFahrzeit(skipFahrzeit);
+    setKmStand('');
+    setStartStep('km');
   };
 
-  const handleStartAtMarket = () => {
-    onStartDay(true);
+  const handleStartConfirmKm = () => {
+    onStartDay(pendingSkipFahrzeit, kmStand || undefined);
+  };
+
+  const handleEndTimeConfirmed = (time: string) => {
+    setPendingEndTime(time);
+    setKmStand('');
+    setEndKmStep(true);
+  };
+
+  const handleEndConfirmKm = () => {
+    onEndDay(pendingEndTime, kmStand || undefined);
   };
 
   const handleEndDay = () => {
     if (endTime) {
-      onEndDay(endTime);
+      handleEndTimeConfirmed(endTime);
     }
+  };
+
+  const handleKmInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setKmStand(e.target.value.replace(/[^0-9.,]/g, ''));
   };
 
   const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,90 +241,222 @@ export const DayTrackingModal: React.FC<DayTrackingModalProps> = ({
           {/* Start Mode */}
           {mode === 'start' && (
             <>
-              <div className={styles.currentTimeDisplay}>
-                <Clock size={32} weight="regular" />
-                <span className={styles.currentTimeValue}>{currentTime}</span>
-                <span className={styles.currentTimeLabel}>Aktuelle Uhrzeit</span>
-              </div>
+              {startStep === 'options' && (
+                <>
+                  <div className={styles.currentTimeDisplay}>
+                    <Clock size={32} weight="regular" />
+                    <span className={styles.currentTimeValue}>{currentTime}</span>
+                    <span className={styles.currentTimeLabel}>Aktuelle Uhrzeit</span>
+                  </div>
 
-              <div className={styles.startOptions}>
-                <button className={styles.startOptionCard} onClick={handleStartWithDrive}>
-                  <div className={styles.startOptionIcon}>
-                    <Car size={32} weight="fill" />
-                  </div>
-                  <div className={styles.startOptionText}>
-                    <span className={styles.startOptionTitle}>Fahrt beginnen</span>
-                    <span className={styles.startOptionDesc}>Ich fahre jetzt zum ersten Markt</span>
-                  </div>
-                  <Play size={24} weight="fill" className={styles.startOptionArrow} />
-                </button>
+                  <div className={styles.startOptions}>
+                    <button className={styles.startOptionCard} onClick={() => handleStartOptionClick(false)}>
+                      <div className={styles.startOptionIcon}>
+                        <Car size={32} weight="fill" />
+                      </div>
+                      <div className={styles.startOptionText}>
+                        <span className={styles.startOptionTitle}>Fahrt beginnen</span>
+                        <span className={styles.startOptionDesc}>Ich fahre jetzt zum ersten Markt</span>
+                      </div>
+                      <Play size={24} weight="fill" className={styles.startOptionArrow} />
+                    </button>
 
-                <button className={styles.startOptionCard} onClick={handleStartAtMarket}>
-                  <div className={styles.startOptionIcon}>
-                    <MapPin size={32} weight="fill" />
+                    <button className={styles.startOptionCard} onClick={() => handleStartOptionClick(true)}>
+                      <div className={styles.startOptionIcon}>
+                        <MapPin size={32} weight="fill" />
+                      </div>
+                      <div className={styles.startOptionText}>
+                        <span className={styles.startOptionTitle}>Ich bin schon beim Markt</span>
+                        <span className={styles.startOptionDesc}>Keine Fahrzeit für den ersten Markt</span>
+                      </div>
+                      <ArrowRight size={24} weight="bold" className={styles.startOptionArrow} />
+                    </button>
                   </div>
-                  <div className={styles.startOptionText}>
-                    <span className={styles.startOptionTitle}>Ich bin schon beim Markt</span>
-                    <span className={styles.startOptionDesc}>Keine Fahrzeit für den ersten Markt</span>
+                </>
+              )}
+
+              {startStep === 'km' && (
+                <div className={styles.kmStandSection}>
+                  <div className={styles.kmStandIcon}>
+                    <Gauge size={40} weight="duotone" />
                   </div>
-                  <ArrowRight size={24} weight="bold" className={styles.startOptionArrow} />
-                </button>
-              </div>
+                  <span className={styles.kmStandTitle}>KM-Stand eingeben</span>
+                  <span className={styles.kmStandDesc}>Aktueller Kilometerstand deines Fahrzeugs</span>
+                  <input
+                    ref={kmInputRef}
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.kmStandInput}
+                    value={kmStand}
+                    onChange={handleKmInputChange}
+                    placeholder="z.B. 45320"
+                  />
+                  <button className={styles.kmStandConfirm} onClick={handleStartConfirmKm} disabled={!kmStand}>
+                    <Check size={18} weight="bold" />
+                    Bestätigen
+                  </button>
+                </div>
+              )}
             </>
           )}
 
           {/* End Mode */}
           {mode === 'end' && (
             <>
-              {/* Step 1: Confirm current time */}
-              {endStep === 'confirm' && (
+              {endKmStep ? (
+                <div className={styles.kmStandSection}>
+                  <div className={styles.kmStandIconEnd}>
+                    <Gauge size={40} weight="duotone" />
+                  </div>
+                  <span className={styles.kmStandTitle}>KM-Stand eingeben</span>
+                  <span className={styles.kmStandDesc}>Aktueller Kilometerstand nach der Heimfahrt</span>
+                  <input
+                    ref={kmInputRef}
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.kmStandInput}
+                    value={kmStand}
+                    onChange={handleKmInputChange}
+                    placeholder="z.B. 45480"
+                  />
+                  <button className={styles.kmStandConfirmEnd} onClick={handleEndConfirmKm} disabled={!kmStand}>
+                    <Check size={18} weight="bold" />
+                    Tag beenden
+                  </button>
+                </div>
+              ) : (
                 <>
-                  <div className={styles.currentTimeDisplay}>
-                    <Clock size={32} weight="regular" />
-                    <span className={styles.currentTimeValue}>{currentTime}</span>
-                    <span className={styles.currentTimeLabel}>Ist das die richtige Uhrzeit?</span>
-                  </div>
+                  {/* Step 1: Confirm current time */}
+                  {endStep === 'confirm' && (
+                    <>
+                      <div className={styles.currentTimeDisplay}>
+                        <Clock size={32} weight="regular" />
+                        <span className={styles.currentTimeValue}>{currentTime}</span>
+                        <span className={styles.currentTimeLabel}>Ist das die richtige Uhrzeit?</span>
+                      </div>
 
-                  <div className={styles.confirmButtons}>
-                    <button 
-                      className={styles.confirmYesButton}
-                      onClick={() => onEndDay(currentTime)}
-                    >
-                      <Check size={20} weight="bold" />
-                      Ja, Tag beenden
-                    </button>
-                    <button 
-                      className={styles.confirmNoButton}
-                      onClick={() => setEndStep('manual')}
-                    >
-                      Nein, Zeit anpassen
-                    </button>
-                  </div>
+                      <div className={styles.confirmButtons}>
+                        <button 
+                          className={styles.confirmYesButton}
+                          onClick={() => handleEndTimeConfirmed(currentTime)}
+                        >
+                          <Check size={20} weight="bold" />
+                          Ja, Tag beenden
+                        </button>
+                        <button 
+                          className={styles.confirmNoButton}
+                          onClick={() => setEndStep('manual')}
+                        >
+                          Nein, Zeit anpassen
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Step 2: Manual time entry */}
+                  {endStep === 'manual' && (
+                    <>
+                      {summary && (
+                        <div className={styles.summaryCards}>
+                          <div className={styles.summaryCard}>
+                            <Car size={24} weight="fill" />
+                            <span className={styles.summaryValue}>{summary.totalFahrzeit || '0:00'}</span>
+                            <span className={styles.summaryLabel}>Fahrzeit</span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <Timer size={24} weight="fill" />
+                            <span className={styles.summaryValue}>{summary.totalBesuchszeit || '0:00'}</span>
+                            <span className={styles.summaryLabel}>Besuchszeit</span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <MapPin size={24} weight="fill" />
+                            <span className={styles.summaryValue}>{summary.marketsVisited || 0}</span>
+                            <span className={styles.summaryLabel}>Märkte</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className={styles.endTimeSection}>
+                        <div className={styles.endTimeHeader}>
+                          <House size={24} weight="fill" />
+                          <span>Ankunftszeit Zuhause</span>
+                        </div>
+
+                        <div className={styles.timeInputWrapper}>
+                          <input
+                            type="text"
+                            className={styles.timeInput}
+                            value={endTime}
+                            onChange={handleTimeInputChange}
+                            placeholder="HH:MM"
+                            maxLength={5}
+                          />
+                          <button
+                            type="button"
+                            className={styles.clockButton}
+                            onClick={() => setShowTimePicker(!showTimePicker)}
+                            aria-label="Zeit auswählen"
+                          >
+                            <Clock size={20} weight="regular" />
+                          </button>
+                          {showTimePicker && (
+                            <TimePicker
+                              value={endTime}
+                              onChange={setEndTime}
+                              onClose={() => setShowTimePicker(false)}
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        className={styles.endButton}
+                        onClick={handleEndDay}
+                        disabled={!isEndTimeValid}
+                      >
+                        <House size={20} weight="fill" />
+                        Zuhause angekommen
+                      </button>
+                    </>
+                  )}
                 </>
               )}
+            </>
+          )}
 
-              {/* Step 2: Manual time entry */}
-              {endStep === 'manual' && (
+          {/* Force Close Mode */}
+          {mode === 'force_close' && (
+            <>
+              {endKmStep ? (
+                <div className={styles.kmStandSection}>
+                  <div className={styles.kmStandIconEnd}>
+                    <Gauge size={40} weight="duotone" />
+                  </div>
+                  <span className={styles.kmStandTitle}>KM-Stand eingeben</span>
+                  <span className={styles.kmStandDesc}>Kilometerstand bei Ankunft zuhause</span>
+                  <input
+                    ref={kmInputRef}
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.kmStandInput}
+                    value={kmStand}
+                    onChange={handleKmInputChange}
+                    placeholder="z.B. 45480"
+                  />
+                  <button className={styles.kmStandConfirmEnd} onClick={handleEndConfirmKm} disabled={!kmStand}>
+                    <Check size={18} weight="bold" />
+                    Bestätigen
+                  </button>
+                </div>
+              ) : (
                 <>
-                  {summary && (
-                    <div className={styles.summaryCards}>
-                      <div className={styles.summaryCard}>
-                        <Car size={24} weight="fill" />
-                        <span className={styles.summaryValue}>{summary.totalFahrzeit || '0:00'}</span>
-                        <span className={styles.summaryLabel}>Fahrzeit</span>
-                      </div>
-                      <div className={styles.summaryCard}>
-                        <Timer size={24} weight="fill" />
-                        <span className={styles.summaryValue}>{summary.totalBesuchszeit || '0:00'}</span>
-                        <span className={styles.summaryLabel}>Besuchszeit</span>
-                      </div>
-                      <div className={styles.summaryCard}>
-                        <MapPin size={24} weight="fill" />
-                        <span className={styles.summaryValue}>{summary.marketsVisited || 0}</span>
-                        <span className={styles.summaryLabel}>Märkte</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className={styles.forceCloseWarning}>
+                    <Warning size={48} weight="fill" />
+                    <p>
+                      Es schaut so aus als hättest du vergessen deine Zeit zu beenden.
+                      Bitte gib hier deine korrekte Ankunftszeit zuhause an.
+                    </p>
+                  </div>
 
                   <div className={styles.endTimeSection}>
                     <div className={styles.endTimeHeader}>
@@ -327,70 +492,15 @@ export const DayTrackingModal: React.FC<DayTrackingModalProps> = ({
                   </div>
 
                   <button
-                    className={styles.endButton}
+                    className={styles.confirmButton}
                     onClick={handleEndDay}
                     disabled={!isEndTimeValid}
                   >
-                    <House size={20} weight="fill" />
-                    Zuhause angekommen
+                    <Check size={20} weight="bold" />
+                    Bestätigen
                   </button>
                 </>
               )}
-            </>
-          )}
-
-          {/* Force Close Mode */}
-          {mode === 'force_close' && (
-            <>
-              <div className={styles.forceCloseWarning}>
-                <Warning size={48} weight="fill" />
-                <p>
-                  Es schaut so aus als hättest du vergessen deine Zeit zu beenden.
-                  Bitte gib hier deine korrekte Ankunftszeit zuhause an.
-                </p>
-              </div>
-
-              <div className={styles.endTimeSection}>
-                <div className={styles.endTimeHeader}>
-                  <House size={24} weight="fill" />
-                  <span>Ankunftszeit Zuhause</span>
-                </div>
-
-                <div className={styles.timeInputWrapper}>
-                  <input
-                    type="text"
-                    className={styles.timeInput}
-                    value={endTime}
-                    onChange={handleTimeInputChange}
-                    placeholder="HH:MM"
-                    maxLength={5}
-                  />
-                  <button
-                    type="button"
-                    className={styles.clockButton}
-                    onClick={() => setShowTimePicker(!showTimePicker)}
-                    aria-label="Zeit auswählen"
-                  >
-                    <Clock size={20} weight="regular" />
-                  </button>
-                  {showTimePicker && (
-                    <TimePicker
-                      value={endTime}
-                      onChange={setEndTime}
-                      onClose={() => setShowTimePicker(false)}
-                    />
-                  )}
-                </div>
-              </div>
-
-              <button
-                className={styles.confirmButton}
-                onClick={handleEndDay}
-                disabled={!isEndTimeValid}
-              >
-                <Check size={20} weight="bold" />
-                Bestätigen
-              </button>
             </>
           )}
         </div>

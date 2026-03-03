@@ -24,6 +24,8 @@ export interface DayTracking {
   total_unterbrechung: string | null;
   total_arbeitszeit: string | null;
   markets_visited: number;
+  km_stand_start: number | null;
+  km_stand_end: number | null;
   status: DayTrackingStatus;
   created_at: string;
   updated_at: string;
@@ -55,12 +57,14 @@ export interface DaySummary {
 
 export interface StartDayRequest {
   skipFahrzeit: boolean;
-  startTime?: string; // Optional override, defaults to current time
+  startTime?: string;
+  kmStandStart?: string;
 }
 
 export interface EndDayRequest {
-  endTime: string; // Required arrival time
-  forceClose?: boolean; // If true, marks as force_closed
+  endTime: string;
+  forceClose?: boolean;
+  kmStandEnd?: string;
 }
 
 // ============================================================================
@@ -85,6 +89,7 @@ class DayTrackingService {
           gebietsleiter_id: glId,
           skip_fahrzeit: options.skipFahrzeit,
           start_time: options.startTime,
+          km_stand_start: options.kmStandStart,
         }),
       });
 
@@ -121,6 +126,7 @@ class DayTrackingService {
           gebietsleiter_id: glId,
           end_time: options.endTime,
           force_close: options.forceClose || false,
+          km_stand_end: options.kmStandEnd,
         }),
       });
 

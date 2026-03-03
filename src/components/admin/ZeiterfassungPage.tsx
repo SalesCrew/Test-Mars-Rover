@@ -78,7 +78,6 @@ interface GLProfileData {
   totalReineArbeitszeit: number; // in minutes
   totalErsteLetzteSpan: number; // in minutes
   avgDailyWorkTime: number;
-  totalDistanzKm: number;
   days: {
     date: string;
     ersteAktion: string;
@@ -199,7 +198,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
   const [loading, setLoading] = useState(true);
   const [expandedGLs, setExpandedGLs] = useState<Set<string>>(new Set());
   const [detailedEntries, setDetailedEntries] = useState<Record<string, ZeiterfassungEntry[]>>({});
-  const [dayTrackingData, setDayTrackingData] = useState<Record<string, { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean }>>({});
+  const [dayTrackingData, setDayTrackingData] = useState<Record<string, { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean; km_stand_start?: number | null; km_stand_end?: number | null }>>({});
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
   
   // Profile view state
@@ -323,12 +322,14 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       setZusatzEntries(zusatzData);
       
       if (dayTrackingAll && dayTrackingAll.length > 0) {
-        const dtMap: Record<string, { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean }> = {};
+        const dtMap: Record<string, { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean; km_stand_start?: number | null; km_stand_end?: number | null }> = {};
         dayTrackingAll.forEach((dt: any) => {
           const val = {
             day_start_time: dt.day_start_time || null,
             day_end_time: dt.day_end_time || null,
-            skipped_first_fahrzeit: dt.skipped_first_fahrzeit || false
+            skipped_first_fahrzeit: dt.skipped_first_fahrzeit || false,
+            km_stand_start: dt.km_stand_start ?? null,
+            km_stand_end: dt.km_stand_end ?? null
           };
           dtMap[`${dt.tracking_date}-${dt.gebietsleiter_id}`] = val;
           dtMap[`${dt.gebietsleiter_id}-${dt.tracking_date}`] = val;
@@ -696,7 +697,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
   const buildTimelineExportRows = (
     marketEntries: ZeiterfassungEntry[],
     glZusatz: ZusatzZeiterfassungEntry[],
-    dayTrack: { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean } | null,
+    dayTrack: { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean; km_stand_start?: number | null; km_stand_end?: number | null } | null,
     dateStr: string,
     glName?: string
   ): string[][] => {
@@ -743,18 +744,21 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         if (gap > 0) { fVon = prev.endTime; fBis = item.startTime; fDauer = fmtGap(gap); }
       }
 
+      const kmStart = idx === 0 ? (dayTrack?.km_stand_start?.toString() || '') : '';
+      const kmEnd = '';
+
       if (item.type === 'market') {
         const entry = item.entry;
         const row = glName
-          ? [formattedDate, glName, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', diffToMinutes(entry.besuchszeit_diff), entry.distanz_km?.toString() || '']
-          : [formattedDate, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', diffToMinutes(entry.besuchszeit_diff), entry.distanz_km?.toString() || ''];
+          ? [formattedDate, glName, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', diffToMinutes(entry.besuchszeit_diff), kmStart, kmEnd]
+          : [formattedDate, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', diffToMinutes(entry.besuchszeit_diff), kmStart, kmEnd];
         rows.push(row);
       } else {
         const zusatz = item.entry;
         const label = `${zusatz.reason_label}${zusatz.is_work_time_deduction ? ' (Abzug)' : ''}`;
         const row = glName
-          ? [formattedDate, glName, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', diffToMinutes(zusatz.zeit_diff), '']
-          : [formattedDate, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', diffToMinutes(zusatz.zeit_diff), ''];
+          ? [formattedDate, glName, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', diffToMinutes(zusatz.zeit_diff), kmStart, kmEnd]
+          : [formattedDate, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', diffToMinutes(zusatz.zeit_diff), kmStart, kmEnd];
         rows.push(row);
       }
     });
@@ -765,8 +769,8 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       const gap = gapMins(lastItem.endTime, dayTrack.day_end_time);
       if (gap > 0) {
         const row = glName
-          ? [formattedDate, glName, 'Heimfahrt', '', '', '', '', lastItem.endTime, dayTrack.day_end_time, fmtGap(gap), '', '', '', '']
-          : [formattedDate, 'Heimfahrt', '', '', '', '', lastItem.endTime, dayTrack.day_end_time, fmtGap(gap), '', '', '', ''];
+          ? [formattedDate, glName, 'Heimfahrt', '', '', '', '', lastItem.endTime, dayTrack.day_end_time, fmtGap(gap), '', '', '', '', dayTrack.km_stand_end?.toString() || '']
+          : [formattedDate, 'Heimfahrt', '', '', '', '', lastItem.endTime, dayTrack.day_end_time, fmtGap(gap), '', '', '', '', dayTrack.km_stand_end?.toString() || ''];
         rows.push(row);
       }
     }
@@ -779,7 +783,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
     const handleExport = async () => {
       if (viewMode === 'date') {
         const exportData: string[][] = [
-          ['Datum', 'Gebietsleiter', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer (min)', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer (min)', 'Distanz (km)']
+          ['Datum', 'Gebietsleiter', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer (min)', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer (min)', 'KM Start', 'KM Ende']
         ];
 
         // Group entries by date + GL
@@ -830,7 +834,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           : 'GL';
 
         const exportData: string[][] = [
-          ['Datum', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer (min)', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer (min)', 'Distanz (km)']
+          ['Datum', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer (min)', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer (min)', 'KM Start', 'KM Ende']
         ];
 
         // Group by date
@@ -892,7 +896,9 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           [key]: {
             day_start_time: dayTrackingResponse.dayTracking.day_start_time,
             day_end_time: dayTrackingResponse.dayTracking.day_end_time,
-            skipped_first_fahrzeit: dayTrackingResponse.dayTracking.skipped_first_fahrzeit
+            skipped_first_fahrzeit: dayTrackingResponse.dayTracking.skipped_first_fahrzeit,
+            km_stand_start: dayTrackingResponse.dayTracking.km_stand_start ?? null,
+            km_stand_end: dayTrackingResponse.dayTracking.km_stand_end ?? null
           }
         }));
       }
@@ -1107,7 +1113,6 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       let totalReineArbeitszeit = 0;
       let totalErsteLetzteSpan = 0;
       let totalMarketsVisited = 0;
-      let totalDistanzKm = 0;
 
       const days = Object.keys(dateGroups).sort((a, b) => b.localeCompare(a)).map(date => {
         const dayEntries = dateGroups[date];
@@ -1135,7 +1140,6 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           }
           dayTotalMinutes += parseInterval(entry.calculated_fahrzeit || entry.fahrzeit_diff);
           dayTotalMinutes += parseInterval(entry.besuchszeit_diff);
-          totalDistanzKm += entry.distanz_km || 0;
         });
 
         // Include zusatz entry times in erste/letzte computation
@@ -1219,7 +1223,6 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         totalReineArbeitszeit,
         totalErsteLetzteSpan,
         avgDailyWorkTime,
-        totalDistanzKm,
         days
       };
     });
@@ -1569,16 +1572,8 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                         // Reine Arbeitszeit = Arbeitstag - Unterbrechung
                         const reineArbeitszeitMinutes = Math.max(0, arbeitstag - unterbrechungMinutes);
                         
-                        const dayDistanzKm = day.entries.reduce((sum, e) => sum + (e.distanz_km || 0), 0);
-
                         return (
                           <>
-                            {dayDistanzKm > 0 && (
-                              <div className={styles.dayRowStatPill} style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
-                                <span className={styles.dayRowStatLabel} style={{ color: '#D97706' }}>Distanz</span>
-                                <span className={styles.dayRowStatValue} style={{ color: '#D97706' }}>{Math.round(dayDistanzKm * 10) / 10} km</span>
-                              </div>
-                            )}
                             {unterbrechungMinutes > 0 && (
                               <div className={styles.dayRowStatPill} style={{ background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%)', border: '1px solid rgba(220, 38, 38, 0.15)' }}>
                                 <span className={styles.dayRowStatLabel} style={{ color: '#DC2626' }}>Unterbrechung</span>
@@ -1687,6 +1682,9 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                               {formatGap(anfahrtMinutes)}
                                             </span>
                                           </div>
+                                        )}
+                                        {dayTracking.km_stand_start != null && (
+                                          <span className={styles.kmBadge}>{dayTracking.km_stand_start} km</span>
                                         )}
                                       </div>
                                     </div>
@@ -1843,6 +1841,9 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                               {formatGap(heimfahrtMinutes)}
                                             </span>
                                           </div>
+                                        )}
+                                        {dayTracking.km_stand_end != null && (
+                                          <span className={styles.kmBadge}>{dayTracking.km_stand_end} km</span>
                                         )}
                                       </div>
                                     </div>
@@ -2026,10 +2027,6 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                     <span className={styles.glProfileStatValue}>{formatMinutes(gl.avgDailyWorkTime)}</span>
                     <span className={styles.glProfileStatLabel}>Ø/Tag</span>
                   </div>
-                  <div className={styles.glProfileStat}>
-                    <span className={styles.glProfileStatValue} style={{ color: '#D97706' }}>{Math.round(gl.totalDistanzKm * 10) / 10}</span>
-                    <span className={styles.glProfileStatLabel}>KM</span>
-                  </div>
                 </div>
               </button>
             ))
@@ -2110,17 +2107,8 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                       // Reine Arbeitszeit = Arbeitstag - Unterbrechung
                       const reineArbeitszeitMinutes = Math.max(0, arbeitstag - unterbrechungMinutes);
                       
-                      const dayDistanzKm = gl.entries.reduce((sum, e) => sum + (e.distanz_km || 0), 0);
-
                       return (
                         <>
-                          {dayDistanzKm > 0 && (
-                            <div className={styles.stat} style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
-                              <span className={styles.statLabel} style={{ color: '#D97706' }}>Distanz</span>
-                              <span className={styles.statValue} style={{ color: '#D97706' }}>{Math.round(dayDistanzKm * 10) / 10} km</span>
-                            </div>
-                          )}
-
                           {unterbrechungMinutes > 0 && (
                             <div className={styles.stat} style={{ background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%)', border: '1px solid rgba(220, 38, 38, 0.15)' }}>
                               <span className={styles.statLabel} style={{ color: '#DC2626' }}>Unterbrechung</span>
@@ -2233,6 +2221,9 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                             {formatGap(anfahrtMinutes)}
                                           </span>
                                         </div>
+                                      )}
+                                      {dayTracking.km_stand_start != null && (
+                                        <span className={styles.kmBadge}>{dayTracking.km_stand_start} km</span>
                                       )}
                                     </div>
                                   </div>
@@ -2386,6 +2377,9 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                                             {formatGap(heimfahrtMinutes)}
                                           </span>
                                         </div>
+                                      )}
+                                      {dayTracking.km_stand_end != null && (
+                                        <span className={styles.kmBadge}>{dayTracking.km_stand_end} km</span>
                                       )}
                                     </div>
                                   </div>

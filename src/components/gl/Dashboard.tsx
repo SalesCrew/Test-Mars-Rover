@@ -272,8 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
             besuchszeit_von: persisted.besuchszeitVon,
             besuchszeit_bis: persisted.besuchszeitBis || undefined,
             kommentar: persisted.kommentar,
-            food_prozent: persisted.foodProzent,
-            distanz_km: persisted.distanzKm
+            food_prozent: persisted.foodProzent
           });
           clearActiveVisit();
         } catch { /* still offline */ }
@@ -358,36 +357,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   };
 
   // Handle start day
-  const handleStartDay = async (skipFahrzeit: boolean) => {
+  const handleStartDay = async (skipFahrzeit: boolean, kmStandStart?: string) => {
     if (!user?.id) {
       console.error('❌ handleStartDay: No user ID available');
       return;
     }
     
-    console.log('🟡 handleStartDay called:', { userId: user.id, skipFahrzeit });
-    
     try {
       const now = new Date();
       const startTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const result = await dayTrackingService.startDay(user.id, { skipFahrzeit, startTime });
-      console.log('✅ Day started successfully:', result);
+      await dayTrackingService.startDay(user.id, { skipFahrzeit, startTime, kmStandStart });
       setDayTrackingStatus('active');
       setIsDayTrackingModalOpen(false);
     } catch (error: any) {
       console.error('❌ Error starting day:', error);
-      console.error('❌ Error message:', error?.message);
       alert('Fehler beim Starten des Tages: ' + (error?.message || 'Unknown error'));
     }
   };
 
-  // Handle end day
-  const handleEndDay = async (endTime: string) => {
+  const handleEndDay = async (endTime: string, kmStandEnd?: string) => {
     if (!user?.id) return;
     
     try {
       await dayTrackingService.endDay(user.id, { 
         endTime, 
-        forceClose: dayTrackingModalMode === 'force_close' 
+        forceClose: dayTrackingModalMode === 'force_close',
+        kmStandEnd
       });
       setDayTrackingStatus('completed');
       setIsDayTrackingModalOpen(false);
@@ -709,7 +704,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                   fahrzeit_bis: zeitData.fahrzeitBis,
                   besuchszeit_von: zeitData.besuchszeitVon,
                   besuchszeit_bis: zeitData.besuchszeitBis,
-                  distanz_km: zeitData.distanzKm,
                   kommentar: zeitData.kommentar,
                   food_prozent: zeitData.foodProzent
                 });

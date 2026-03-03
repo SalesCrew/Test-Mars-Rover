@@ -121,7 +121,6 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   const [zeiterfassung, setZeiterfassung] = useState(() => ({
     fahrzeitVon: '',
     fahrzeitBis: '',
-    distanzKm: resumeData?.distanzKm || '',
     besuchszeitVon: resumeData?.besuchszeitVon || '',
     besuchszeitBis: resumeData?.besuchszeitBis || '',
     kommentar: resumeData?.kommentar || '',
@@ -429,7 +428,6 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     debounceRef.current = setTimeout(async () => {
       const localKey = field === 'besuchszeit_von' ? 'besuchszeitVon'
         : field === 'besuchszeit_bis' ? 'besuchszeitBis'
-        : field === 'distanz_km' ? 'distanzKm'
         : field;
       updateActiveVisit({ [localKey]: value } as Partial<PersistedVisit>);
       if (submissionId) {
@@ -450,7 +448,6 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
         await fragebogenService.zeiterfassung.update(submissionId, {
           besuchszeit_von: zeiterfassung.besuchszeitVon,
           besuchszeit_bis: zeiterfassung.besuchszeitBis,
-          distanz_km: zeiterfassung.distanzKm,
           kommentar: zeiterfassung.kommentar,
           food_prozent: zeiterfassung.foodProzent
         });
@@ -460,8 +457,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
           besuchszeitVon: zeiterfassung.besuchszeitVon,
           besuchszeitBis: zeiterfassung.besuchszeitBis || null,
           kommentar: zeiterfassung.kommentar,
-          foodProzent: zeiterfassung.foodProzent,
-          distanzKm: zeiterfassung.distanzKm
+          foodProzent: zeiterfassung.foodProzent
         });
         updatePendingSync({ final: true });
       }
@@ -920,21 +916,6 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
               <div className={styles.timeDuration}>
                 {besuchszeitRunning ? formatElapsed(besuchszeitElapsed) : calculateTimeDiff(zeiterfassung.besuchszeitVon, zeiterfassung.besuchszeitBis)}
               </div>
-            </div>
-            <div className={styles.distanzFieldInline}>
-              <span className={styles.timeLabel}>Distanz (KM)</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                className={styles.distanzInputInline}
-                value={zeiterfassung.distanzKm}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9.,]/g, '');
-                  setZeiterfassung(prev => ({ ...prev, distanzKm: val }));
-                  debouncedPatch('distanz_km', val);
-                }}
-                placeholder="0"
-              />
             </div>
           </div>
         </div>
