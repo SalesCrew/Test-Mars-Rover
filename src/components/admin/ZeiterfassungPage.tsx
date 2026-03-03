@@ -722,8 +722,13 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       return Math.max(0, sMins - eMins);
     };
     const fmtGap = (m: number): string => {
-      if (m <= 0) return '00:00:00';
-      return `${Math.floor(m / 60).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}:00`;
+      return String(m);
+    };
+    const diffToMinutes = (diff: string | null | undefined): string => {
+      if (!diff) return '';
+      const parts = diff.split(':').map(Number);
+      if (parts.length < 2) return diff;
+      return String(parts[0] * 60 + parts[1]);
     };
 
     items.forEach((item, idx) => {
@@ -741,15 +746,15 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       if (item.type === 'market') {
         const entry = item.entry;
         const row = glName
-          ? [formattedDate, glName, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', entry.besuchszeit_diff || '', entry.distanz_km?.toString() || '']
-          : [formattedDate, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', entry.besuchszeit_diff || '', entry.distanz_km?.toString() || ''];
+          ? [formattedDate, glName, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', diffToMinutes(entry.besuchszeit_diff), entry.distanz_km?.toString() || '']
+          : [formattedDate, entry.market.name, entry.market.chain, entry.market.address || '', entry.market.postal_code || '', entry.market.city || '', fVon, fBis, fDauer, entry.besuchszeit_von || '', entry.besuchszeit_bis || '', diffToMinutes(entry.besuchszeit_diff), entry.distanz_km?.toString() || ''];
         rows.push(row);
       } else {
         const zusatz = item.entry;
         const label = `${zusatz.reason_label}${zusatz.is_work_time_deduction ? ' (Abzug)' : ''}`;
         const row = glName
-          ? [formattedDate, glName, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', zusatz.zeit_diff || '', '']
-          : [formattedDate, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', zusatz.zeit_diff || '', ''];
+          ? [formattedDate, glName, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', diffToMinutes(zusatz.zeit_diff), '']
+          : [formattedDate, label, '', zusatz.kommentar || '', '', '', fVon, fBis, fDauer, zusatz.zeit_von || '', zusatz.zeit_bis || '', diffToMinutes(zusatz.zeit_diff), ''];
         rows.push(row);
       }
     });
@@ -774,7 +779,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
     const handleExport = async () => {
       if (viewMode === 'date') {
         const exportData: string[][] = [
-          ['Datum', 'Gebietsleiter', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer', 'Distanz (km)']
+          ['Datum', 'Gebietsleiter', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer (min)', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer (min)', 'Distanz (km)']
         ];
 
         // Group entries by date + GL
@@ -825,7 +830,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           : 'GL';
 
         const exportData: string[][] = [
-          ['Datum', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer', 'Distanz (km)']
+          ['Datum', 'Markt', 'Handelskette', 'Adresse', 'PLZ', 'Ort', 'Fahrzeit Von', 'Fahrzeit Bis', 'Fahrzeit Dauer (min)', 'Besuchszeit Von', 'Besuchszeit Bis', 'Besuchszeit Dauer (min)', 'Distanz (km)']
         ];
 
         // Group by date
