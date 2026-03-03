@@ -111,8 +111,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
       try {
         setIsLoadingMarkets(true);
         const dbMarkets = await marketService.getAllMarkets();
-        // Transform AdminMarket to Market type (include gebietsleiter for clustering)
-        const markets: Market[] = dbMarkets.map(m => ({
+        const activeDbMarkets = dbMarkets.filter(m => m.isActive !== false);
+        const markets: Market[] = activeDbMarkets.map(m => ({
           id: m.id,
           name: m.name,
           address: m.address,

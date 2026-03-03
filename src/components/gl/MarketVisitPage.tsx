@@ -427,12 +427,18 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   const debouncedPatch = useCallback((field: string, value: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      updateActiveVisit({ [field === 'besuchszeit_von' ? 'besuchszeitVon' : 'besuchszeitBis']: value });
+      const localKey = field === 'besuchszeit_von' ? 'besuchszeitVon'
+        : field === 'besuchszeit_bis' ? 'besuchszeitBis'
+        : field === 'distanz_km' ? 'distanzKm'
+        : field;
+      updateActiveVisit({ [localKey]: value } as Partial<PersistedVisit>);
       if (submissionId) {
         try {
           await fragebogenService.zeiterfassung.update(submissionId, { [field]: value });
         } catch {
-          updatePendingSync({ [field === 'besuchszeit_von' ? 'von' : 'bis']: true });
+          if (field === 'besuchszeit_von') updatePendingSync({ von: true });
+          else if (field === 'besuchszeit_bis') updatePendingSync({ bis: true });
+          else updatePendingSync({ final: true });
         }
       }
     }, 500);
@@ -909,11 +915,26 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
                 maxLength={5}
               />
             </div>
-            <div className={styles.timeField}>
+            <div className={styles.timeFieldNarrow}>
               <span className={styles.timeLabel}>Dauer</span>
               <div className={styles.timeDuration}>
                 {besuchszeitRunning ? formatElapsed(besuchszeitElapsed) : calculateTimeDiff(zeiterfassung.besuchszeitVon, zeiterfassung.besuchszeitBis)}
               </div>
+            </div>
+            <div className={styles.distanzFieldInline}>
+              <span className={styles.timeLabel}>Distanz (KM)</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                className={styles.distanzInputInline}
+                value={zeiterfassung.distanzKm}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.,]/g, '');
+                  setZeiterfassung(prev => ({ ...prev, distanzKm: val }));
+                  debouncedPatch('distanz_km', val);
+                }}
+                placeholder="0"
+              />
             </div>
           </div>
         </div>

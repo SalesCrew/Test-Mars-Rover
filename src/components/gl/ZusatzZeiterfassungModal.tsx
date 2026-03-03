@@ -278,7 +278,7 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
         const res = await fetch(`${API_BASE_URL}/markets`);
         if (res.ok) {
           const data = await res.json();
-          setMarkets((data || []).map((m: any) => ({
+          setMarkets((data || []).filter((m: any) => m.is_active !== false).map((m: any) => ({
             id: m.id,
             name: m.name,
             chain: m.chain || '',

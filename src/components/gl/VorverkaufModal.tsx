@@ -93,8 +93,8 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
       try {
         setIsLoadingMarkets(true);
         const dbMarkets = await marketService.getAllMarkets();
-        // Transform to Market type
-        const markets: Market[] = dbMarkets.map(m => ({
+        const activeDbMarkets = dbMarkets.filter(m => m.isActive !== false);
+        const markets: Market[] = activeDbMarkets.map(m => ({
           id: m.id,
           name: m.name,
           address: m.address,

@@ -78,6 +78,7 @@ interface GLProfileData {
   totalReineArbeitszeit: number; // in minutes
   totalErsteLetzteSpan: number; // in minutes
   avgDailyWorkTime: number;
+  totalDistanzKm: number;
   days: {
     date: string;
     ersteAktion: string;
@@ -1101,6 +1102,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       let totalReineArbeitszeit = 0;
       let totalErsteLetzteSpan = 0;
       let totalMarketsVisited = 0;
+      let totalDistanzKm = 0;
 
       const days = Object.keys(dateGroups).sort((a, b) => b.localeCompare(a)).map(date => {
         const dayEntries = dateGroups[date];
@@ -1128,6 +1130,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           }
           dayTotalMinutes += parseInterval(entry.calculated_fahrzeit || entry.fahrzeit_diff);
           dayTotalMinutes += parseInterval(entry.besuchszeit_diff);
+          totalDistanzKm += entry.distanz_km || 0;
         });
 
         // Include zusatz entry times in erste/letzte computation
@@ -1211,6 +1214,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         totalReineArbeitszeit,
         totalErsteLetzteSpan,
         avgDailyWorkTime,
+        totalDistanzKm,
         days
       };
     });
@@ -1560,8 +1564,16 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                         // Reine Arbeitszeit = Arbeitstag - Unterbrechung
                         const reineArbeitszeitMinutes = Math.max(0, arbeitstag - unterbrechungMinutes);
                         
+                        const dayDistanzKm = day.entries.reduce((sum, e) => sum + (e.distanz_km || 0), 0);
+
                         return (
                           <>
+                            {dayDistanzKm > 0 && (
+                              <div className={styles.dayRowStatPill} style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+                                <span className={styles.dayRowStatLabel} style={{ color: '#D97706' }}>Distanz</span>
+                                <span className={styles.dayRowStatValue} style={{ color: '#D97706' }}>{Math.round(dayDistanzKm * 10) / 10} km</span>
+                              </div>
+                            )}
                             {unterbrechungMinutes > 0 && (
                               <div className={styles.dayRowStatPill} style={{ background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%)', border: '1px solid rgba(220, 38, 38, 0.15)' }}>
                                 <span className={styles.dayRowStatLabel} style={{ color: '#DC2626' }}>Unterbrechung</span>
@@ -2009,6 +2021,10 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                     <span className={styles.glProfileStatValue}>{formatMinutes(gl.avgDailyWorkTime)}</span>
                     <span className={styles.glProfileStatLabel}>Ø/Tag</span>
                   </div>
+                  <div className={styles.glProfileStat}>
+                    <span className={styles.glProfileStatValue} style={{ color: '#D97706' }}>{Math.round(gl.totalDistanzKm * 10) / 10}</span>
+                    <span className={styles.glProfileStatLabel}>KM</span>
+                  </div>
                 </div>
               </button>
             ))
@@ -2089,8 +2105,17 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                       // Reine Arbeitszeit = Arbeitstag - Unterbrechung
                       const reineArbeitszeitMinutes = Math.max(0, arbeitstag - unterbrechungMinutes);
                       
+                      const dayDistanzKm = gl.entries.reduce((sum, e) => sum + (e.distanz_km || 0), 0);
+
                       return (
                         <>
+                          {dayDistanzKm > 0 && (
+                            <div className={styles.stat} style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+                              <span className={styles.statLabel} style={{ color: '#D97706' }}>Distanz</span>
+                              <span className={styles.statValue} style={{ color: '#D97706' }}>{Math.round(dayDistanzKm * 10) / 10} km</span>
+                            </div>
+                          )}
+
                           {unterbrechungMinutes > 0 && (
                             <div className={styles.stat} style={{ background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.05) 100%)', border: '1px solid rgba(220, 38, 38, 0.15)' }}>
                               <span className={styles.statLabel} style={{ color: '#DC2626' }}>Unterbrechung</span>

@@ -93,7 +93,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
           marketService.getAllMarkets()
         ]);
         setAllProducts(products.filter(p => p.isActive !== false));
-        setAllMarkets(markets.map(m => ({
+        const activeMarkets = markets.filter(m => m.isActive !== false);
+        setAllMarkets(activeMarkets.map(m => ({
           id: m.id,
           name: m.name,
           address: m.address,

@@ -404,8 +404,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       
       try {
         const dbMarkets = await marketService.getAllMarkets();
-        // Filter to only markets assigned to this GL
-        const glMarkets = dbMarkets.filter(m => m.gebietsleiter === user.id);
+        const activeMarkets = dbMarkets.filter(m => m.isActive !== false);
+        const glMarkets = activeMarkets.filter(m => m.gebietsleiter === user.id);
         const markets: Market[] = glMarkets.map(m => ({
           id: m.id,
           name: m.name,
