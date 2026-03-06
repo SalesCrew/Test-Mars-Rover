@@ -193,6 +193,12 @@ export const VorbestellerHistoryPage: React.FC = () => {
   const [loadingPt, setLoadingPt] = useState(true);
   const [expandedPtEntries, setExpandedPtEntries] = useState<Set<string>>(new Set());
 
+  // Produkttausch edit
+  const [ptEditingId, setPtEditingId] = useState<string | null>(null);
+  const [ptEditQty, setPtEditQty] = useState(0);
+  const [ptSaving, setPtSaving] = useState(false);
+  const [ptConfirmDeleteId, setPtConfirmDeleteId] = useState<string | null>(null);
+
   // ---- FETCH WAVES ----
   useEffect(() => {
     if (!user?.id) return;
@@ -241,6 +247,43 @@ export const VorbestellerHistoryPage: React.FC = () => {
       entries: grouped[date],
     }));
   }, [ptEntries]);
+
+  // ---- PT EDIT/DELETE ----
+  const refetchPtEntries = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const all = await produktersatzService.getAllEntries(user.id);
+      setPtEntries(all.filter(e => e.reason === 'Produkttausch'));
+    } catch (e) { console.error(e); }
+  }, [user?.id]);
+
+  const ptStartEdit = useCallback((itemId: string, qty: number) => {
+    setPtEditingId(itemId); setPtEditQty(qty); setPtConfirmDeleteId(null);
+  }, []);
+  const ptCancelEdit = useCallback(() => {
+    setPtEditingId(null); setPtEditQty(0); setPtConfirmDeleteId(null);
+  }, []);
+
+  const ptSaveEdit = useCallback(async (itemId: string) => {
+    if (ptEditQty < 1) return;
+    setPtSaving(true);
+    try {
+      await produktersatzService.updateItemQuantity(itemId, ptEditQty);
+      setPtEditingId(null);
+      await refetchPtEntries();
+    } catch (e) { console.error(e); alert('Fehler beim Speichern'); }
+    finally { setPtSaving(false); }
+  }, [ptEditQty, refetchPtEntries]);
+
+  const ptHandleDelete = useCallback(async (entryId: string) => {
+    setPtSaving(true);
+    try {
+      await produktersatzService.deleteEntry(entryId);
+      setPtConfirmDeleteId(null); setPtEditingId(null);
+      setPtEntries(prev => prev.filter(e => e.id !== entryId));
+    } catch (e) { console.error(e); alert('Fehler beim Löschen'); }
+    finally { setPtSaving(false); }
+  }, []);
 
   // ---- FETCH WAVE DEFINITIONS (for add flow) ----
   const fetchWaveDefinition = useCallback(async (waveId: string) => {
@@ -1002,7 +1045,27 @@ export const VorbestellerHistoryPage: React.FC = () => {
                                           </span>
                                         )}
                                       </div>
-                                      <span className={`${styles.ptItemQty} ${styles.ptItemQtyBlue}`}>{item.quantity}x</span>
+                                      {ptEditingId === item.id ? (
+                                        <div className={styles.editRow}>
+                                          <div className={styles.quantityControls}>
+                                            <button className={styles.quantityButton} onClick={() => setPtEditQty(Math.max(1, ptEditQty - 1))}>
+                                              <Minus size={14} weight="bold" />
+                                            </button>
+                                            <input type="text" className={styles.quantityInput} value={ptEditQty === 0 ? '' : ptEditQty}
+                                              onChange={e => { const v = e.target.value; if (v === '') { setPtEditQty(0); return; } const n = parseInt(v, 10); if (!isNaN(n) && n >= 0) setPtEditQty(n); }}
+                                              placeholder="0" />
+                                            <button className={styles.quantityButton} onClick={() => setPtEditQty(ptEditQty + 1)}>
+                                              <Plus size={14} weight="bold" />
+                                            </button>
+                                          </div>
+                                          <div className={styles.editActions}>
+                                            <button className={styles.editSave} onClick={() => ptSaveEdit(item.id)} disabled={ptSaving || ptEditQty < 1}><Check size={14} weight="bold" /></button>
+                                            <button className={styles.editCancel} onClick={ptCancelEdit}><X size={14} weight="bold" /></button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span className={`${styles.ptItemQty} ${styles.ptItemQtyBlue} ${styles.ptItemQtyClickable}`} onClick={() => ptStartEdit(item.id, item.quantity)}>{item.quantity}x</span>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1021,7 +1084,27 @@ export const VorbestellerHistoryPage: React.FC = () => {
                                           </span>
                                         )}
                                       </div>
-                                      <span className={`${styles.ptItemQty} ${styles.ptItemQtyGreen}`}>{item.quantity}x</span>
+                                      {ptEditingId === item.id ? (
+                                        <div className={styles.editRow}>
+                                          <div className={styles.quantityControls}>
+                                            <button className={styles.quantityButton} onClick={() => setPtEditQty(Math.max(1, ptEditQty - 1))}>
+                                              <Minus size={14} weight="bold" />
+                                            </button>
+                                            <input type="text" className={styles.quantityInput} value={ptEditQty === 0 ? '' : ptEditQty}
+                                              onChange={e => { const v = e.target.value; if (v === '') { setPtEditQty(0); return; } const n = parseInt(v, 10); if (!isNaN(n) && n >= 0) setPtEditQty(n); }}
+                                              placeholder="0" />
+                                            <button className={styles.quantityButton} onClick={() => setPtEditQty(ptEditQty + 1)}>
+                                              <Plus size={14} weight="bold" />
+                                            </button>
+                                          </div>
+                                          <div className={styles.editActions}>
+                                            <button className={styles.editSave} onClick={() => ptSaveEdit(item.id)} disabled={ptSaving || ptEditQty < 1}><Check size={14} weight="bold" /></button>
+                                            <button className={styles.editCancel} onClick={ptCancelEdit}><X size={14} weight="bold" /></button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span className={`${styles.ptItemQty} ${styles.ptItemQtyGreen} ${styles.ptItemQtyClickable}`} onClick={() => ptStartEdit(item.id, item.quantity)}>{item.quantity}x</span>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1030,6 +1113,21 @@ export const VorbestellerHistoryPage: React.FC = () => {
                               {entry.notes && (
                                 <div className={styles.ptNotes}>{entry.notes}</div>
                               )}
+
+                              <div className={styles.ptEntryActions}>
+                                {ptConfirmDeleteId === entry.id ? (
+                                  <div className={styles.confirmDelete}>
+                                    <span className={styles.confirmDeleteText}>Eintrag löschen?</span>
+                                    <button className={styles.confirmDeleteYes} onClick={() => ptHandleDelete(entry.id)} disabled={ptSaving}>Ja</button>
+                                    <button className={styles.confirmDeleteNo} onClick={() => setPtConfirmDeleteId(null)}>Nein</button>
+                                  </div>
+                                ) : (
+                                  <button className={styles.ptDeleteBtn} onClick={() => { setPtConfirmDeleteId(entry.id); setPtEditingId(null); }}>
+                                    <Trash size={14} weight="bold" />
+                                    <span>Eintrag löschen</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

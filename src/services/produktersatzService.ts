@@ -133,6 +133,23 @@ class ProduktErsatzService {
     }
   }
 
+  async updateItemQuantity(itemId: string, quantity: number): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/items/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update item quantity: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error updating item quantity:', error);
+      throw error;
+    }
+  }
+
   async deleteEntry(id: string): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
