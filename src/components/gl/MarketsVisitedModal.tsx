@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { X, Storefront, MapPin, Check, Clock, CaretLeft, Package, ArrowsLeftRight, ShoppingCart, Spinner, CalendarBlank, MagnifyingGlass } from '@phosphor-icons/react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { X, Storefront, MapPin, Check, Clock, CaretLeft, Package, ArrowsLeftRight, ShoppingCart, Spinner, CalendarBlank, MagnifyingGlass, Funnel, CaretDown } from '@phosphor-icons/react';
 import type { Market } from '../../types/market-types';
 import { API_BASE_URL } from '../../config/database';
 import styles from './MarketsVisitedModal.module.css';
@@ -113,14 +113,35 @@ export const MarketsVisitedModal: React.FC<MarketsVisitedModalProps> = ({
   const [history, setHistory] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [chainFilter, setChainFilter] = useState<string>('');
+  const [chainDropdownOpen, setChainDropdownOpen] = useState(false);
+  const chainDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedMarket(null);
       setHistory([]);
       setSearchTerm('');
+      setChainFilter('');
+      setChainDropdownOpen(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (chainDropdownRef.current && !chainDropdownRef.current.contains(e.target as Node)) {
+        setChainDropdownOpen(false);
+      }
+    };
+    if (chainDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [chainDropdownOpen]);
+
+  const uniqueChains = useMemo(() => {
+    const chains = new Set<string>();
+    markets.forEach(m => { if (m.chain) chains.add(m.chain); });
+    return Array.from(chains).sort((a, b) => a.localeCompare(b));
+  }, [markets]);
 
   const fetchHistory = useCallback(async (marketId: string) => {
     setLoading(true);
@@ -159,18 +180,24 @@ export const MarketsVisitedModal: React.FC<MarketsVisitedModalProps> = ({
   const pendingCount = sortedMarkets.length - freshCount;
 
   const filteredMarkets = useMemo(() => {
-    if (!searchTerm.trim()) return sortedMarkets;
-    const q = searchTerm.toLowerCase().trim();
-    return sortedMarkets.filter(m =>
-      m.name.toLowerCase().includes(q) ||
-      m.chain?.toLowerCase().includes(q) ||
-      m.city?.toLowerCase().includes(q) ||
-      m.address?.toLowerCase().includes(q) ||
-      m.postalCode?.toLowerCase().includes(q) ||
-      String(m.frequency || '').includes(q) ||
-      String(m.currentVisits || '').includes(q)
-    );
-  }, [sortedMarkets, searchTerm]);
+    let result = sortedMarkets;
+    if (chainFilter) {
+      result = result.filter(m => m.chain === chainFilter);
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      result = result.filter(m =>
+        m.name.toLowerCase().includes(q) ||
+        m.chain?.toLowerCase().includes(q) ||
+        m.city?.toLowerCase().includes(q) ||
+        m.address?.toLowerCase().includes(q) ||
+        m.postalCode?.toLowerCase().includes(q) ||
+        String(m.frequency || '').includes(q) ||
+        String(m.currentVisits || '').includes(q)
+      );
+    }
+    return result;
+  }, [sortedMarkets, searchTerm, chainFilter]);
 
   const visitGroups = useMemo(() => groupByVisitDate(history), [history]);
   const submissionGroups = useMemo(() => {
@@ -216,20 +243,51 @@ export const MarketsVisitedModal: React.FC<MarketsVisitedModalProps> = ({
               </div>
             </div>
 
-            <div className={styles.searchWrapper}>
-              <MagnifyingGlass size={16} weight="bold" className={styles.searchIcon} />
-              <input
-                type="text"
-                className={styles.searchInput}
-                placeholder="Markt, Handelskette, Ort, PLZ ..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
-                <button className={styles.searchClear} onClick={() => setSearchTerm('')}>
-                  <X size={14} weight="bold" />
+            <div className={styles.searchRow}>
+              <div className={styles.searchWrapper}>
+                <MagnifyingGlass size={16} weight="bold" className={styles.searchIcon} />
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="Markt, Ort, PLZ ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                  <button className={styles.searchClear} onClick={() => setSearchTerm('')}>
+                    <X size={14} weight="bold" />
+                  </button>
+                )}
+              </div>
+              <div className={styles.chainFilterWrapper} ref={chainDropdownRef}>
+                <button
+                  className={`${styles.chainFilterBtn} ${chainFilter ? styles.chainFilterActive : ''}`}
+                  onClick={() => setChainDropdownOpen(!chainDropdownOpen)}
+                >
+                  <Funnel size={14} weight={chainFilter ? 'fill' : 'bold'} />
+                  <span className={styles.chainFilterLabel}>{chainFilter || 'Kette'}</span>
+                  <CaretDown size={12} weight="bold" className={`${styles.chainFilterCaret} ${chainDropdownOpen ? styles.open : ''}`} />
                 </button>
-              )}
+                {chainDropdownOpen && (
+                  <div className={styles.chainDropdown}>
+                    <button
+                      className={`${styles.chainOption} ${!chainFilter ? styles.chainOptionActive : ''}`}
+                      onClick={() => { setChainFilter(''); setChainDropdownOpen(false); }}
+                    >
+                      Alle Ketten
+                    </button>
+                    {uniqueChains.map(chain => (
+                      <button
+                        key={chain}
+                        className={`${styles.chainOption} ${chainFilter === chain ? styles.chainOptionActive : ''}`}
+                        onClick={() => { setChainFilter(chain); setChainDropdownOpen(false); }}
+                      >
+                        {chain}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className={styles.marketsList}>
