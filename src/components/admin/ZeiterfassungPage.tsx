@@ -971,6 +971,23 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
       groups[date][entry.gebietsleiter_id].push(entry);
     });
 
+    // Build a GL name lookup from market entries
+    const glNameLookup: Record<string, { id: string; first_name: string; last_name: string }> = {};
+    entries.forEach(entry => {
+      if (entry.gebietsleiter_id && entry.gebietsleiter && !glNameLookup[entry.gebietsleiter_id]) {
+        glNameLookup[entry.gebietsleiter_id] = entry.gebietsleiter;
+      }
+    });
+
+    // Ensure GLs with only zusatz entries on a given day still appear
+    zusatzEntries.forEach(z => {
+      if (!z.entry_date || !z.gebietsleiter_id) return;
+      if (!groups[z.entry_date]) groups[z.entry_date] = {};
+      if (!groups[z.entry_date][z.gebietsleiter_id]) {
+        groups[z.entry_date][z.gebietsleiter_id] = [];
+      }
+    });
+
     const dayGroups: DayGroup[] = [];
 
     Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach(date => {
@@ -978,7 +995,9 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
 
       Object.keys(groups[date]).forEach(glId => {
         const glEntries = groups[date][glId];
-        const gl = glEntries[0].gebietsleiter;
+        const gl = glEntries.length > 0
+          ? glEntries[0].gebietsleiter
+          : glNameLookup[glId] || { id: glId, first_name: 'Unbekannt', last_name: '' };
 
         // Find erste and letzte aktion
         let earliestTime: Date | null = null;
@@ -1090,6 +1109,16 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
         };
       }
       glGroups[entry.gebietsleiter_id].entries.push(entry);
+    });
+
+    // Ensure GLs with only zusatz entries also appear in profile view
+    zusatzEntries.forEach(z => {
+      if (!z.gebietsleiter_id || glGroups[z.gebietsleiter_id]) return;
+      const glFromMarket = entries.find(e => e.gebietsleiter_id === z.gebietsleiter_id);
+      glGroups[z.gebietsleiter_id] = {
+        gl: glFromMarket?.gebietsleiter || { id: z.gebietsleiter_id, first_name: 'Unbekannt', last_name: '' },
+        entries: []
+      };
     });
 
     // Process each GL

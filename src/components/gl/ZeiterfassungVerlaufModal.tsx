@@ -20,7 +20,8 @@ import {
   Pause,
   CircleNotch,
   Star,
-  Trash
+  Trash,
+  Airplane
 } from '@phosphor-icons/react';
 import { useAuth } from '../../contexts/AuthContext';
 import fragebogenService from '../../services/fragebogenService';
@@ -235,6 +236,7 @@ const reasonIcons: Record<string, React.ElementType> = {
   hotel: Bed,
   unterbrechung: Pause,
   sonderaufgabe: Star,
+  dienstreise: Airplane,
 };
 
 // Chain colors
