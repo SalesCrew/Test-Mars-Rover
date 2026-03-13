@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   X, 
   Clock, 
-  CaretLeft, 
+  CaretLeft,
+  CaretRight,
   Check, 
   Storefront, 
   FirstAidKit, 
@@ -18,7 +19,8 @@ import {
   Star,
   MagnifyingGlass,
   MapPin,
-  Airplane
+  Airplane,
+  CalendarBlank
 } from '@phosphor-icons/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/database';
@@ -142,6 +144,139 @@ const formatTimeInput = (value: string): string => {
   }
 };
 
+// Custom Date Picker Component
+const MONTH_NAMES = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+const formatDateDisplay = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}.${m}.${y}`;
+};
+
+const CustomDatePicker: React.FC<{
+  value: string;
+  onChange: (date: string) => void;
+  max: string;
+}> = ({ value, onChange, max }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = value ? new Date(value + 'T00:00:00') : new Date();
+  const [viewYear, setViewYear] = useState(selected.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selected.getMonth());
+
+  useEffect(() => {
+    if (open) {
+      const d = value ? new Date(value + 'T00:00:00') : new Date();
+      setViewYear(d.getFullYear());
+      setViewMonth(d.getMonth());
+    }
+  }, [open, value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  const maxDate = max ? new Date(max + 'T23:59:59') : null;
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); }
+    else setViewMonth(viewMonth - 1);
+  };
+  const nextMonth = () => {
+    const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
+    const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
+    if (maxDate) {
+      const firstOfNext = new Date(nextY, nextM, 1);
+      if (firstOfNext > maxDate) return;
+    }
+    setViewMonth(nextM);
+    setViewYear(nextY);
+  };
+
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const isDisabled = (day: number) => {
+    if (!maxDate) return false;
+    return new Date(viewYear, viewMonth, day) > maxDate;
+  };
+
+  const isSelected = (day: number) => {
+    if (!value) return false;
+    const s = new Date(value + 'T00:00:00');
+    return s.getFullYear() === viewYear && s.getMonth() === viewMonth && s.getDate() === day;
+  };
+
+  const isToday = (day: number) => {
+    const now = new Date();
+    return now.getFullYear() === viewYear && now.getMonth() === viewMonth && now.getDate() === day;
+  };
+
+  const handleSelect = (day: number) => {
+    if (isDisabled(day)) return;
+    const m = (viewMonth + 1).toString().padStart(2, '0');
+    const d = day.toString().padStart(2, '0');
+    onChange(`${viewYear}-${m}-${d}`);
+    setOpen(false);
+  };
+
+  return (
+    <div className={styles.datePickerWrapper} ref={ref}>
+      <button type="button" className={styles.datePickerButton} onClick={() => setOpen(!open)}>
+        <CalendarBlank size={16} weight="regular" className={styles.datePickerIcon} />
+        <span className={styles.datePickerValue}>{formatDateDisplay(value) || 'Datum wählen'}</span>
+      </button>
+      {open && (
+        <div className={styles.datePickerDropdown}>
+          <div className={styles.datePickerHeader}>
+            <button type="button" className={styles.datePickerNav} onClick={prevMonth}>
+              <CaretLeft size={16} weight="bold" />
+            </button>
+            <span className={styles.datePickerMonthLabel}>
+              {MONTH_NAMES[viewMonth]} {viewYear}
+            </span>
+            <button type="button" className={styles.datePickerNav} onClick={nextMonth}>
+              <CaretRight size={16} weight="bold" />
+            </button>
+          </div>
+          <div className={styles.datePickerDayLabels}>
+            {DAY_LABELS.map(l => <span key={l} className={styles.datePickerDayLabel}>{l}</span>)}
+          </div>
+          <div className={styles.datePickerGrid}>
+            {cells.map((day, i) => (
+              day === null ? (
+                <span key={`e-${i}`} className={styles.datePickerEmpty} />
+              ) : (
+                <button
+                  key={day}
+                  type="button"
+                  className={`${styles.datePickerDay} ${isSelected(day) ? styles.datePickerDaySelected : ''} ${isToday(day) && !isSelected(day) ? styles.datePickerDayToday : ''} ${isDisabled(day) ? styles.datePickerDayDisabled : ''}`}
+                  onClick={() => handleSelect(day)}
+                  disabled={isDisabled(day)}
+                >
+                  {day}
+                </button>
+              )
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface ZusatzEntry {
   id: string;
   reason: string;
@@ -152,6 +287,7 @@ interface ZusatzEntry {
   kommentar?: string;
   market_id?: string;
   marketName?: string;
+  entryDate?: string;
 }
 
 interface MarketVisitTime {
@@ -170,7 +306,7 @@ interface ZusatzZeiterfassungModalProps {
 const reasons = [
   { id: 'unterbrechung', label: 'Unterbrechung', icon: Pause, isDeduction: true, requiresComment: true, requiresMarket: false },
   { id: 'sonderaufgabe', label: 'Sonderaufgabe', icon: Star, isDeduction: false, requiresComment: false, requiresMarket: true },
-  { id: 'marktbesuch', label: 'Marktbesuch', icon: Storefront, isDeduction: false, requiresComment: false, requiresMarket: false },
+  { id: 'marktbesuch', label: 'Marktbesuch', icon: Storefront, isDeduction: false, requiresComment: false, requiresMarket: true },
   { id: 'arztbesuch', label: 'Arztbesuch', icon: FirstAidKit, isDeduction: false, requiresComment: false, requiresMarket: false },
   { id: 'werkstatt', label: 'Werkstatt/Autoreinigung', icon: Car, isDeduction: false, requiresComment: false, requiresMarket: false },
   { id: 'homeoffice', label: 'Homeoffice', icon: House, isDeduction: false, requiresComment: false, requiresMarket: false },
@@ -251,12 +387,17 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
   marketVisits = [],
 }) => {
   const { user } = useAuth();
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+  }, []);
   const [step, setStep] = useState<'reason' | 'market' | 'time' | 'added'>('reason');
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [entries, setEntries] = useState<ZusatzEntry[]>([]);
   const [von, setVon] = useState('');
   const [bis, setBis] = useState('');
   const [kommentar, setKommentar] = useState('');
+  const [entryDate, setEntryDate] = useState('');
   const [activeTimePicker, setActiveTimePicker] = useState<'von' | 'bis' | null>(null);
 
   // Market selection state (for sonderaufgabe)
@@ -325,14 +466,16 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
       setSelectedMarketId(null);
       setSelectedMarketName('');
       setMarketSearch('');
+      setEntryDate(todayStr);
     }
-  }, [isOpen]);
+  }, [isOpen, todayStr]);
 
   const handleReasonSelect = (reasonId: string) => {
     setSelectedReason(reasonId);
     setVon('');
     setBis('');
     setKommentar('');
+    setEntryDate(todayStr);
     setSelectedMarketId(null);
     setSelectedMarketName('');
     setMarketSearch('');
@@ -360,6 +503,7 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
       kommentar: kommentar || undefined,
       market_id: selectedMarketId || undefined,
       marketName: selectedMarketName || undefined,
+      entryDate: entryDate || todayStr,
     };
 
     setEntries(prev => [...prev, newEntry]);
@@ -368,6 +512,7 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
     setVon('');
     setBis('');
     setKommentar('');
+    setEntryDate(todayStr);
     setSelectedMarketId(null);
     setSelectedMarketName('');
     setMarketSearch('');
@@ -550,6 +695,14 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
           {/* Step 2: Time Entry */}
           {step === 'time' && (
             <div className={styles.timeEntry}>
+              <div className={styles.dateField}>
+                <label className={styles.dateLabel}>DATUM</label>
+                <CustomDatePicker
+                  value={entryDate}
+                  onChange={setEntryDate}
+                  max={todayStr}
+                />
+              </div>
               <div className={styles.timeRow}>
                 <div className={styles.timeField}>
                   <label className={styles.timeLabel}>VON</label>
@@ -681,6 +834,9 @@ export const ZusatzZeiterfassungModal: React.FC<ZusatzZeiterfassungModalProps> =
                           {entry.marketName && <span className={styles.entryMarketName}> - {entry.marketName}</span>}
                         </span>
                         <span className={styles.entryTime}>
+                          {entry.entryDate && entry.entryDate !== todayStr && (
+                            <span className={styles.entryDateBadge}>{formatDateDisplay(entry.entryDate)}</span>
+                          )}
                           {entry.von} - {entry.bis} ({entry.duration})
                         </span>
                       </div>
