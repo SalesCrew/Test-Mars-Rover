@@ -708,7 +708,7 @@ export const zeiterfassungApi = {
     return response.json();
   },
 
-  async updateZusatz(id: string, data: { zeit_von?: string; zeit_bis?: string }): Promise<any> {
+  async updateZusatz(id: string, data: { zeit_von?: string; zeit_bis?: string; kommentar?: string }): Promise<any> {
     const response = await fetch(`${FRAGEBOGEN_API}/zusatz-zeiterfassung/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

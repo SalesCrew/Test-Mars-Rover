@@ -641,8 +641,36 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingId) return;
+
+    try {
+      if (editingId.startsWith('fahrzeit-')) {
+        const entryId = editingId.replace('fahrzeit-', '');
+        await fragebogenService.zeiterfassung.update(entryId, {
+          fahrzeit_von: editData.fahrzeitVon,
+          fahrzeit_bis: editData.fahrzeitBis,
+        });
+      } else {
+        const entry = entries.find(e => e.id === editingId);
+        if (entry?.type === 'market') {
+          await fragebogenService.zeiterfassung.update(editingId, {
+            besuchszeit_von: editData.besuchszeitVon,
+            besuchszeit_bis: editData.besuchszeitBis,
+          });
+        } else if (entry?.type === 'zusatz') {
+          await fragebogenService.zeiterfassung.updateZusatz(editingId, {
+            zeit_von: editData.von,
+            zeit_bis: editData.bis,
+            kommentar: editData.kommentar,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error saving time edit:', error);
+      alert('Fehler beim Speichern');
+      return;
+    }
 
     setEntries(prevEntries => prevEntries.map(entry => {
       // Handle fahrzeit edit
@@ -682,7 +710,6 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
       return entry;
     }));
 
-    console.log('Saved edit for:', editingId, editData);
     setEditingId(null);
     setEditData({});
     setActiveTimePicker(null);
