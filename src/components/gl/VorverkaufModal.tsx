@@ -378,14 +378,14 @@ export const VorverkaufModal: React.FC<VorverkaufModalProps> = ({ isOpen, onClos
       setShowVisitChoiceModal(true);
     } else {
       // No recent visit, automatically create new visit
-      await executeSubmission(true);
+      await executeSubmission(false);
     }
   };
 
   // Handler when user chooses to create a new visit from the modal
   const handleCreateNewVisit = async () => {
     setShowVisitChoiceModal(false);
-    await executeSubmission(true);
+    await executeSubmission(false);
   };
 
   // Handler when user chooses to count to existing visit from the modal

@@ -703,7 +703,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       setPendingSubmitType('pending');
       setShowVisitChoiceModal(true);
     } else {
-      executePendingSubmission(true);
+      executePendingSubmission(false);
     }
   };
 
@@ -715,7 +715,7 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
       setPendingSubmitType('confirm');
       setShowVisitChoiceModal(true);
     } else {
-      executeConfirmSubmission(true);
+      executeConfirmSubmission(false);
     }
   };
 
@@ -723,9 +723,9 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const handleCreateNewVisit = async () => {
     setShowVisitChoiceModal(false);
     if (pendingSubmitType === 'pending') {
-      await executePendingSubmission(true);
+      await executePendingSubmission(false);
     } else if (pendingSubmitType === 'confirm') {
-      await executeConfirmSubmission(true);
+      await executeConfirmSubmission(false);
     }
   };
 

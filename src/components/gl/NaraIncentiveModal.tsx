@@ -162,11 +162,6 @@ export const NaraIncentiveModal: React.FC<NaraIncentiveModalProps> = ({ isOpen, 
           quantity: p.quantity
         }))
       });
-      try {
-        await marketService.recordVisit(selectedMarketId, glId);
-      } catch (visitError) {
-        console.warn('Could not record market visit:', visitError);
-      }
       setStep('success');
       setTimeout(() => setIsAnimating(true), 50);
     } catch (err) {
