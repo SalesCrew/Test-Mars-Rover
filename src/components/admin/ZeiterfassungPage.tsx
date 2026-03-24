@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { CaretDown, CaretRight, CaretLeft, Storefront, Car, CalendarCheck, TrendUp, Receipt, User, MagnifyingGlass, Pause, Star, FirstAidKit, House, GraduationCap, Warehouse, Path, Bed, Check, X, Trash, Warning, NavigationArrow, Airplane } from '@phosphor-icons/react';
 import XLSX from 'xlsx-js-style';
@@ -200,6 +200,48 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
   const [expandedGLs, setExpandedGLs] = useState<Set<string>>(new Set());
   const [detailedEntries, setDetailedEntries] = useState<Record<string, ZeiterfassungEntry[]>>({});
   const [dayTrackingData, setDayTrackingData] = useState<Record<string, { day_start_time: string | null; day_end_time: string | null; skipped_first_fahrzeit: boolean; km_stand_start?: number | null; km_stand_end?: number | null }>>({});
+
+  // Compute per-GL cumulative KM driven and Privatnutzung from dayTrackingData
+  const kmStatsPerGL = useMemo(() => {
+    const stats: Record<string, { totalKm: number; totalPrivatnutzung: number }> = {};
+    // Only process date-keyed entries (format: "YYYY-MM-DD-<uuid>") to avoid double-counting
+    const dateKeyPattern = /^\d{4}-\d{2}-\d{2}-/;
+    // Group by glId: collect { date, km_stand_start, km_stand_end }
+    const byGL: Record<string, Array<{ date: string; start: number | null; end: number | null }>> = {};
+    Object.entries(dayTrackingData).forEach(([key, val]) => {
+      if (!dateKeyPattern.test(key)) return;
+      const date = key.substring(0, 10);
+      const glId = key.substring(11);
+      if (!byGL[glId]) byGL[glId] = [];
+      byGL[glId].push({
+        date,
+        start: val.km_stand_start ?? null,
+        end: val.km_stand_end ?? null,
+      });
+    });
+    // For each GL compute totals
+    Object.entries(byGL).forEach(([glId, days]) => {
+      const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
+      let totalKm = 0;
+      let totalPrivatnutzung = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        const { start, end } = sorted[i];
+        // Daily km driven: only when both start and end are recorded
+        if (start != null && end != null) {
+          totalKm += Math.max(0, end - start);
+        }
+        // Privatnutzung: gap between this day's end and next day's start
+        if (i < sorted.length - 1 && end != null) {
+          const nextStart = sorted[i + 1].start;
+          if (nextStart != null && nextStart > end) {
+            totalPrivatnutzung += nextStart - end;
+          }
+        }
+      }
+      stats[glId] = { totalKm: Math.round(totalKm), totalPrivatnutzung: Math.round(totalPrivatnutzung) };
+    });
+    return stats;
+  }, [dayTrackingData]);
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
   
   // Profile view state
@@ -1654,6 +1696,13 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                               <span className={styles.dayRowStatLabel} style={{ color: '#8B5CF6' }}>Märkte</span>
                               <span className={styles.dayRowStatValue} style={{ color: '#8B5CF6' }}>{day.maerkteBesucht}</span>
                             </div>
+
+                            {dayTracking?.km_stand_end != null && dayTracking?.km_stand_start != null && (
+                              <div className={styles.dayRowStatPill} style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.04) 100%)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                                <span className={styles.dayRowStatLabel} style={{ color: '#D97706' }}>KM</span>
+                                <span className={styles.dayRowStatValue} style={{ color: '#D97706' }}>{Math.round(dayTracking.km_stand_end - dayTracking.km_stand_start)}</span>
+                              </div>
+                            )}
                           </>
                         );
                       })()}
@@ -2089,6 +2138,18 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                     <span className={styles.glProfileStatValue}>{formatMinutes(gl.avgDailyWorkTime)}</span>
                     <span className={styles.glProfileStatLabel}>Ø/Tag</span>
                   </div>
+                  {(kmStatsPerGL[gl.glId]?.totalKm ?? 0) > 0 && (
+                    <div className={styles.glProfileStat}>
+                      <span className={styles.glProfileStatValue} style={{ color: '#D97706' }}>{kmStatsPerGL[gl.glId].totalKm} km</span>
+                      <span className={styles.glProfileStatLabel}>Gesamt KM</span>
+                    </div>
+                  )}
+                  {(kmStatsPerGL[gl.glId]?.totalPrivatnutzung ?? 0) > 0 && (
+                    <div className={styles.glProfileStat}>
+                      <span className={styles.glProfileStatValue} style={{ color: '#EF4444' }}>{kmStatsPerGL[gl.glId].totalPrivatnutzung} km</span>
+                      <span className={styles.glProfileStatLabel}>Privatnutzung</span>
+                    </div>
+                  )}
                 </div>
               </button>
             ))
@@ -2194,6 +2255,13 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
                             <span className={styles.statLabel} style={{ color: '#8B5CF6' }}>Märkte besucht</span>
                             <span className={styles.statValue} style={{ color: '#8B5CF6' }}>{gl.maerkteBesucht}</span>
                           </div>
+
+                          {dayTracking?.km_stand_end != null && dayTracking?.km_stand_start != null && (
+                            <div className={styles.stat} style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.04) 100%)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                              <span className={styles.statLabel} style={{ color: '#D97706' }}>KM</span>
+                              <span className={styles.statValue} style={{ color: '#D97706' }}>{Math.round(dayTracking.km_stand_end - dayTracking.km_stand_start)}</span>
+                            </div>
+                          )}
                         </>
                       );
                     })()}
