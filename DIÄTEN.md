@@ -34,9 +34,9 @@ Taggeld entschädigt den persönlichen Mehraufwand für Verpflegung bei Dienstre
 | 9h          | 9,77 + 3 × 4,03                   | € 21,86  |
 | 10h         | 9,77 + 4 × 4,03                   | € 25,89  |
 | 11h         | 9,77 + 5 × 4,03                   | € 29,92  |
-| ≥ 11h 30min | 9,77 + 5 × 4,03 → capped          | € 31,77  |
+| ≥ 12h       | 9,77 + 6 × 4,03 = 33,95 → capped  | € 31,77  |
 
-The cap of € 31,77 is reached at ~11.5h (5 full hours beyond the 6th = 5 × 4,03 = 20,15 + 9,77 = 29,92; one more full hour would exceed cap, so max applies).
+Das Maximum von € 31,77 wird ab 12h Abwesenheit erreicht (6 volle Stunden über der 6. = 6 × 4,03 = 24,18 + 9,77 = 33,95 → gedeckelt auf 31,77).
 
 ---
 
