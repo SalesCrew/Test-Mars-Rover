@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, PaperPlaneRight } from '@phosphor-icons/react';
 import roverIcon from '../../assets/rover-icon.png';
 import styles from './ChatWindow.module.css';
+import { API_BASE_URL } from '../../config/database';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ChatWindowProps {
   isOpen: boolean;
@@ -15,7 +17,13 @@ interface Message {
   timestamp: Date;
 }
 
+interface ApiMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -26,14 +34,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatWindowRef = useRef<HTMLDivElement>(null);
+  const conversationHistory = useRef<ApiMessage[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
-      // Focus input when chat opens
       setTimeout(() => {
         inputRef.current?.focus();
       }, 300);
@@ -48,7 +57,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
     };
 
     if (isOpen) {
-      // Add event listener with a slight delay to prevent immediate closing
       setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside);
       }, 100);
@@ -60,33 +68,67 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    // Scroll to bottom when new messages arrive
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
-    const newMessage: Message = {
+    const userText = inputValue.trim();
+
+    const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputValue,
+      text: userText,
       sender: 'user',
       timestamp: new Date(),
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
+    setIsLoading(true);
 
-    // Simulate rover response
-    setTimeout(() => {
-      const roverResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Danke für deine Nachricht! Ich verarbeite deine Anfrage...',
-        sender: 'rover',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, roverResponse]);
-    }, 1000);
+    conversationHistory.current.push({ role: 'user', content: userText });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: conversationHistory.current,
+          authUserId: user?.id,
+          glId: user?.gebietsleiter_id,
+        }),
+      });
+
+      const data = await response.json();
+      const replyText: string = response.ok
+        ? (data.reply ?? 'Keine Antwort erhalten.')
+        : (data.error ?? 'Ein Fehler ist aufgetreten.');
+
+      conversationHistory.current.push({ role: 'assistant', content: replyText });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          text: replyText,
+          sender: 'rover',
+          timestamp: new Date(),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          text: 'Verbindungsfehler. Bitte versuche es erneut.',
+          sender: 'rover',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -142,6 +184,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
         ))}
+        {isLoading && (
+          <div className={`${styles.messageWrapper} ${styles.roverMessage}`}>
+            <img src={roverIcon} alt="Rover" className={styles.messageAvatar} />
+            <div className={styles.messageBubble}>
+              <div className={styles.typingDots}>
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -155,11 +207,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ isOpen, onClose }) => {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
+          disabled={isLoading}
         />
         <button
           className={styles.sendButton}
           onClick={handleSend}
-          disabled={!inputValue.trim()}
+          disabled={!inputValue.trim() || isLoading}
           aria-label="Senden"
         >
           <PaperPlaneRight size={20} weight="fill" />

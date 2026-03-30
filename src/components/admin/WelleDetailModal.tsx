@@ -96,6 +96,7 @@ interface WelleDetailModalProps {
 
 export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClose, onDelete }) => {
   const [deleteClickCount, setDeleteClickCount] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,7 +108,7 @@ export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClo
     };
   }, []);
 
-  const handleDeleteClick = async () => {
+  const handleDeleteClick = () => {
     if (isDeleting) return;
 
     if (deleteClickCount === 0) {
@@ -119,21 +120,30 @@ export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClo
       if (deleteTimerRef.current) {
         clearTimeout(deleteTimerRef.current);
       }
-      
-      setIsDeleting(true);
-      try {
-        await wellenService.deleteWelle(welle.id);
-        if (onDelete) {
-          onDelete();
-        }
-        onClose();
-      } catch (error) {
-        console.error('Error deleting welle:', error);
-        alert('Fehler beim Löschen der Welle');
-        setIsDeleting(false);
-        setDeleteClickCount(0);
-      }
+      setDeleteClickCount(0);
+      setShowDeleteConfirm(true);
     }
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await wellenService.deleteWelle(welle.id);
+      if (onDelete) {
+        onDelete();
+      }
+      onClose();
+    } catch (error) {
+      console.error('Error deleting welle:', error);
+      alert('Fehler beim Löschen der Welle');
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setDeleteClickCount(0);
   };
 
   // Calculate overall progress
@@ -202,6 +212,37 @@ export const WelleDetailModal: React.FC<WelleDetailModalProps> = ({ welle, onClo
   return ReactDOM.createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+
+        {/* ── Delete Confirmation Dialog ── */}
+        {showDeleteConfirm && (
+          <div className={styles.confirmOverlay} onClick={handleCancelDelete}>
+            <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.confirmIcon}>
+                <Trash size={28} weight="fill" />
+              </div>
+              <h3 className={styles.confirmTitle}>Welle archivieren?</h3>
+              <p className={styles.confirmText}>
+                <strong>"{welle.name}"</strong> wird ausgeblendet. Alle Einreichungen und Daten bleiben erhalten.
+              </p>
+              <div className={styles.confirmActions}>
+                <button
+                  className={styles.confirmCancelBtn}
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  className={styles.confirmDeleteBtn}
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Wird archiviert…' : 'Ja, archivieren'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Hero Section */}
         <div className={styles.heroSection}>
           {welle.image && (
