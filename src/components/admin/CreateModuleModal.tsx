@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, ArrowLeft, Check, Plus, Trash, DotsSixVertical, GitBranch, Question, CheckCircle as CheckCircleFilled, CaretDown } from '@phosphor-icons/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ArrowLeft, Check, Plus, Trash, DotsSixVertical, GitBranch, Question, CheckCircle as CheckCircleFilled, CaretDown, Image } from '@phosphor-icons/react';
 import fragebogenService from '../../services/fragebogenService';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -878,6 +878,33 @@ const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
   const config = QUESTION_TYPES[question.type];
   const Icon = config.icon;
 
+  // Image attachment state
+  const [isUploading, setIsUploading] = useState(false);
+  const [hoveredImageIdx, setHoveredImageIdx] = useState<number | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        const url = await fragebogenService.questions.uploadImage(base64, file.name);
+        onUpdate(question.id, { images: [...(question.images || []), url] });
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = (idx: number) => {
+    const updated = (question.images || []).filter((_, i) => i !== idx);
+    onUpdate(question.id, { images: updated });
+  };
+
   const handleAddOption = () => {
     const newOption = ''; // Empty string instead of default text
     onUpdate(question.id, { options: [...(question.options || []), newOption] });
@@ -999,6 +1026,75 @@ const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
                 <span>Pflichtfrage</span>
               </label>
             </div>
+
+            {/* Image attachments */}
+            <div className={styles.imageAttachRow}>
+              {(question.images || []).map((url, idx) => (
+                <div
+                  key={idx}
+                  className={styles.imagePill}
+                  onMouseEnter={() => setHoveredImageIdx(idx)}
+                  onMouseLeave={() => setHoveredImageIdx(null)}
+                >
+                  {hoveredImageIdx === idx && (
+                    <div className={styles.imageHoverPreview}>
+                      <img src={url} alt={`Bild ${idx + 1}`} />
+                    </div>
+                  )}
+                  <span
+                    className={styles.imagePillLabel}
+                    onClick={() => setLightboxUrl(url)}
+                  >
+                    <Image size={12} weight="bold" />
+                    Bild {idx + 1}
+                  </span>
+                  <button
+                    className={styles.imagePillRemove}
+                    onClick={() => handleRemoveImage(idx)}
+                    title="Bild entfernen"
+                  >
+                    <X size={11} weight="bold" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add button: shows "Bild anhängen" when none, "+" when some exist */}
+              <button
+                className={(question.images || []).length === 0 ? styles.attachImageBtn : styles.addMoreImageBtn}
+                onClick={() => imgInputRef.current?.click()}
+                disabled={isUploading}
+                title="Bild anhängen"
+              >
+                {(question.images || []).length === 0 ? (
+                  <><Image size={13} weight="bold" />{isUploading ? 'Lädt…' : 'Bild anhängen'}</>
+                ) : (
+                  <Plus size={13} weight="bold" />
+                )}
+              </button>
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImageUpload(f);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+
+            {/* Lightbox */}
+            {lightboxUrl && (
+              <div className={styles.lightboxOverlay} onClick={() => setLightboxUrl(null)}>
+                <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+                  <button className={styles.lightboxClose} onClick={() => setLightboxUrl(null)}>
+                    <X size={20} weight="bold" />
+                  </button>
+                  <img src={lightboxUrl} alt="Vorschau" className={styles.lightboxImg} />
+                </div>
+              </div>
+            )}
 
             {/* Type-specific fields */}
             {(question.type === 'single_choice' || question.type === 'multiple_choice') && (

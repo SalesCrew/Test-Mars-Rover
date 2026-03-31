@@ -62,6 +62,9 @@ export interface QuestionInterface {
   
   // Conditional logic
   conditions?: QuestionCondition[];
+
+  // Attached images (URLs stored in question-images bucket)
+  images?: string[];
 }
 
 export interface QuestionCondition {
@@ -140,7 +143,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
           name: m.name,
           description: m.description,
           questionCount: m.question_count || 0,
-          questions: (m.questions || []).map((mq: { question: { id: string; type: string; question_text: string; instruction?: string; options?: string[]; likert_scale?: any; matrix_config?: any; numeric_constraints?: any; slider_config?: any }; required: boolean; order_index: number }) => ({
+          questions: (m.questions || []).map((mq: { question: { id: string; type: string; question_text: string; instruction?: string; options?: string[]; likert_scale?: any; matrix_config?: any; numeric_constraints?: any; slider_config?: any; images?: string[] }; required: boolean; order_index: number }) => ({
             id: mq.question.id,
             moduleId: m.id,
             type: mq.question.type as QuestionType,
@@ -153,7 +156,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
             matrixRows: mq.question.matrix_config?.rows,
             matrixColumns: mq.question.matrix_config?.columns,
             numericConstraints: mq.question.numeric_constraints,
-            sliderConfig: mq.question.slider_config
+            sliderConfig: mq.question.slider_config,
+            images: mq.question.images || []
           })),
           createdAt: m.created_at
         }));
@@ -350,6 +354,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
           matrixColumns: mq.question?.matrix_config?.columns,
           numericConstraints: mq.question?.numeric_constraints,
           sliderConfig: mq.question?.slider_config,
+          images: mq.question?.images || [],
           conditions: rulesByQuestion[mq.question?.id] || []
         })),
         createdAt: fullModule.created_at
@@ -395,7 +400,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
               columns: question.matrixColumns
             } : undefined,
             numeric_constraints: question.numericConstraints,
-            slider_config: question.sliderConfig
+            slider_config: question.sliderConfig,
+            images: question.images || []
           };
           
           const createdQuestion = await fragebogenService.questions.create(questionPayload);
@@ -414,7 +420,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
               columns: question.matrixColumns
             } : undefined,
             numeric_constraints: question.numericConstraints,
-            slider_config: question.sliderConfig
+            slider_config: question.sliderConfig,
+            images: question.images || []
           });
         }
       }
@@ -433,7 +440,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
             columns: question.matrixColumns
           } : undefined,
           numeric_constraints: question.numericConstraints,
-          slider_config: question.sliderConfig
+          slider_config: question.sliderConfig,
+          images: question.images || []
         };
         
         const createdQuestion = await fragebogenService.questions.create(questionPayload);
@@ -576,6 +584,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
             matrixColumns: mq.question?.matrix_config?.columns,
             numericConstraints: mq.question?.numeric_constraints,
             sliderConfig: mq.question?.slider_config,
+            images: mq.question?.images || [],
             conditions: rulesByQuestion[dupQuestionId] || []
           };
         }),
@@ -645,7 +654,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
             likert_scale: question.likert_scale,
             matrix_config: question.matrix_config,
             numeric_constraints: question.numeric_constraints,
-            slider_config: question.slider_config
+            slider_config: question.slider_config,
+            images: question.images || []
           };
           
           const createdQuestion = await fragebogenService.questions.create(questionPayload);
@@ -744,7 +754,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
           matrixRows: mq.question?.matrix_config?.rows,
           matrixColumns: mq.question?.matrix_config?.columns,
           numericConstraints: mq.question?.numeric_constraints,
-          sliderConfig: mq.question?.slider_config
+          sliderConfig: mq.question?.slider_config,
+          images: mq.question?.images || []
         })),
         createdAt: m.created_at
       }));
@@ -955,7 +966,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
             columns: question.matrixColumns
           } : undefined,
           numeric_constraints: question.numericConstraints,
-          slider_config: question.sliderConfig
+          slider_config: question.sliderConfig,
+          images: question.images || []
         };
         
         const createdQuestion = await fragebogenService.questions.create(questionPayload);

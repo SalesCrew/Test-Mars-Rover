@@ -182,6 +182,23 @@ export const questionsApi = {
   },
 
   /**
+   * Upload an image for a question, returns the public URL
+   */
+  async uploadImage(imageBase64: string, filename?: string): Promise<string> {
+    const response = await fetch(`${FRAGEBOGEN_API}/questions/upload-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: imageBase64, filename })
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to upload image');
+    }
+    const data = await response.json();
+    return data.url;
+  },
+
+  /**
    * Create a new question
    */
   async create(question: Partial<Question>): Promise<Question> {

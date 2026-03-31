@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS fb_questions (
     -- For slider: {"min": 0, "max": 100, "step": 1, "unit": "%"}
     slider_config JSONB,
     
+    -- Images attached to the question (array of public URLs from question-images bucket)
+    images JSONB DEFAULT '[]'::JSONB,
+    
     -- Metadata
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
