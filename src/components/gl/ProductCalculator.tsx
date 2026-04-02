@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, CaretDown, MagnifyingGlass, Plus, Minus, ArrowsClockwise, Package, Sparkle, Check, ArrowsLeftRight, Storefront, Clock } from '@phosphor-icons/react';
 import type { Product, ProductWithQuantity, ReplacementSuggestion } from '../../types/product-types';
 import type { Market } from '../../types/market-types';
-import { getAllProducts } from '../../data/productsData';
+import { getAllProducts, getAllProductsIncludingArchived } from '../../data/productsData';
 import { marketService } from '../../services/marketService';
 import { produktersatzService } from '../../services/produktersatzService';
 import { wellenService, type PendingDeliverySubmission } from '../../services/wellenService';
@@ -49,6 +49,8 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   const marketDropdownRef = useRef<HTMLDivElement>(null);
   const marketSearchInputRef = useRef<HTMLInputElement>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  // Includes archived products — used only for the Entnommen dropdown
+  const [allProductsWithArchived, setAllProductsWithArchived] = useState<Product[]>([]);
   const [allMarkets, setAllMarkets] = useState<Market[]>([]);
   const [_isLoadingProducts, setIsLoadingProducts] = useState(true);
   void _isLoadingProducts; // Reserved for loading state display
@@ -88,11 +90,13 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     const fetchData = async () => {
       try {
         setIsLoadingProducts(true);
-        const [products, markets] = await Promise.all([
+        const [products, productsWithArchived, markets] = await Promise.all([
           getAllProducts(),
+          getAllProductsIncludingArchived(),
           marketService.getAllMarkets()
         ]);
         setAllProducts(products.filter(p => p.isActive !== false));
+        setAllProductsWithArchived(productsWithArchived.filter(p => p.isActive !== false || p.isArchived));
         const activeMarkets = markets.filter(m => m.isActive !== false);
         setAllMarkets(activeMarkets.map(m => ({
           id: m.id,
@@ -122,14 +126,14 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
   // Filter products based on search query
   const filteredRemovedProducts = useMemo(() => {
     const query = removedSearchQuery.toLowerCase().trim();
-    if (!query) return allProducts;
+    if (!query) return allProductsWithArchived;
     
-    return allProducts.filter(p => 
+    return allProductsWithArchived.filter(p => 
       p.name.toLowerCase().includes(query) ||
       p.department.toLowerCase().includes(query) ||
       (p.sku && p.sku.toLowerCase().includes(query))
     );
-  }, [removedSearchQuery, allProducts]);
+  }, [removedSearchQuery, allProductsWithArchived]);
 
   const filteredAvailableProducts = useMemo(() => {
     const query = availableSearchQuery.toLowerCase().trim();
@@ -142,7 +146,6 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
     );
   }, [availableSearchQuery, allProducts]);
 
-  // Group products by category
   const groupedRemovedProducts = useMemo(() => {
     const groups: Record<string, Product[]> = {};
     filteredRemovedProducts.forEach(product => {
@@ -1013,7 +1016,12 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                                 }}
                               >
                                 <div className={styles.productInfo}>
-                                  <div className={styles.productName}>{product.name}</div>
+                                  <div className={styles.productName}>
+                                    {product.name}
+                                    {product.isArchived && (
+                                      <span className={styles.archivedLabel}>Archiv</span>
+                                    )}
+                                  </div>
                                   <div className={styles.productDetails}>
                                     {product.weight || product.content || '-'}
                                   </div>
@@ -1039,7 +1047,12 @@ export const ProductCalculator: React.FC<ProductCalculatorProps> = ({ isOpen, on
                     {removedProducts.map(p => (
                       <div key={p.product.id} className={styles.productCard}>
                         <div className={styles.productCardInfo}>
-                          <div className={styles.productCardName}>{p.product.name}</div>
+                          <div className={styles.productCardName}>
+                            {p.product.name}
+                            {p.product.isArchived && (
+                              <span className={styles.archivedLabel}>Archiv</span>
+                            )}
+                          </div>
                           <div className={styles.productCardMeta}>
                             {p.product.weight || p.product.content || '-'}
                             {p.product.content && ` · VE: ${p.product.content}`}

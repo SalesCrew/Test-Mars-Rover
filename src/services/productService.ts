@@ -2,8 +2,11 @@ import { API_ENDPOINTS } from '../config/database';
 import type { Product } from '../types/product-types';
 
 // Get all products
-export const getAllProducts = async (): Promise<Product[]> => {
-  const response = await fetch(API_ENDPOINTS.products.getAll);
+export const getAllProducts = async (options?: { includeArchived?: boolean }): Promise<Product[]> => {
+  const url = options?.includeArchived
+    ? `${API_ENDPOINTS.products.getAll}?includeArchived=true`
+    : API_ENDPOINTS.products.getAll;
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error('Failed to fetch products');
   }

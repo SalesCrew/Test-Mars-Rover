@@ -3,11 +3,15 @@ import { productService } from '../services/productService';
 
 export type { Product };
 
-// In-memory cache
+// In-memory cache — active products only
 let productsCache: Product[] = [];
 let isLoaded = false;
 
-// Load products from API
+// Separate cache for archived-inclusive list (Produkttausch / Entnommen)
+let allProductsCache: Product[] = [];
+let allProductsLoaded = false;
+
+// Load active products from API
 const loadProducts = async (): Promise<Product[]> => {
   try {
     const products = await productService.getAllProducts();
@@ -20,12 +24,33 @@ const loadProducts = async (): Promise<Product[]> => {
   }
 };
 
-// Get all products (async - loads from API if needed)
+// Load all products including archived from API
+const loadAllProducts = async (): Promise<Product[]> => {
+  try {
+    const products = await productService.getAllProducts({ includeArchived: true });
+    allProductsCache = products;
+    allProductsLoaded = true;
+    return products;
+  } catch (error) {
+    console.error('Failed to load all products from API:', error);
+    return [];
+  }
+};
+
+// Get active products (async - loads from API if needed). Used by all screens except Entnommen dropdown.
 export const getAllProducts = async (): Promise<Product[]> => {
   if (!isLoaded) {
     await loadProducts();
   }
   return productsCache;
+};
+
+// Get all products including archived (async). Used only for the Entnommen dropdown in Produkttausch.
+export const getAllProductsIncludingArchived = async (): Promise<Product[]> => {
+  if (!allProductsLoaded) {
+    await loadAllProducts();
+  }
+  return allProductsCache;
 };
 
 // Get products synchronously (returns cached data)

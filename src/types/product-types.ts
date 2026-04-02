@@ -11,6 +11,7 @@ export interface Product {
   artikelNr?: string; // Persistent unique article number from supplier
   paletteProducts?: PaletteProduct[]; // Products contained in a palette (only for palette type)
   isActive?: boolean;
+  isArchived?: boolean; // true when product has been soft-deleted (is_deleted=true in DB)
 }
 
 // Product contained within a palette
