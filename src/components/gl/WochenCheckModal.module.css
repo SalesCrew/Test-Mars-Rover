@@ -579,6 +579,57 @@
   text-align: left !important;
 }
 
+/* Ort pills inside edit form */
+.ortPills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ortPill {
+  padding: 4px 12px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 20px;
+  background: white;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.ortPill:hover {
+  border-color: #93C5FD;
+  color: #3B82F6;
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.ortPillSelected {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: white;
+}
+
+.ortPillSelected:hover {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: white;
+}
+
+/* Ort badge in display mode */
+.ortBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  margin-left: 6px;
+}
+
 /* Time Input with Clock */
 .timeInputWrapper {
   position: relative;

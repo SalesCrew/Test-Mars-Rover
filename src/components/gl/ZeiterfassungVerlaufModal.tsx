@@ -200,6 +200,7 @@ interface ZusatzEntry {
   isWorkTimeDeduction?: boolean;
   marketName?: string;
   marketChain?: string;
+  schulungOrt?: string | null;
 }
 
 type TimeEntry = MarketVisitEntry | ZusatzEntry;
@@ -409,6 +410,7 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
           marketName: entry.market?.name,
           marketChain: entry.market?.chain,
           isWorkTimeDeduction: entry.is_work_time_deduction,
+          schulungOrt: entry.schulung_ort || null,
         }));
 
         const allEntries = [...marketEntries, ...zusatzEntries];
@@ -642,6 +644,7 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
         von: entry.von,
         bis: entry.bis,
         kommentar: entry.kommentar || '',
+        schulungOrt: entry.schulungOrt || '',
       });
     }
   };
@@ -668,6 +671,7 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
             zeit_von: editData.von,
             zeit_bis: editData.bis,
             kommentar: editData.kommentar,
+            schulung_ort: entry.reason === 'schulung' ? (editData.schulungOrt || null) : undefined,
           });
         }
       }
@@ -710,6 +714,7 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
           bis: newBis,
           duration: calculateDuration(newVon, newBis),
           kommentar: editData.kommentar,
+          schulungOrt: entry.reason === 'schulung' ? (editData.schulungOrt || null) : entry.schulungOrt,
         };
       }
       return entry;
@@ -1318,6 +1323,23 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
                                     className={styles.editFullWidth}
                                   />
                                 </div>
+                                {entry.reason === 'schulung' && (
+                                  <div className={styles.editRow}>
+                                    <label>Ort:</label>
+                                    <div className={styles.ortPills}>
+                                      {[{ id: 'auto', label: 'Auto' }, { id: 'buero', label: 'Büro' }, { id: 'homeoffice', label: 'Homeoffice' }].map(opt => (
+                                        <button
+                                          key={opt.id}
+                                          type="button"
+                                          className={`${styles.ortPill} ${editData.schulungOrt === opt.id ? styles.ortPillSelected : ''}`}
+                                          onClick={() => setEditData({ ...editData, schulungOrt: opt.id })}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                                 <div className={styles.editActions}>
                                   <button className={styles.cancelBtn} onClick={handleCancelEdit}>
                                     Abbrechen
@@ -1333,6 +1355,11 @@ export const ZeiterfassungVerlaufModal: React.FC<ZeiterfassungVerlaufModalProps>
                                 <div className={styles.zusatzTimes}>
                                   {entry.von} - {entry.bis}
                                   <span className={styles.zusatzDuration}>({entry.duration})</span>
+                                  {entry.reason === 'schulung' && entry.schulungOrt && (
+                                    <span className={styles.ortBadge}>
+                                      {entry.schulungOrt === 'auto' ? 'Auto' : entry.schulungOrt === 'buero' ? 'Büro' : 'Homeoffice'}
+                                    </span>
+                                  )}
                                 </div>
                                 {entry.kommentar && (
                                   <div className={styles.zusatzComment}>{entry.kommentar}</div>

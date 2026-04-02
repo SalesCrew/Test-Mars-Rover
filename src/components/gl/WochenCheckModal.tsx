@@ -192,6 +192,7 @@ interface ZusatzEntry {
   isWorkTimeDeduction?: boolean;
   marketName?: string;
   marketChain?: string;
+  schulungOrt?: string | null;
 }
 
 type TimeEntry = MarketVisitEntry | ZusatzEntry;
@@ -420,6 +421,7 @@ export const WochenCheckModal: React.FC<WochenCheckModalProps> = ({ isOpen, onCl
             marketName: entry.market?.name,
             marketChain: entry.market?.chain,
             isWorkTimeDeduction: entry.is_work_time_deduction,
+            schulungOrt: entry.schulung_ort || null,
           }))
           .filter((e: TimeEntry) => e.date >= startISO && e.date <= endISO);
 
@@ -554,12 +556,35 @@ export const WochenCheckModal: React.FC<WochenCheckModalProps> = ({ isOpen, onCl
         von: entry.von,
         bis: entry.bis,
         kommentar: entry.kommentar || '',
+        schulungOrt: entry.schulungOrt || '',
       });
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingId) return;
+
+    try {
+      const entry = entries.find(e => e.id === editingId);
+      if (entry?.type === 'market') {
+        await fragebogenService.zeiterfassung.update(editingId, {
+          besuchszeit_von: editData.besuchszeitVon,
+          besuchszeit_bis: editData.besuchszeitBis,
+        });
+      } else if (entry?.type === 'zusatz') {
+        await fragebogenService.zeiterfassung.updateZusatz(editingId, {
+          zeit_von: editData.von,
+          zeit_bis: editData.bis,
+          kommentar: editData.kommentar,
+          schulung_ort: entry.reason === 'schulung' ? (editData.schulungOrt || null) : undefined,
+        });
+      }
+    } catch (error) {
+      console.error('Error saving time edit:', error);
+      alert('Fehler beim Speichern');
+      return;
+    }
+
     setEntries(prevEntries => prevEntries.map(entry => {
       if (editingId === entry.id && entry.type === 'market') {
         return {
@@ -574,7 +599,14 @@ export const WochenCheckModal: React.FC<WochenCheckModalProps> = ({ isOpen, onCl
       if (editingId === entry.id && entry.type === 'zusatz') {
         const newVon = editData.von || entry.von;
         const newBis = editData.bis || entry.bis;
-        return { ...entry, von: newVon, bis: newBis, duration: calculateDuration(newVon, newBis), kommentar: editData.kommentar };
+        return {
+          ...entry,
+          von: newVon,
+          bis: newBis,
+          duration: calculateDuration(newVon, newBis),
+          kommentar: editData.kommentar,
+          schulungOrt: entry.reason === 'schulung' ? (editData.schulungOrt || null) : entry.schulungOrt,
+        };
       }
       return entry;
     }));
@@ -966,6 +998,23 @@ export const WochenCheckModal: React.FC<WochenCheckModalProps> = ({ isOpen, onCl
                                     <label>Kommentar:</label>
                                     <input type="text" value={editData.kommentar || ''} onChange={(e) => setEditData({...editData, kommentar: e.target.value})} placeholder="Optional" className={styles.editFullWidth} />
                                   </div>
+                                  {entry.reason === 'schulung' && (
+                                    <div className={styles.editRow}>
+                                      <label>Ort:</label>
+                                      <div className={styles.ortPills}>
+                                        {[{ id: 'auto', label: 'Auto' }, { id: 'buero', label: 'Büro' }, { id: 'homeoffice', label: 'Homeoffice' }].map(opt => (
+                                          <button
+                                            key={opt.id}
+                                            type="button"
+                                            className={`${styles.ortPill} ${editData.schulungOrt === opt.id ? styles.ortPillSelected : ''}`}
+                                            onClick={() => setEditData({ ...editData, schulungOrt: opt.id })}
+                                          >
+                                            {opt.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                   <div className={styles.editActions}>
                                     <button className={styles.cancelBtn} onClick={handleCancelEdit}>Abbrechen</button>
                                     <button className={styles.saveBtn} onClick={handleSaveEdit}><Check size={14} weight="bold" /> Speichern</button>
@@ -976,6 +1025,11 @@ export const WochenCheckModal: React.FC<WochenCheckModalProps> = ({ isOpen, onCl
                                   <div className={styles.zusatzTimes}>
                                     {entry.von} - {entry.bis}
                                     <span className={styles.zusatzDuration}>({entry.duration})</span>
+                                    {entry.reason === 'schulung' && entry.schulungOrt && (
+                                      <span className={styles.ortBadge}>
+                                        {entry.schulungOrt === 'auto' ? 'Auto' : entry.schulungOrt === 'buero' ? 'Büro' : 'Homeoffice'}
+                                      </span>
+                                    )}
                                   </div>
                                   {entry.kommentar && <div className={styles.zusatzComment}>{entry.kommentar}</div>}
                                 </>
