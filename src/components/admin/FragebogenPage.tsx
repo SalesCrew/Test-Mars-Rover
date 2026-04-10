@@ -1551,17 +1551,17 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       {/* Module Detail Modal */}
       {selectedModule && (
         <ModuleDetailModal 
-          module={selectedModule}
+          module={selectedModule as any}
           usageCount={getFragebogenUsingModule(selectedModule.id)}
           onClose={() => setSelectedModule(null)}
           onEdit={(moduleWithQuestions) => {
             // Transform the module data to the format expected by CreateModuleModal
             const editableModule: Module = {
               id: moduleWithQuestions.id,
-              name: moduleWithQuestions.name,
-              description: moduleWithQuestions.description,
-              questionCount: moduleWithQuestions.questions.length,
-              questions: moduleWithQuestions.questions.map(q => ({
+              name: (moduleWithQuestions as any).name,
+              description: (moduleWithQuestions as any).description,
+              questionCount: (moduleWithQuestions as any).questions?.length ?? 0,
+              questions: ((moduleWithQuestions as any).questions || []).map((q: any) => ({
                 id: q.id,
                 moduleId: q.moduleId,
                 type: q.type as QuestionType,
@@ -1575,7 +1575,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
                 matrixColumns: q.matrixColumns,
                 numericConstraints: q.numericConstraints,
                 sliderConfig: q.sliderConfig,
-                conditions: q.conditions?.map(c => ({
+                conditions: q.conditions?.map((c: any) => ({
                   id: c.id,
                   triggerQuestionId: c.triggerQuestionId,
                   triggerAnswer: c.triggerAnswer,

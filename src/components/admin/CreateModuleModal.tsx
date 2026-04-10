@@ -110,15 +110,15 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
       moduleId: 'temp',
       type,
       questionText: '',
-      required: true, // Changed to true by default
+      required: true,
       order: questions.length + 1,
-      ...(QUESTION_TYPES[type].requiresOptions && { options: [''] }),
+      ...(QUESTION_TYPES[type].requiresOptions && { options: [{ id: `opt_${Date.now().toString(36)}`, label: '' }] }),
       ...(type === 'likert' && { 
         likertScale: { min: undefined as any, max: undefined as any, minLabel: '', maxLabel: '' } 
       }),
       ...(type === 'matrix' && { 
-        matrixRows: [''], 
-        matrixColumns: ['', ''] 
+        matrixRows: [{ id: `row_${Date.now().toString(36)}`, label: '' }],
+        matrixColumns: [{ id: `col_${Date.now().toString(36)}a`, label: '' }, { id: `col_${Date.now().toString(36)}b`, label: '' }]
       }),
       ...(type === 'open_numeric' && { 
         numericConstraints: { decimals: false } 
@@ -149,7 +149,10 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
   const filteredImportQuestions = allDatabaseQuestions.filter(q => {
     const matchesSearch = importSearchTerm.trim() === '' || 
       q.questionText.toLowerCase().includes(importSearchTerm.toLowerCase()) ||
-      (q.options?.some(opt => opt.toLowerCase().includes(importSearchTerm.toLowerCase())));
+      (q.options?.some(opt => {
+        const label = typeof opt === 'string' ? opt : (opt as any)?.label ?? '';
+        return label.toLowerCase().includes(importSearchTerm.toLowerCase());
+      }));
     const matchesType = selectedQuestionType === 'all' || q.type === selectedQuestionType;
     return matchesSearch && matchesType;
   });
@@ -520,8 +523,8 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
 
                         {(question.type === 'single_choice' || question.type === 'multiple_choice') && question.options && question.options.length > 0 && (
                           <div className={styles.reviewOptions}>
-                            {question.options.map((option, idx) => (
-                              <span key={idx} className={styles.reviewOption}>{option}</span>
+                            {question.options.map((option) => (
+                              <span key={option.id} className={styles.reviewOption}>{option.label}</span>
                             ))}
                           </div>
                         )}
@@ -536,8 +539,8 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
 
                         {question.type === 'matrix' && question.matrixRows && question.matrixColumns && (
                           <div className={styles.reviewMatrix}>
-                            <div><strong>Zeilen:</strong> {question.matrixRows.join(', ')}</div>
-                            <div><strong>Spalten:</strong> {question.matrixColumns.join(', ')}</div>
+                            <div><strong>Zeilen:</strong> {question.matrixRows.map(r => r.label).join(', ')}</div>
+                            <div><strong>Spalten:</strong> {question.matrixColumns.map(c => c.label).join(', ')}</div>
                           </div>
                         )}
 
@@ -825,7 +828,7 @@ export const CreateModuleModal: React.FC<CreateModuleModalProps> = ({ isOpen, on
                           <span className={styles.importQuestionText}>{question.questionText}</span>
                           {question.options && question.options.length > 0 && (
                             <span className={styles.importQuestionOptions}>
-                              {question.options.filter(o => o.trim()).join(', ')}
+                              {question.options.filter((o: any) => (typeof o === 'string' ? o : o.label ?? '').trim()).map((o: any) => typeof o === 'string' ? o : o.label).join(', ')}
                             </span>
                           )}
                         </div>
@@ -907,28 +910,28 @@ const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
   };
 
   const handleAddOption = () => {
-    const newOption = ''; // Empty string instead of default text
+    const newOption: { id: string; label: string } = { id: `opt_${Date.now().toString(36)}`, label: '' };
     onUpdate(question.id, { options: [...(question.options || []), newOption] });
   };
 
   const handleUpdateOption = (index: number, value: string) => {
-    const newOptions = [...(question.options || [])];
-    newOptions[index] = value;
+    const newOptions: { id: string; label: string }[] = [...(question.options || [])];
+    newOptions[index] = { ...newOptions[index], label: value };
     onUpdate(question.id, { options: newOptions });
   };
 
   const handleRemoveOption = (index: number) => {
-    const newOptions = question.options?.filter((_, i) => i !== index) || [];
+    const newOptions: { id: string; label: string }[] = question.options?.filter((_, i) => i !== index) || [];
     onUpdate(question.id, { options: newOptions });
   };
 
   const handleAddMatrixRow = () => {
-    const newRow = ''; // Empty string instead of default text
+    const newRow: { id: string; label: string } = { id: `row_${Date.now().toString(36)}`, label: '' };
     onUpdate(question.id, { matrixRows: [...(question.matrixRows || []), newRow] });
   };
 
   const handleAddMatrixColumn = () => {
-    const newCol = ''; // Empty string instead of default text
+    const newCol: { id: string; label: string } = { id: `col_${Date.now().toString(36)}`, label: '' };
     onUpdate(question.id, { matrixColumns: [...(question.matrixColumns || []), newCol] });
   };
 
@@ -1102,11 +1105,11 @@ const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
               <div className={styles.optionsEditor}>
                 <label className={styles.label}>Antwortmöglichkeiten</label>
                 {question.options?.map((option, index) => (
-                  <div key={index} className={styles.optionRow}>
+                  <div key={option.id} className={styles.optionRow}>
                     <input
                       type="text"
                       className={styles.input}
-                      value={option}
+                      value={option.label}
                       onChange={(e) => handleUpdateOption(index, e.target.value)}
                       placeholder={`Option ${index + 1}`}
                     />
@@ -1200,14 +1203,14 @@ const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Zeilen</label>
                   {question.matrixRows?.map((row, index) => (
-                    <div key={index} className={styles.optionRow}>
+                    <div key={row.id} className={styles.optionRow}>
                       <input
                         type="text"
                         className={styles.input}
-                        value={row}
+                        value={row.label}
                         onChange={(e) => {
-                          const newRows = [...(question.matrixRows || [])];
-                          newRows[index] = e.target.value;
+                          const newRows: { id: string; label: string }[] = [...(question.matrixRows || [])];
+                          newRows[index] = { ...newRows[index], label: e.target.value };
                           onUpdate(question.id, { matrixRows: newRows });
                         }}
                         placeholder={`Zeile ${index + 1}`}
@@ -1234,14 +1237,14 @@ const SortableQuestionCard: React.FC<SortableQuestionCardProps> = ({
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Spalten</label>
                   {question.matrixColumns?.map((col, index) => (
-                    <div key={index} className={styles.optionRow}>
+                    <div key={col.id} className={styles.optionRow}>
                       <input
                         type="text"
                         className={styles.input}
-                        value={col}
+                        value={col.label}
                         onChange={(e) => {
-                          const newCols = [...(question.matrixColumns || [])];
-                          newCols[index] = e.target.value;
+                          const newCols: { id: string; label: string }[] = [...(question.matrixColumns || [])];
+                          newCols[index] = { ...newCols[index], label: e.target.value };
                           onUpdate(question.id, { matrixColumns: newCols });
                         }}
                         placeholder={`Spalte ${index + 1}`}
@@ -1502,37 +1505,39 @@ const ConditionalLogicEditor: React.FC<ConditionalLogicEditorProps> = ({
     handleUpdateCondition(conditionId, { targetQuestionIds: newTargetIds });
   };
 
-  const getTriggerQuestionAnswers = (triggerQuestionId: string): string[] => {
+  // Returns {value, label}[] where value is the machine ID stored in rules/answers
+  const getTriggerQuestionAnswers = (triggerQuestionId: string): Array<{value: string, label: string}> => {
     const triggerQ = allQuestions.find(q => q.id === triggerQuestionId);
     if (!triggerQ) return [];
 
     if (triggerQ.type === 'yesno') {
-      return ['Ja', 'Nein'];
+      return [{ value: 'true', label: 'Ja' }, { value: 'false', label: 'Nein' }];
     } else if (triggerQ.type === 'single_choice' || triggerQ.type === 'multiple_choice') {
-      return triggerQ.options || [];
+      return (triggerQ.options || []).map(opt => ({ value: opt.id, label: opt.label }));
     } else if (triggerQ.type === 'likert') {
       const scale = triggerQ.likertScale;
       if (!scale) return [];
-      const answers = [];
+      const answers: Array<{value: string, label: string}> = [];
       for (let i = scale.min; i <= scale.max; i++) {
-        answers.push(i.toString());
+        answers.push({ value: i.toString(), label: i.toString() });
       }
       return answers;
     } else if (triggerQ.type === 'matrix') {
-      // For matrix, combine rows and columns as "Row: Column" format
       const rows = triggerQ.matrixRows || [];
       const cols = triggerQ.matrixColumns || [];
-      const answers: string[] = [];
+      const answers: Array<{value: string, label: string}> = [];
       rows.forEach(row => {
         cols.forEach(col => {
           if (row && col) {
-            answers.push(`${row}: ${col}`);
+            answers.push({
+              value: `${row.id}: ${col.id}`,
+              label: `${row.label}: ${col.label}`
+            });
           }
         });
       });
       return answers;
     }
-    // For numeric and slider, we don't return predefined answers - they use operators
     return [];
   };
 
@@ -1685,7 +1690,7 @@ const ConditionalLogicEditor: React.FC<ConditionalLogicEditorProps> = ({
                         value={String(condition.triggerAnswer ?? '')}
                         options={[
                           { value: '', label: '-- Antwort wählen --' },
-                          ...availableAnswers.map(answer => ({ value: answer, label: answer }))
+                          ...availableAnswers
                         ]}
                         onChange={(value) => handleUpdateCondition(condition.id, { triggerAnswer: value })}
                         disabled={!condition.triggerQuestionId || availableAnswers.length === 0}

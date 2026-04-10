@@ -927,9 +927,10 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
               description: m.description,
               questions: (m.questions || []).map(q => ({
                 ...q,
-                type: q.type as any
+                type: q.type as any,
+                options: q.options as any
               }))
-            }))}
+            })) as any}
             onClose={() => setIsPreviewOpen(false)}
             onComplete={() => {
               // Preview only - no data storage, just close
