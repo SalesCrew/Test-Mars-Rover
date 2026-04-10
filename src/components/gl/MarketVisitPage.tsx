@@ -25,7 +25,7 @@ import {
 import Aurora from './Aurora';
 import type { Market } from '../../types/market-types';
 import { useAuth } from '../../contexts/AuthContext';
-import fragebogenService from '../../services/fragebogenService';
+import fragebogenService, { type AnswerPayload } from '../../services/fragebogenService';
 import { saveActiveVisit, updateActiveVisit, updatePendingSync, clearActiveVisit, type PersistedVisit } from '../../services/visitPersistence';
 import styles from './MarketVisitPage.module.css';
 
@@ -415,7 +415,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   };
 
   /** Build a typed AnswerPayload from a raw answer value */
-  const buildAnswerPayload = (question: typeof allQuestions[0], value: any): import('../../services/fragebogenService').AnswerPayload | null => {
+  const buildAnswerPayload = (question: typeof allQuestions[0], value: any): AnswerPayload | null => {
     if (value === undefined || value === null) return null;
     const base = { question_id: question.id, module_id: question.moduleId, question_type: question.type as any };
     switch (question.type) {
