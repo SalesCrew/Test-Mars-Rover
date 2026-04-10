@@ -6,7 +6,7 @@ import { CreateModuleModal } from './CreateModuleModal';
 import { CreateFragebogenModal } from './CreateFragebogenModal';
 import { QUESTION_TYPES } from './questionTypes';
 import fragebogenService from '../../services/fragebogenService';
-import type { Module as ApiModule } from '../../services/fragebogenService';
+import type { Module as ApiModule, Question as ApiQuestion } from '../../services/fragebogenService';
 import styles from './FragebogenPage.module.css';
 
 export type QuestionType = 
@@ -21,6 +21,20 @@ export type QuestionType =
   | 'slider'             // Slider für Anteile
   | 'barcode_scanner';   // Barcode/QR-Code Scanner
 
+/** A selectable option for single_choice / multiple_choice questions. */
+export interface QuestionOption {
+  /** Stable ID that is stored in answers. Never changes after creation. */
+  id: string;
+  /** Display label shown to the user. Admins may edit this. */
+  label: string;
+}
+
+/** A single row or column entry for matrix questions. */
+export interface MatrixEntry {
+  id: string;
+  label: string;
+}
+
 export interface QuestionInterface {
   id: string;
   moduleId: string;
@@ -30,8 +44,8 @@ export interface QuestionInterface {
   required: boolean;
   order: number;
   
-  // For single/multiple choice, likert
-  options?: string[];
+  // For single/multiple choice: array of {id, label} objects
+  options?: QuestionOption[];
   
   // For likert scale
   likertScale?: {
@@ -41,9 +55,9 @@ export interface QuestionInterface {
     maxLabel: string;
   };
   
-  // For matrix
-  matrixRows?: string[];
-  matrixColumns?: string[];
+  // For matrix: arrays of {id, label} objects
+  matrixRows?: MatrixEntry[];
+  matrixColumns?: MatrixEntry[];
   
   // For numeric
   numericConstraints?: {
@@ -113,6 +127,22 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
   isCreateFragebogenModalOpen,
   onCloseCreateFragebogenModal
 }) => {
+
+  /** Build an API-typed question payload from the local QuestionInterface. */
+  const buildQuestionPayload = (q: QuestionInterface): Partial<ApiQuestion> => ({
+    type: q.type,
+    question_text: q.questionText,
+    instruction: q.instruction,
+    is_template: false,
+    options: q.options,
+    likert_scale: q.likertScale as any,
+    matrix_config: q.matrixRows && q.matrixColumns
+      ? { rows: q.matrixRows, columns: q.matrixColumns }
+      : undefined,
+    numeric_constraints: q.numericConstraints as any,
+    slider_config: q.sliderConfig,
+    images: q.images || []
+  });
   // Data states
   const [modules, setModules] = useState<Module[]>([]);
   const [fragebogenList, setFragebogenList] = useState<Fragebogen[]>([]);
@@ -143,7 +173,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
           name: m.name,
           description: m.description,
           questionCount: m.question_count || 0,
-          questions: (m.questions || []).map((mq: { question: { id: string; type: string; question_text: string; instruction?: string; options?: string[]; likert_scale?: any; matrix_config?: any; numeric_constraints?: any; slider_config?: any; images?: string[] }; required: boolean; order_index: number }) => ({
+          questions: (m.questions || []).map((mq: { question: { id: string; type: string; question_text: string; instruction?: string; options?: any[]; likert_scale?: any; matrix_config?: any; numeric_constraints?: any; slider_config?: any; images?: string[] }; required: boolean; order_index: number }) => ({
             id: mq.question.id,
             moduleId: m.id,
             type: mq.question.type as QuestionType,
@@ -388,63 +418,18 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
         
         if (moduleCount > 1) {
           // Question is shared - create a NEW question (copy-on-write)
-          const questionPayload = {
-            type: question.type,
-            question_text: question.questionText,
-            instruction: question.instruction,
-            is_template: false,
-            options: question.options,
-            likert_scale: question.likertScale,
-            matrix_config: question.matrixRows && question.matrixColumns ? {
-              rows: question.matrixRows,
-              columns: question.matrixColumns
-            } : undefined,
-            numeric_constraints: question.numericConstraints,
-            slider_config: question.sliderConfig,
-            images: question.images || []
-          };
-          
-          const createdQuestion = await fragebogenService.questions.create(questionPayload);
+          const createdQuestion = await fragebogenService.questions.create(buildQuestionPayload(question));
           newQuestionIdMap[question.id] = createdQuestion.id; // Map old ID to new ID
           console.log(`Copy-on-write: Question ${question.id} is used by ${moduleCount} modules, created new question ${createdQuestion.id}`);
         } else {
           // Question is only used by this module - update it in place
-          await fragebogenService.questions.update(question.id, {
-            type: question.type,
-            question_text: question.questionText,
-            instruction: question.instruction,
-            options: question.options,
-            likert_scale: question.likertScale,
-            matrix_config: question.matrixRows && question.matrixColumns ? {
-              rows: question.matrixRows,
-              columns: question.matrixColumns
-            } : undefined,
-            numeric_constraints: question.numericConstraints,
-            slider_config: question.sliderConfig,
-            images: question.images || []
-          });
+          await fragebogenService.questions.update(question.id, buildQuestionPayload(question));
         }
       }
       
       // Step 2: Create brand new questions (temp IDs)
       for (const question of newQuestions) {
-        const questionPayload = {
-          type: question.type,
-          question_text: question.questionText,
-          instruction: question.instruction,
-          is_template: false,
-          options: question.options,
-          likert_scale: question.likertScale,
-          matrix_config: question.matrixRows && question.matrixColumns ? {
-            rows: question.matrixRows,
-            columns: question.matrixColumns
-          } : undefined,
-          numeric_constraints: question.numericConstraints,
-          slider_config: question.sliderConfig,
-          images: question.images || []
-        };
-        
-        const createdQuestion = await fragebogenService.questions.create(questionPayload);
+        const createdQuestion = await fragebogenService.questions.create(buildQuestionPayload(question));
         newQuestionIdMap[question.id] = createdQuestion.id;
       }
       
@@ -940,7 +925,10 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
   const filteredQuestions = allQuestions.filter(q => {
     const matchesSearch = questionSearchTerm.trim() === '' || 
       q.question_text.toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
-      (q.options && q.options.some((opt: string) => opt.toLowerCase().includes(questionSearchTerm.toLowerCase())));
+      (q.options && q.options.some((opt: any) => {
+        const label = typeof opt === 'string' ? opt : (opt?.label || '');
+        return label.toLowerCase().includes(questionSearchTerm.toLowerCase());
+      }));
     
     const matchesType = selectedQuestionTypeFilter === 'all' || q.type === selectedQuestionTypeFilter;
     
@@ -953,24 +941,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       const createdQuestionIds: Array<{ question_id: string; order_index: number; required: boolean; local_id: string }> = [];
       
       for (const question of newModule.questions) {
-        // Transform question from component format to API format
-        const questionPayload = {
-          type: question.type,
-          question_text: question.questionText,
-          instruction: question.instruction,
-          is_template: false,
-          options: question.options,
-          likert_scale: question.likertScale,
-          matrix_config: question.matrixRows && question.matrixColumns ? {
-            rows: question.matrixRows,
-            columns: question.matrixColumns
-          } : undefined,
-          numeric_constraints: question.numericConstraints,
-          slider_config: question.sliderConfig,
-          images: question.images || []
-        };
-        
-        const createdQuestion = await fragebogenService.questions.create(questionPayload);
+        const createdQuestion = await fragebogenService.questions.create(buildQuestionPayload(question));
         
         createdQuestionIds.push({
           question_id: createdQuestion.id,
@@ -1527,10 +1498,10 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
                           <span className={styles.detailLabel}>Matrix:</span>
                           <div className={styles.matrixPreview}>
                             <div className={styles.matrixRows}>
-                              <strong>Zeilen:</strong> {question.matrix_config.rows.join(', ')}
+                              <strong>Zeilen:</strong> {(question.matrix_config.rows as any[]).map((r: any) => typeof r === 'string' ? r : r.label).join(', ')}
                             </div>
                             <div className={styles.matrixCols}>
-                              <strong>Spalten:</strong> {question.matrix_config.columns.join(', ')}
+                              <strong>Spalten:</strong> {(question.matrix_config.columns as any[]).map((c: any) => typeof c === 'string' ? c : c.label).join(', ')}
                             </div>
                           </div>
                         </div>
@@ -1569,11 +1540,11 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       {selectedFragebogen && (
         <FragebogenDetailModal 
           fragebogen={selectedFragebogen}
-          modules={modules.filter(m => selectedFragebogen.moduleIds.includes(m.id))}
+          modules={modules.filter(m => selectedFragebogen.moduleIds.includes(m.id)) as any}
           onClose={() => setSelectedFragebogen(null)}
           onUpdateMarkets={(marketIds) => handleUpdateFragebogenMarkets(selectedFragebogen.id, marketIds)}
           onArchive={(fragebogenId) => handleToggleArchiveFragebogen(fragebogenId)}
-          onEdit={(fragebogen) => handleEditFragebogen(fragebogen)}
+          onEdit={(fragebogen) => handleEditFragebogen(fragebogen as any)}
         />
       )}
 

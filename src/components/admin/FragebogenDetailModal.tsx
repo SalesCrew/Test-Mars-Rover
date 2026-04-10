@@ -417,15 +417,13 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleExport = async () => {
     setIsExporting(true);
-    setExportError(null);
     try {
       await fragebogenService.export.downloadExcel(fragebogen.id, fragebogen.name);
     } catch (err: any) {
-      setExportError(err?.message || 'Export fehlgeschlagen');
+      console.error('Export fehlgeschlagen:', err?.message);
     } finally {
       setIsExporting(false);
     }
@@ -540,7 +538,7 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
                           <div className={styles.optionsList}>
                             {question.options.map((option, idx) => (
                               <span key={idx} className={styles.optionPill}>
-                                {option}
+                                {option.label}
                               </span>
                             ))}
                           </div>
