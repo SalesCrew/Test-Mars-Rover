@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, PencilSimple, Stack, Question, Storefront, Check, MagnifyingGlass, Funnel, Archive, CheckCircle, Eye } from '@phosphor-icons/react';
+import { X, PencilSimple, Stack, Question, Storefront, Check, MagnifyingGlass, Funnel, Archive, CheckCircle, Eye, DownloadSimple, SpinnerGap } from '@phosphor-icons/react';
 import { adminMarkets } from '../../data/adminMarketsData';
 import { FragebogenPreviewModal } from './FragebogenPreviewModal';
 import fragebogenService from '../../services/fragebogenService';
@@ -13,7 +13,7 @@ interface Question {
   questionText: string;
   required: boolean;
   order: number;
-  options?: string[];
+  options?: { id: string; label: string }[];
 }
 
 interface Module {
@@ -415,6 +415,22 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
     setShowArchiveConfirmation(false);
   };
 
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      await fragebogenService.export.downloadExcel(fragebogen.id, fragebogen.name);
+    } catch (err: any) {
+      setExportError(err?.message || 'Export fehlgeschlagen');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Determine if fragebogen is archived (inactive)
   const isArchived = fragebogen.status === 'inactive';
   const actionButtonText = isArchived ? 'Aktivieren' : 'Archivieren';
@@ -442,6 +458,17 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
             </button>
           </div>
           <div className={styles.headerRight}>
+            <button
+              className={styles.exportButton}
+              onClick={handleExport}
+              disabled={isExporting}
+              title="Excel-Export aller Einreichungen"
+            >
+              {isExporting
+                ? <SpinnerGap size={18} weight="bold" className={styles.exportSpinner} />
+                : <DownloadSimple size={18} weight="bold" />}
+              {isExporting ? 'Exportiere…' : 'Excel Export'}
+            </button>
             <button className={styles.archiveButton} onClick={handleArchiveClick}>
               <ActionIcon size={20} weight="bold" />
               <span>{actionButtonText}</span>

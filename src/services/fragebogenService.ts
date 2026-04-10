@@ -29,9 +29,24 @@ export interface LikertScale {
   maxLabel: string;
 }
 
+/** A single selectable option for single_choice and multiple_choice questions. */
+export interface QuestionOption {
+  /** Stable machine-readable ID (e.g. 'opt_abc123def456'). Never changes after creation. */
+  id: string;
+  /** Display label shown to the user. May be edited by admins. */
+  label: string;
+}
+
+/** A single row or column entry inside a matrix question. */
+export interface MatrixEntry {
+  /** Stable machine-readable ID (e.g. 'row_abc123def456'). */
+  id: string;
+  label: string;
+}
+
 export interface MatrixConfig {
-  rows: string[];
-  columns: string[];
+  rows: MatrixEntry[];
+  columns: MatrixEntry[];
 }
 
 export interface NumericConstraints {
@@ -53,8 +68,10 @@ export interface Question {
   question_text: string;
   instruction?: string;
   is_template: boolean;
-  options?: string[];
+  /** Array of {id, label} objects for single_choice / multiple_choice */
+  options?: QuestionOption[];
   likert_scale?: LikertScale;
+  /** Rows and columns as {id, label} objects for matrix questions */
   matrix_config?: MatrixConfig;
   numeric_constraints?: NumericConstraints;
   slider_config?: SliderConfig;
@@ -127,6 +144,7 @@ export interface Response {
   fragebogen_id: string;
   gebietsleiter_id: string;
   market_id: string;
+  zeiterfassung_submission_id?: string;
   status: 'in_progress' | 'completed';
   started_at: string;
   completed_at?: string;
@@ -135,17 +153,41 @@ export interface Response {
   answers?: ResponseAnswer[];
 }
 
+export type AnswerKind = 'text' | 'numeric' | 'boolean' | 'json' | 'file';
+
 export interface ResponseAnswer {
   id: string;
   response_id: string;
   question_id: string;
   module_id: string;
+  question_type?: string;
+  answer_kind?: AnswerKind;
   answer_text?: string;
   answer_numeric?: number;
+  answer_boolean?: boolean;
   answer_json?: any;
   answer_file_url?: string;
   answered_at: string;
+  created_at?: string;
+  updated_at?: string;
   question?: Question;
+}
+
+/** Shape sent to PUT /responses/:id to save one answer */
+export interface AnswerPayload {
+  question_id: string;
+  module_id: string;
+  question_type: QuestionType;
+  /** text   → answer_text (single_choice optionId, open_text, barcode_scanner) */
+  answer_text?: string;
+  /** numeric → answer_numeric (likert, open_numeric, slider) */
+  answer_numeric?: number;
+  /** boolean → answer_boolean (yesno) */
+  answer_boolean?: boolean;
+  /** json    → answer_json (multiple_choice optionId[], matrix {rowId:colId}) */
+  answer_json?: any;
+  /** file    → answer_file_url (photo_upload) */
+  answer_file_url?: string;
 }
 
 // ============================================================================
@@ -586,16 +628,9 @@ export const responsesApi = {
   },
 
   /**
-   * Update a response with answers
+   * Update a response with answers (save one or more answers for a run)
    */
-  async update(id: string, answers: Array<{
-    question_id: string;
-    module_id: string;
-    answer_text?: string;
-    answer_numeric?: number;
-    answer_json?: any;
-    answer_file_url?: string;
-  }>): Promise<Response> {
+  async update(id: string, answers: AnswerPayload[]): Promise<Response> {
     const response = await fetch(`${FRAGEBOGEN_API}/responses/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -626,6 +661,35 @@ export const responsesApi = {
     const response = await fetch(`${FRAGEBOGEN_API}/responses/stats/fragebogen/${fragebogenId}`);
     if (!response.ok) throw new Error('Failed to fetch response stats');
     return response.json();
+  }
+};
+
+// ============================================================================
+// FRAGEBOGEN EXPORT API
+// ============================================================================
+
+export const exportApi = {
+  /**
+   * Download an Excel export for a Fragebogen (all submissions, all statuses).
+   * Streams the .xlsx file and triggers a browser download.
+   */
+  async downloadExcel(fragebogenId: string, fragebogenName: string): Promise<void> {
+    const response = await fetch(`${FRAGEBOGEN_API}/fragebogen/${fragebogenId}/export.xlsx`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as any).error || 'Export fehlgeschlagen');
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = fragebogenName.replace(/[^a-zA-Z0-9_\- ]/g, '_').slice(0, 40);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `fragebogen_${safeName}_${dateStr}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 };
 
@@ -780,5 +844,6 @@ export default {
   fragebogen: fragebogenApi,
   responses: responsesApi,
   zeiterfassung: zeiterfassungApi,
+  export: exportApi,
   API_URL: FRAGEBOGEN_API
 };
