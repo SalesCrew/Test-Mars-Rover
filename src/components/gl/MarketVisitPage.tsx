@@ -25,7 +25,8 @@ import {
 import Aurora from './Aurora';
 import type { Market } from '../../types/market-types';
 import { useAuth } from '../../contexts/AuthContext';
-import fragebogenService, { type AnswerPayload } from '../../services/fragebogenService';
+import fragebogenService from '../../services/fragebogenService';
+import type { AnswerPayload } from '../../services/fragebogenService';
 import { saveActiveVisit, updateActiveVisit, updatePendingSync, clearActiveVisit, type PersistedVisit } from '../../services/visitPersistence';
 import styles from './MarketVisitPage.module.css';
 
