@@ -615,43 +615,46 @@ export const responsesApi = {
     gebietsleiter_id: string;
     market_id: string;
   }): Promise<Response> {
-    const response = await fetch(`${FRAGEBOGEN_API}/responses`, {
+    const res = await fetch(`${FRAGEBOGEN_API}/responses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create response');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as any).error || `Antwort konnte nicht erstellt werden (${res.status})`);
     }
-    return response.json();
+    return res.json();
   },
 
   /**
    * Update a response with answers (save one or more answers for a run)
    */
   async update(id: string, answers: AnswerPayload[]): Promise<Response> {
-    const response = await fetch(`${FRAGEBOGEN_API}/responses/${id}`, {
+    const res = await fetch(`${FRAGEBOGEN_API}/responses/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answers })
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to update response');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as any).error || `Antwort konnte nicht gespeichert werden (${res.status})`);
     }
-    return response.json();
+    return res.json();
   },
 
   /**
    * Mark a response as completed
    */
   async complete(id: string): Promise<Response> {
-    const response = await fetch(`${FRAGEBOGEN_API}/responses/${id}/complete`, {
+    const res = await fetch(`${FRAGEBOGEN_API}/responses/${id}/complete`, {
       method: 'PUT'
     });
-    if (!response.ok) throw new Error('Failed to complete response');
-    return response.json();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as any).error || `Abschluss fehlgeschlagen (${res.status})`);
+    }
+    return res.json();
   },
 
   /**

@@ -77,6 +77,8 @@ interface Module {
   questions: Question[];
 }
 
+type QuestionWithContext = Question & { moduleName: string; moduleId: string };
+
 interface MarketVisitPageProps {
   market: Market;
   modules: Module[];
@@ -118,7 +120,14 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   const [responseId, setResponseId] = useState<string | null>(null);
   const responseCreationInFlightRef = useRef<Promise<string | null> | null>(null);
 
-  // UI states for answer persistence feedback
+  // Pending answer sync queue — keyed by questionId, stores the latest un-synced value.
+  // Navigation never waits for this; it is flushed in the background and before completion.
+  const pendingAnswersRef = useRef<Map<string, { question: QuestionWithContext; value: any }>>(new Map());
+  const isSyncingRef = useRef(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  // UI states for completion feedback only (not used to block mid-question navigation)
   const [isSavingAnswer, setIsSavingAnswer] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -442,25 +451,59 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
   };
 
-  /** Persist a single answer to the backend. Returns true on success, false on failure. */
-  const persistAnswer = async (question: typeof allQuestions[0], value: any): Promise<boolean> => {
-    const payload = buildAnswerPayload(question, value);
-    if (!payload) return true; // no payload = nothing to persist, treat as success
+  /** Add a question answer to the pending sync queue (overwrites any prior queued value for the same question). */
+  const enqueueAnswer = (question: QuestionWithContext, value: any) => {
+    pendingAnswersRef.current.set(question.id, { question, value });
+    setPendingSyncCount(pendingAnswersRef.current.size);
+  };
 
-    const currentResponseId = await ensureResponseRun();
-    if (!currentResponseId) return false; // ensureResponseRun already set saveError
-
-    setIsSavingAnswer(true);
-    setSaveError(null);
-    try {
-      await fragebogenService.responses.update(currentResponseId, [payload]);
-      setIsSavingAnswer(false);
+  /**
+   * Flush all queued answers to the backend.
+   * Returns true when the queue is fully drained, false if any items remain.
+   * Re-entrant-safe: a concurrent flush is skipped and the caller gets an accurate empty-check result.
+   */
+  const flushPendingAnswers = async (): Promise<boolean> => {
+    if (isSyncingRef.current) return pendingAnswersRef.current.size === 0;
+    if (pendingAnswersRef.current.size === 0) return true;
+    if (!fragebogenId || !hasFragebogen) {
+      pendingAnswersRef.current.clear();
+      setPendingSyncCount(0);
       return true;
-    } catch {
-      setIsSavingAnswer(false);
-      setSaveError('Antwort konnte nicht gespeichert werden. Bitte erneut versuchen.');
-      return false;
     }
+
+    isSyncingRef.current = true;
+    try {
+      const currentResponseId = await ensureResponseRun();
+      if (!currentResponseId) {
+        setSyncError('Verbindung konnte nicht hergestellt werden. Antworten werden beim nächsten Versuch erneut gespeichert.');
+        return false;
+      }
+
+      for (const [questionId, { question, value }] of Array.from(pendingAnswersRef.current.entries())) {
+        const payload = buildAnswerPayload(question, value);
+        if (!payload) {
+          pendingAnswersRef.current.delete(questionId);
+          continue;
+        }
+        try {
+          await fragebogenService.responses.update(currentResponseId, [payload]);
+          pendingAnswersRef.current.delete(questionId);
+        } catch {
+          // Keep failed item in queue; next flush will retry it.
+        }
+      }
+    } finally {
+      isSyncingRef.current = false;
+    }
+
+    setPendingSyncCount(pendingAnswersRef.current.size);
+    const allSynced = pendingAnswersRef.current.size === 0;
+    if (!allSynced) {
+      setSyncError('Einige Antworten konnten nicht gespeichert werden.');
+    } else {
+      setSyncError(null);
+    }
+    return allSynced;
   };
 
   const handleNext = async () => {
@@ -479,22 +522,32 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
     
     if (zeiterfassungStep === 'questions') {
-      // Persist the current answer before moving on; block if it fails
+      // Enqueue the current answer for background sync — navigation never waits for this.
       if (currentQuestion && answers[currentQuestion.id] !== undefined) {
-        const saved = await persistAnswer(currentQuestion, answers[currentQuestion.id]);
-        if (!saved) return; // error already set in saveError state
+        enqueueAnswer(currentQuestion as QuestionWithContext, answers[currentQuestion.id]);
       }
 
       setSaveError(null);
+      setSyncError(null);
 
       if (currentIndex < totalQuestions - 1) {
+        // Advance immediately; flush runs in background
         setCurrentIndex(prev => prev + 1);
+        void flushPendingAnswers();
       } else if (zeiterfassungActive) {
+        // Move to end step; flush runs in background
         setZeiterfassungStep('end');
+        void flushPendingAnswers();
       } else {
-        // All questions answered — mark response complete
+        // Last question with no Zeiterfassung — must fully flush before completing
+        setIsSavingAnswer(true);
+        const allFlushed = await flushPendingAnswers();
+        if (!allFlushed) {
+          setIsSavingAnswer(false);
+          setSaveError('Antworten konnten nicht gespeichert werden. Bitte erneut versuchen.');
+          return;
+        }
         if (fragebogenId && hasFragebogen) {
-          setIsSavingAnswer(true);
           const currentResponseId = await ensureResponseRun();
           if (!currentResponseId) {
             setIsSavingAnswer(false);
@@ -515,9 +568,15 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
     
     if (zeiterfassungStep === 'end') {
-      // Ensure response run exists before completing
+      // Flush any pending answers before completing the response run
       if (fragebogenId && hasFragebogen) {
         setIsSavingAnswer(true);
+        const allFlushed = await flushPendingAnswers();
+        if (!allFlushed) {
+          setIsSavingAnswer(false);
+          setSaveError('Antworten konnten nicht gespeichert werden. Bitte erneut versuchen.');
+          return;
+        }
         const currentResponseId = await ensureResponseRun();
         if (!currentResponseId) {
           setIsSavingAnswer(false);
@@ -1345,6 +1404,20 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
       {/* Fixed Navigation Footer */}
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
+          {syncError && !saveError && (
+            <div className={styles.syncErrorBanner}>
+              <span>{syncError}</span>
+              <button
+                className={styles.saveErrorRetry}
+                onClick={() => {
+                  setSyncError(null);
+                  void flushPendingAnswers();
+                }}
+              >
+                Erneut versuchen
+              </button>
+            </div>
+          )}
           {saveError && (
             <div className={styles.saveErrorBanner}>
               <span>{saveError}</span>
@@ -1357,6 +1430,11 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
               >
                 Erneut versuchen
               </button>
+            </div>
+          )}
+          {pendingSyncCount > 0 && !syncError && !saveError && !isSavingAnswer && (
+            <div className={styles.syncingIndicator}>
+              <span>Antworten werden synchronisiert…</span>
             </div>
           )}
           <div className={styles.footerButtons}>

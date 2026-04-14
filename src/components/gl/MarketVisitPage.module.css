@@ -748,6 +748,28 @@
   font-weight: var(--font-weight-medium);
 }
 
+.syncErrorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  border-radius: 10px;
+  font-size: var(--font-size-sm);
+  color: #C2410C;
+  font-weight: var(--font-weight-medium);
+}
+
+.syncingIndicator {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: #64748B;
+  padding: 4px 0 2px;
+  opacity: 0.85;
+}
+
 .saveErrorRetry {
   flex-shrink: 0;
   padding: 4px 12px;
