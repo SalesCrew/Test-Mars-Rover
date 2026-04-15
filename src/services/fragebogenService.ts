@@ -693,6 +693,41 @@ export const exportApi = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  /**
+   * Download monthly distribution export for selected Fragebögen/Items/chains.
+   */
+  async downloadDistributionExcel(payload: {
+    fragebogenIds: string[];
+    questionIds: string[];
+    chains?: string[];
+  }): Promise<void> {
+    const response = await fetch(`${FRAGEBOGEN_API}/fragebogen/distribution-export.xlsx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fragebogen_ids: payload.fragebogenIds,
+        question_ids: payload.questionIds,
+        chains: payload.chains || []
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error((err as any).error || `Distribution-Export fehlgeschlagen (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    anchor.href = url;
+    anchor.download = `fragebogen_distribution_${dateStr}.xlsx`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }
 };
 

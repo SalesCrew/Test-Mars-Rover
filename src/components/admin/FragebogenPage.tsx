@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TrendUp, Clock, XCircle, Stack, PencilSimple, Calendar, Users, CheckCircle as CheckCircleFilled, Question, CircleNotch, Copy, Trash, Warning } from '@phosphor-icons/react';
 import { FragebogenDetailModal } from './FragebogenDetailModal';
 import { ModuleDetailModal } from './ModuleDetailModal';
@@ -7,6 +7,8 @@ import { CreateFragebogenModal } from './CreateFragebogenModal';
 import { QUESTION_TYPES } from './questionTypes';
 import fragebogenService from '../../services/fragebogenService';
 import type { Module as ApiModule, Question as ApiQuestion } from '../../services/fragebogenService';
+import { adminMarkets } from '../../data/adminMarketsData';
+import { FragebogenDistributionExportModal, type DistributionFragebogenOption } from './FragebogenDistributionExportModal';
 import styles from './FragebogenPage.module.css';
 
 export type QuestionType = 
@@ -153,6 +155,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
   const [isQuestionTypeDropdownOpen, setIsQuestionTypeDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDistributionExportModalOpen, setIsDistributionExportModalOpen] = useState(false);
+  const [isDistributionExporting, setIsDistributionExporting] = useState(false);
 
   // Load data from API on mount
   useEffect(() => {
@@ -221,6 +225,12 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
     };
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const openDistributionExport = () => setIsDistributionExportModalOpen(true);
+    window.addEventListener('fragebogen:distribution-export', openDistributionExport);
+    return () => window.removeEventListener('fragebogen:distribution-export', openDistributionExport);
   }, []);
 
   const [selectedFragebogen, setSelectedFragebogen] = useState<Fragebogen | null>(null);
@@ -891,6 +901,58 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
 
   const getFragebogenUsingModule = (moduleId: string) => {
     return fragebogenList.filter(f => f.moduleIds.includes(moduleId)).length;
+  };
+
+  const distributionExportOptions = useMemo<DistributionFragebogenOption[]>(() => {
+    return fragebogenList.map((fragebogen) => {
+      const yesNoQuestionMap = new Map<string, { id: string; label: string }>();
+      modules
+        .filter(module => fragebogen.moduleIds.includes(module.id))
+        .forEach(module => {
+          module.questions
+            .filter(question => question.type === 'yesno')
+            .forEach(question => {
+              yesNoQuestionMap.set(question.id, {
+                id: question.id,
+                label: question.questionText || 'Unbenanntes Item'
+              });
+            });
+        });
+
+      const marketIdSet = new Set(fragebogen.marketIds || []);
+      const chains = Array.from(
+        new Set(
+          adminMarkets
+            .filter(market => marketIdSet.has(market.id))
+            .map(market => market.chain)
+            .filter(Boolean)
+        )
+      );
+
+      return {
+        id: fragebogen.id,
+        name: fragebogen.name,
+        yesnoQuestions: Array.from(yesNoQuestionMap.values()),
+        availableChains: chains
+      };
+    });
+  }, [fragebogenList, modules]);
+
+  const handleDistributionExport = async (selection: {
+    fragebogenIds: string[];
+    questionIds: string[];
+    chains: string[];
+  }) => {
+    try {
+      setIsDistributionExporting(true);
+      await fragebogenService.export.downloadDistributionExcel(selection);
+      setIsDistributionExportModalOpen(false);
+    } catch (err: any) {
+      console.error('Distribution export fehlgeschlagen:', err);
+      alert(err?.message || 'Distribution-Export fehlgeschlagen.');
+    } finally {
+      setIsDistributionExporting(false);
+    }
   };
 
   const toggleQuestionExpanded = (questionId: string) => {
@@ -1869,6 +1931,16 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
           </div>
         </div>
       )}
+
+      <FragebogenDistributionExportModal
+        isOpen={isDistributionExportModalOpen}
+        isExporting={isDistributionExporting}
+        fragebogenOptions={distributionExportOptions}
+        onClose={() => {
+          if (!isDistributionExporting) setIsDistributionExportModalOpen(false);
+        }}
+        onExport={handleDistributionExport}
+      />
     </div>
   );
 };

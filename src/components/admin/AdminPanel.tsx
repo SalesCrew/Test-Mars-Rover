@@ -518,6 +518,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen = true }) => {
           )}
           {selectedPage === 'fragebogen' && (
             <div className={styles.headerButtons}>
+              <button
+                className={styles.exportButton}
+                onClick={() => window.dispatchEvent(new CustomEvent('fragebogen:distribution-export'))}
+              >
+                <DownloadSimple size={18} weight="bold" />
+                <span>Export</span>
+              </button>
               <button 
                 className={styles.createFragebogenButton}
                 onClick={() => setIsCreateFragebogenModalOpen(true)}
