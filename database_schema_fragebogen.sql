@@ -368,14 +368,14 @@ BEGIN
     SET status = 'inactive'
     WHERE status != 'inactive'
     AND archived = false
-    AND end_date < CURRENT_DATE;
+    AND end_date < (timezone('Europe/Vienna', now()))::date;
 
     UPDATE fb_fragebogen
     SET status = 'active'
     WHERE status = 'scheduled'
     AND archived = false
-    AND start_date <= CURRENT_DATE
-    AND end_date >= CURRENT_DATE;
+    AND start_date <= (timezone('Europe/Vienna', now()))::date
+    AND end_date >= (timezone('Europe/Vienna', now()))::date;
 END;
 $$ LANGUAGE plpgsql;
 
