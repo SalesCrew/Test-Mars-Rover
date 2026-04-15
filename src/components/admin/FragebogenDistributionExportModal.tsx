@@ -23,6 +23,7 @@ interface DistributionExportSelection {
 interface FragebogenDistributionExportModalProps {
   isOpen: boolean;
   isExporting: boolean;
+  isLoadingItems?: boolean;
   fragebogenOptions: DistributionFragebogenOption[];
   onClose: () => void;
   onExport: (selection: DistributionExportSelection) => Promise<void>;
@@ -31,6 +32,7 @@ interface FragebogenDistributionExportModalProps {
 export const FragebogenDistributionExportModal: React.FC<FragebogenDistributionExportModalProps> = ({
   isOpen,
   isExporting,
+  isLoadingItems = false,
   fragebogenOptions,
   onClose,
   onExport
@@ -189,7 +191,13 @@ export const FragebogenDistributionExportModal: React.FC<FragebogenDistributionE
             </div>
             <div className={styles.checkList}>
               {availableQuestions.length === 0 ? (
-                <div className={styles.emptyState}>Bitte zuerst Fragebogen auswählen.</div>
+                <div className={styles.emptyState}>
+                  {selectedFragebogenIds.length === 0
+                    ? 'Bitte zuerst Fragebogen auswählen.'
+                    : isLoadingItems
+                      ? 'Lade Ja/Nein-Items…'
+                      : 'Keine Ja/Nein-Items in der Auswahl gefunden.'}
+                </div>
               ) : availableQuestions.map(question => (
                 <label key={question.id} className={styles.checkItem}>
                   <input

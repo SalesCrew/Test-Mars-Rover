@@ -157,6 +157,8 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isDistributionExportModalOpen, setIsDistributionExportModalOpen] = useState(false);
   const [isDistributionExporting, setIsDistributionExporting] = useState(false);
+  const [isLoadingDistributionItems, setIsLoadingDistributionItems] = useState(false);
+  const [distributionQuestionsByFragebogenId, setDistributionQuestionsByFragebogenId] = useState<Record<string, Array<{ id: string; label: string }>>>({});
 
   // Load data from API on mount
   useEffect(() => {
@@ -232,6 +234,65 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
     window.addEventListener('fragebogen:distribution-export', openDistributionExport);
     return () => window.removeEventListener('fragebogen:distribution-export', openDistributionExport);
   }, []);
+
+  useEffect(() => {
+    if (!isDistributionExportModalOpen) return;
+    if (fragebogenList.length === 0) {
+      setDistributionQuestionsByFragebogenId({});
+      return;
+    }
+
+    let cancelled = false;
+    const loadDistributionQuestions = async () => {
+      setIsLoadingDistributionItems(true);
+      try {
+        const uniqueModuleIds = Array.from(
+          new Set(fragebogenList.flatMap(f => f.moduleIds || []))
+        );
+
+        const questionsByModuleId: Record<string, Array<{ id: string; label: string }>> = {};
+
+        await Promise.all(uniqueModuleIds.map(async moduleId => {
+          try {
+            const fullModule = await fragebogenService.modules.getById(moduleId);
+            const yesNoQuestions = (fullModule.questions || [])
+              .map((mq: any) => mq?.question)
+              .filter((q: any) => q && q.type === 'yesno')
+              .map((q: any) => ({
+                id: q.id,
+                label: q.question_text || 'Unbenanntes Item'
+              }));
+            questionsByModuleId[moduleId] = yesNoQuestions;
+          } catch (err) {
+            console.error(`Failed to load module for distribution export: ${moduleId}`, err);
+            questionsByModuleId[moduleId] = [];
+          }
+        }));
+
+        const nextByFragebogen: Record<string, Array<{ id: string; label: string }>> = {};
+        fragebogenList.forEach(fragebogen => {
+          const merged = new Map<string, { id: string; label: string }>();
+          (fragebogen.moduleIds || []).forEach(moduleId => {
+            (questionsByModuleId[moduleId] || []).forEach(q => merged.set(q.id, q));
+          });
+          nextByFragebogen[fragebogen.id] = Array.from(merged.values());
+        });
+
+        if (!cancelled) {
+          setDistributionQuestionsByFragebogenId(nextByFragebogen);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingDistributionItems(false);
+        }
+      }
+    };
+
+    void loadDistributionQuestions();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDistributionExportModalOpen, fragebogenList]);
 
   const [selectedFragebogen, setSelectedFragebogen] = useState<Fragebogen | null>(null);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
@@ -905,20 +966,6 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
 
   const distributionExportOptions = useMemo<DistributionFragebogenOption[]>(() => {
     return fragebogenList.map((fragebogen) => {
-      const yesNoQuestionMap = new Map<string, { id: string; label: string }>();
-      modules
-        .filter(module => fragebogen.moduleIds.includes(module.id))
-        .forEach(module => {
-          module.questions
-            .filter(question => question.type === 'yesno')
-            .forEach(question => {
-              yesNoQuestionMap.set(question.id, {
-                id: question.id,
-                label: question.questionText || 'Unbenanntes Item'
-              });
-            });
-        });
-
       const marketIdSet = new Set(fragebogen.marketIds || []);
       const chains = Array.from(
         new Set(
@@ -932,11 +979,11 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       return {
         id: fragebogen.id,
         name: fragebogen.name,
-        yesnoQuestions: Array.from(yesNoQuestionMap.values()),
+        yesnoQuestions: distributionQuestionsByFragebogenId[fragebogen.id] || [],
         availableChains: chains
       };
     });
-  }, [fragebogenList, modules]);
+  }, [fragebogenList, distributionQuestionsByFragebogenId]);
 
   const handleDistributionExport = async (selection: {
     fragebogenIds: string[];
@@ -1935,6 +1982,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       <FragebogenDistributionExportModal
         isOpen={isDistributionExportModalOpen}
         isExporting={isDistributionExporting}
+        isLoadingItems={isLoadingDistributionItems}
         fragebogenOptions={distributionExportOptions}
         onClose={() => {
           if (!isDistributionExporting) setIsDistributionExportModalOpen(false);
