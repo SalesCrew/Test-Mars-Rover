@@ -14,6 +14,32 @@ export interface FragebogenMarketImportResult {
   unmatchedInternalIds: string[];
   excludedByFormat: number;
   totalDataRows: number;
+  matchedRows: MatchedMarketRow[];
+  unmatchedRows: UnmatchedMarketRow[];
+  reasonSummary: Record<FragebogenImportUnmatchedReason, number>;
+}
+
+export type FragebogenImportUnmatchedReason =
+  | 'empty_internal_id'
+  | 'excluded_by_store_format'
+  | 'internal_id_not_found'
+  | 'duplicate_internal_id_in_file'
+  | 'already_matched_market_duplicate';
+
+export interface MatchedMarketRow {
+  rowIndex: number;
+  rawInternalId: string;
+  normalizedInternalId: string;
+  marketId: string;
+  marketName: string;
+}
+
+export interface UnmatchedMarketRow {
+  rowIndex: number;
+  rawInternalId: string;
+  normalizedInternalId: string;
+  reason: FragebogenImportUnmatchedReason;
+  details?: string;
 }
 
 const columnLetterToIndex = (letter: string): number => {
@@ -102,40 +128,119 @@ export const parseFragebogenMarketMatches = async (
         const matchedMarketIds: string[] = [];
         const matchedInternalIds: string[] = [];
         const unmatchedInternalIds: string[] = [];
+        const matchedRows: MatchedMarketRow[] = [];
+        const unmatchedRows: UnmatchedMarketRow[] = [];
         const seenMarketIds = new Set<string>();
-        // Dedupe unmatched by normalized key, keep first original display value
-        const seenUnmatchedNormalized = new Set<string>();
+        const seenFileInternalIds = new Set<string>();
+        const unmatchedById = new Set<string>();
+        const reasonSummary: Record<FragebogenImportUnmatchedReason, number> = {
+          empty_internal_id: 0,
+          excluded_by_store_format: 0,
+          internal_id_not_found: 0,
+          duplicate_internal_id_in_file: 0,
+          already_matched_market_duplicate: 0,
+        };
 
         for (let i = startRow; i < rawData.length; i++) {
           const row = rawData[i];
           if (!row || row.length === 0) continue;
 
-          const rawId = idIdx >= 0 && row[idIdx] != null ? String(row[idIdx]).trim() : '';
-          if (!rawId) continue;
-
           totalDataRows++;
 
+          const rawId = idIdx >= 0 && row[idIdx] != null ? String(row[idIdx]).trim() : '';
           const rawFormat = formatIdx >= 0 && row[formatIdx] != null
             ? String(row[formatIdx]).trim().toLowerCase()
             : '';
 
+          if (!rawId) {
+            reasonSummary.empty_internal_id++;
+            unmatchedRows.push({
+              rowIndex: i + 1,
+              rawInternalId: '',
+              normalizedInternalId: '',
+              reason: 'empty_internal_id',
+              details: 'Interne ID ist leer'
+            });
+            continue;
+          }
+
           if (rawFormat !== matchValue) {
             excludedByFormat++;
+            reasonSummary.excluded_by_store_format++;
+            unmatchedRows.push({
+              rowIndex: i + 1,
+              rawInternalId: rawId,
+              normalizedInternalId: rawId.toLowerCase(),
+              reason: 'excluded_by_store_format',
+              details: `Food PS Store Format "${rawFormat || '(leer)'}" passt nicht zu "${mapping.foodPsStoreFormatValue}"`
+            });
             continue;
           }
 
           const normalizedId = rawId.toLowerCase();
+          if (seenFileInternalIds.has(normalizedId)) {
+            reasonSummary.duplicate_internal_id_in_file++;
+            unmatchedRows.push({
+              rowIndex: i + 1,
+              rawInternalId: rawId,
+              normalizedInternalId: normalizedId,
+              reason: 'duplicate_internal_id_in_file',
+              details: 'Interne ID kommt mehrfach in der Datei vor'
+            });
+            if (!unmatchedById.has(normalizedId)) {
+              unmatchedById.add(normalizedId);
+              unmatchedInternalIds.push(rawId);
+            }
+            continue;
+          }
+          seenFileInternalIds.add(normalizedId);
+
           const marketId = marketByInternalId.get(normalizedId);
 
-          if (marketId && !seenMarketIds.has(marketId)) {
+          if (!marketId) {
+            reasonSummary.internal_id_not_found++;
+            unmatchedRows.push({
+              rowIndex: i + 1,
+              rawInternalId: rawId,
+              normalizedInternalId: normalizedId,
+              reason: 'internal_id_not_found',
+              details: 'Interne ID wurde in der Marktdatenbank nicht gefunden'
+            });
+            if (!unmatchedById.has(normalizedId)) {
+              unmatchedById.add(normalizedId);
+              unmatchedInternalIds.push(rawId);
+            }
+            continue;
+          }
+
+          if (seenMarketIds.has(marketId)) {
+            reasonSummary.already_matched_market_duplicate++;
+            unmatchedRows.push({
+              rowIndex: i + 1,
+              rawInternalId: rawId,
+              normalizedInternalId: normalizedId,
+              reason: 'already_matched_market_duplicate',
+              details: 'Markt ist bereits durch eine andere Datei-Zeile zugeordnet'
+            });
+            if (!unmatchedById.has(normalizedId)) {
+              unmatchedById.add(normalizedId);
+              unmatchedInternalIds.push(rawId);
+            }
+            continue;
+          }
+
+          const matchedMarket = availableMarkets.find(m => m.id === marketId);
+          if (marketId) {
             matchedMarketIds.push(marketId);
             matchedInternalIds.push(rawId);
             seenMarketIds.add(marketId);
-          } else if (!marketId) {
-            if (!seenUnmatchedNormalized.has(normalizedId)) {
-              seenUnmatchedNormalized.add(normalizedId);
-              unmatchedInternalIds.push(rawId);
-            }
+            matchedRows.push({
+              rowIndex: i + 1,
+              rawInternalId: rawId,
+              normalizedInternalId: normalizedId,
+              marketId,
+              marketName: matchedMarket?.name || 'Unbekannter Markt'
+            });
           }
         }
 
@@ -145,6 +250,9 @@ export const parseFragebogenMarketMatches = async (
           unmatchedInternalIds,
           excludedByFormat,
           totalDataRows,
+          matchedRows,
+          unmatchedRows,
+          reasonSummary,
         });
       } catch (err) {
         reject(err instanceof Error ? err : new Error(`Fehler beim Verarbeiten der Datei: ${err}`));

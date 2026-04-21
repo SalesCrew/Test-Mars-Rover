@@ -4,6 +4,8 @@ import { X, Check, WarningCircle, Upload, FileText } from '@phosphor-icons/react
 import {
   readFragebogenMarketExcelPreview,
   parseFragebogenMarketMatches,
+  type FragebogenImportUnmatchedReason,
+  type UnmatchedMarketRow,
   type FragebogenMarketImportMapping,
   type FragebogenMarketImportResult,
 } from '../../utils/fragebogenMarketImport';
@@ -44,6 +46,8 @@ export const FragebogenMarketImportMapperModal: React.FC<FragebogenMarketImportM
   const [isParsing, setIsParsing] = useState(false);
   const [result, setResult] = useState<FragebogenMarketImportResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [manualMatchTarget, setManualMatchTarget] = useState<UnmatchedMarketRow | null>(null);
+  const [manualSearchTerm, setManualSearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const maxCols = preview.reduce((max, row) => Math.max(max, row.length), 0);
@@ -61,10 +65,20 @@ export const FragebogenMarketImportMapperModal: React.FC<FragebogenMarketImportM
     mapping.foodPsStoreFormatColumn.trim() !== '' &&
     mapping.foodPsStoreFormatValue.trim() !== '';
 
+  const reasonLabels: Record<FragebogenImportUnmatchedReason, string> = {
+    empty_internal_id: 'Interne ID fehlt',
+    excluded_by_store_format: 'Store-Format gefiltert',
+    internal_id_not_found: 'Interne ID nicht gefunden',
+    duplicate_internal_id_in_file: 'Interne ID doppelt in Datei',
+    already_matched_market_duplicate: 'Markt bereits zugeordnet'
+  };
+
   const handleFile = (f: File) => {
     setFile(f);
     setResult(null);
     setParseError(null);
+    setManualMatchTarget(null);
+    setManualSearchTerm('');
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -98,7 +112,10 @@ export const FragebogenMarketImportMapperModal: React.FC<FragebogenMarketImportM
 
   const handleConfirm = () => {
     if (!result) return;
-    onConfirm(result);
+    onConfirm({
+      ...result,
+      matchedMarketIds: Array.from(new Set(result.matchedMarketIds)),
+    });
   };
 
   const setColLetter = (key: 'interneIdColumn' | 'foodPsStoreFormatColumn', raw: string) => {
@@ -112,7 +129,124 @@ export const FragebogenMarketImportMapperModal: React.FC<FragebogenMarketImportM
     setPreview([]);
     setResult(null);
     setParseError(null);
+    setManualMatchTarget(null);
+    setManualSearchTerm('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const unmatchedCandidateMarkets = React.useMemo(() => {
+    if (!result) return [];
+    const matchedIds = new Set(result.matchedMarketIds);
+    return availableMarkets.filter(market => !matchedIds.has(market.id));
+  }, [availableMarkets, result]);
+
+  const searchableCandidates = React.useMemo(() => {
+    return unmatchedCandidateMarkets.map((market) => {
+      const searchableText = [
+        market.id,
+        market.internalId,
+        market.name,
+        market.address,
+        market.city,
+        market.postalCode,
+        market.chain,
+        market.gebietsleiterName,
+        market.gebietsleiterEmail,
+        market.banner,
+        market.channel,
+        market.subgroup,
+        market.branch,
+        market.marketEmail,
+        market.marketTel,
+        market.marsFil,
+        market.email,
+        market.phone,
+      ]
+        .filter(Boolean)
+        .map(value => String(value).toLowerCase())
+        .join(' ');
+
+      return { market, searchableText };
+    });
+  }, [unmatchedCandidateMarkets]);
+
+  const filteredManualCandidates = React.useMemo(() => {
+    const tokens = manualSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (tokens.length === 0) {
+      return searchableCandidates.map(item => item.market);
+    }
+
+    return searchableCandidates
+      .filter(item => tokens.every(token => item.searchableText.includes(token)))
+      .map(item => item.market);
+  }, [manualSearchTerm, searchableCandidates]);
+
+  const applyManualMatch = (target: UnmatchedMarketRow, market: AdminMarket) => {
+    setResult(prev => {
+      if (!prev) return prev;
+
+      const removeIndex = prev.unmatchedRows.findIndex(row =>
+        row.rowIndex === target.rowIndex &&
+        row.normalizedInternalId === target.normalizedInternalId &&
+        row.reason === target.reason
+      );
+      if (removeIndex === -1) return prev;
+
+      const nextUnmatchedRows = [...prev.unmatchedRows];
+      nextUnmatchedRows.splice(removeIndex, 1);
+
+      const nextMatchedRows = [
+        ...prev.matchedRows,
+        {
+          rowIndex: target.rowIndex,
+          rawInternalId: target.rawInternalId,
+          normalizedInternalId: target.normalizedInternalId,
+          marketId: market.id,
+          marketName: market.name
+        }
+      ];
+
+      const nextMatchedMarketIds = Array.from(new Set([...prev.matchedMarketIds, market.id]));
+      const nextMatchedInternalIds = target.rawInternalId
+        ? Array.from(new Set([...prev.matchedInternalIds, target.rawInternalId]))
+        : prev.matchedInternalIds;
+
+      const nextReasonSummary = {
+        ...prev.reasonSummary,
+        [target.reason]: Math.max(0, (prev.reasonSummary[target.reason] || 0) - 1)
+      };
+
+      const nextExcludedByFormat = target.reason === 'excluded_by_store_format'
+        ? Math.max(0, prev.excludedByFormat - 1)
+        : prev.excludedByFormat;
+
+      const nextUnmatchedInternalIds = Array.from(
+        new Map(
+          nextUnmatchedRows
+            .filter(row => row.rawInternalId.trim() !== '')
+            .map(row => [row.normalizedInternalId, row.rawInternalId])
+        ).values()
+      );
+
+      return {
+        ...prev,
+        matchedRows: nextMatchedRows,
+        matchedMarketIds: nextMatchedMarketIds,
+        matchedInternalIds: nextMatchedInternalIds,
+        unmatchedRows: nextUnmatchedRows,
+        unmatchedInternalIds: nextUnmatchedInternalIds,
+        reasonSummary: nextReasonSummary,
+        excludedByFormat: nextExcludedByFormat
+      };
+    });
+
+    setManualSearchTerm('');
+    setManualMatchTarget(null);
   };
 
   return ReactDOM.createPortal(
@@ -283,54 +417,70 @@ export const FragebogenMarketImportMapperModal: React.FC<FragebogenMarketImportM
                       {result.matchedMarketIds.length === 1 ? 'Markt gefunden' : 'Märkte gefunden'}
                     </span>
                   </div>
-                  {result.excludedByFormat > 0 && (
-                    <div className={styles.resultInfo}>
-                      {result.excludedByFormat} {result.excludedByFormat === 1 ? 'Zeile' : 'Zeilen'} gefiltert
-                      {' '}(Food PS Store Format ≠ „{mapping.foodPsStoreFormatValue}")
-                    </div>
-                  )}
-                  {result.unmatchedInternalIds.length > 0 && (
-                    <div className={styles.resultWarning}>
-                      <WarningCircle size={16} weight="fill" />
-                      <span>
-                        {result.unmatchedInternalIds.length}{' '}
-                        {result.unmatchedInternalIds.length === 1 ? 'ID' : 'IDs'} nicht in der Datenbank gefunden:{' '}
-                        {result.unmatchedInternalIds.slice(0, 5).join(', ')}
-                        {result.unmatchedInternalIds.length > 5 && ` +${result.unmatchedInternalIds.length - 5} weitere`}
-                      </span>
-                    </div>
-                  )}
-                  {/* Contextual zero-match hints */}
-                  {result.totalDataRows > 0 && result.matchedMarketIds.length === 0 && (
-                    <>
-                      {result.excludedByFormat === result.totalDataRows && (
-                        <div className={styles.zeroMatchHint}>
-                          <WarningCircle size={16} weight="fill" />
-                          <span>
-                            Alle Zeilen wurden durch den Store-Format-Filter ausgeschlossen.
-                            Bitte den Wert für „Food PS Store Format" prüfen.
-                          </span>
+
+                  <div className={styles.reasonPills}>
+                    {(Object.keys(result.reasonSummary) as FragebogenImportUnmatchedReason[]).map((reason) => {
+                      const count = result.reasonSummary[reason] || 0;
+                      if (!count) return null;
+                      return (
+                        <div key={reason} className={styles.reasonPill}>
+                          <span className={styles.reasonPillCount}>{count}</span>
+                          <span className={styles.reasonPillLabel}>{reasonLabels[reason]}</span>
                         </div>
-                      )}
-                      {result.excludedByFormat === 0 && result.unmatchedInternalIds.length > 0 && (
-                        <div className={styles.zeroMatchHint}>
-                          <WarningCircle size={16} weight="fill" />
-                          <span>
-                            Keine IDs gefunden — die IDs aus der Datei stimmen nicht mit der Datenbank überein.
-                            Bitte die Interne-ID-Spalte prüfen.
-                          </span>
-                        </div>
-                      )}
-                      {result.excludedByFormat > 0 && result.excludedByFormat < result.totalDataRows && result.unmatchedInternalIds.length > 0 && (
-                        <div className={styles.zeroMatchHint}>
-                          <WarningCircle size={16} weight="fill" />
-                          <span>
-                            Keine Übereinstimmungen gefunden. Bitte Store-Format-Wert und Interne-ID-Spalte prüfen.
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  )}
+                      );
+                    })}
+                  </div>
+
+                  <div className={styles.resultListBlock}>
+                    <h4 className={styles.resultListTitle}>Gematchte Märkte ({result.matchedRows.length})</h4>
+                    {result.matchedRows.length === 0 ? (
+                      <div className={styles.resultListEmpty}>Keine gematchten Märkte.</div>
+                    ) : (
+                      <div className={styles.resultList}>
+                        {result.matchedRows.map((row) => (
+                          <div key={`${row.rowIndex}-${row.marketId}`} className={styles.resultListItemMatched}>
+                            <span className={styles.resultListId}>{row.rawInternalId || '(leer)'}</span>
+                            <span className={styles.resultListArrow}>→</span>
+                            <span className={styles.resultListMarket}>{row.marketName}</span>
+                            <span className={styles.resultListMeta}>Zeile {row.rowIndex}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.resultListBlock}>
+                    <h4 className={styles.resultListTitle}>Nicht gematcht / übersprungen ({result.unmatchedRows.length})</h4>
+                    {result.unmatchedRows.length === 0 ? (
+                      <div className={styles.resultListEmpty}>Alle Zeilen wurden erfolgreich gematcht.</div>
+                    ) : (
+                      <div className={styles.resultList}>
+                        {result.unmatchedRows.map((row) => (
+                          <div
+                            key={`${row.rowIndex}-${row.reason}-${row.normalizedInternalId || 'empty'}`}
+                            className={styles.resultListItemUnmatched}
+                          >
+                            <div className={styles.resultListUnmatchedInfo}>
+                              <span className={styles.resultListId}>{row.rawInternalId || '(leer)'}</span>
+                              <span className={styles.resultListReason}>{reasonLabels[row.reason]}</span>
+                              <span className={styles.resultListMeta}>Zeile {row.rowIndex}</span>
+                              {row.details && <span className={styles.resultListDetails}>{row.details}</span>}
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.manualMatchButton}
+                              onClick={() => {
+                                setManualMatchTarget(row);
+                                setManualSearchTerm('');
+                              }}
+                            >
+                              Manuell zuordnen
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </>
@@ -374,6 +524,56 @@ export const FragebogenMarketImportMapperModal: React.FC<FragebogenMarketImportM
           )}
         </div>
       </div>
+
+      {manualMatchTarget && result && (
+        <div className={styles.manualOverlay} onClick={() => setManualMatchTarget(null)}>
+          <div className={styles.manualModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.manualHeader}>
+              <h3 className={styles.manualTitle}>Markt manuell zuordnen</h3>
+              <button className={styles.closeBtn} onClick={() => setManualMatchTarget(null)}>
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+
+            <div className={styles.manualTargetInfo}>
+              <div><strong>ID:</strong> {manualMatchTarget.rawInternalId || '(leer)'}</div>
+              <div><strong>Grund:</strong> {reasonLabels[manualMatchTarget.reason]}</div>
+              {manualMatchTarget.details && <div>{manualMatchTarget.details}</div>}
+            </div>
+
+            <input
+              className={styles.manualSearchInput}
+              placeholder="Suche über alle Marktdaten..."
+              value={manualSearchTerm}
+              onChange={(e) => setManualSearchTerm(e.target.value)}
+            />
+
+            <div className={styles.manualHint}>
+              Es werden nur noch nicht gematchte Märkte angezeigt ({unmatchedCandidateMarkets.length} verfügbar).
+            </div>
+
+            <div className={styles.manualList}>
+              {filteredManualCandidates.length === 0 ? (
+                <div className={styles.resultListEmpty}>Keine Märkte für diese Suche gefunden.</div>
+              ) : (
+                filteredManualCandidates.map((market) => (
+                  <button
+                    key={market.id}
+                    type="button"
+                    className={styles.manualListItem}
+                    onClick={() => applyManualMatch(manualMatchTarget, market)}
+                  >
+                    <span className={styles.manualMarketName}>{market.name}</span>
+                    <span className={styles.manualMarketMeta}>
+                      {market.internalId} · {market.chain} · {market.postalCode} {market.city} · {market.address}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

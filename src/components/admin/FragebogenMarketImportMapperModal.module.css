@@ -537,3 +537,242 @@
   color: #94A3B8;
   font-style: italic;
 }
+
+.reasonPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reasonPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.8);
+  padding: 4px 10px;
+}
+
+.reasonPillCount {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7C3AED;
+}
+
+.reasonPillLabel {
+  font-size: 12px;
+  color: #475569;
+}
+
+.resultListBlock {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resultListTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.resultList {
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  border-radius: 10px;
+  max-height: 220px;
+  overflow: auto;
+  background: white;
+}
+
+.resultListEmpty {
+  border: 1px dashed rgba(203, 213, 225, 0.9);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #64748B;
+  font-size: 13px;
+  background: rgba(248, 250, 252, 0.65);
+}
+
+.resultListItemMatched,
+.resultListItemUnmatched {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.85);
+}
+
+.resultListItemMatched:last-child,
+.resultListItemUnmatched:last-child {
+  border-bottom: none;
+}
+
+.resultListId {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+  min-width: 84px;
+}
+
+.resultListArrow {
+  color: #64748B;
+}
+
+.resultListMarket {
+  flex: 1;
+  font-size: 13px;
+  color: #334155;
+}
+
+.resultListMeta {
+  font-size: 11px;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.resultListUnmatchedInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resultListReason {
+  font-size: 12px;
+  font-weight: 600;
+  color: #B45309;
+}
+
+.resultListDetails {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.manualMatchButton {
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.08);
+  color: #6D28D9;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.manualMatchButton:hover {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.55);
+}
+
+.manualOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100004;
+  background: rgba(15, 23, 42, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.manualModal {
+  width: min(820px, 100%);
+  max-height: 80vh;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.manualHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.manualTitle {
+  margin: 0;
+  font-size: 16px;
+  color: #1E293B;
+}
+
+.manualTargetInfo {
+  border: 1px solid rgba(241, 245, 249, 0.95);
+  background: rgba(248, 250, 252, 0.65);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.manualSearchInput {
+  border: 1.5px solid rgba(203, 213, 225, 0.9);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.manualSearchInput:focus {
+  outline: none;
+  border-color: #7C3AED;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.manualHint {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.manualList {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
+  overflow: auto;
+  max-height: 48vh;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.manualListItem {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.9);
+  background: white;
+  text-align: left;
+  padding: 9px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.manualListItem:last-child {
+  border-bottom: none;
+}
+
+.manualListItem:hover {
+  background: rgba(239, 246, 255, 0.6);
+}
+
+.manualMarketName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.manualMarketMeta {
+  font-size: 11px;
+  color: #64748B;
+}

@@ -970,8 +970,7 @@ export const CreateFragebogenModal: React.FC<CreateFragebogenModalProps> = ({
                     type="button"
                     className={styles.importMarketsButton}
                     onClick={() => { setIsImportModalOpen(true); setImportSummary(null); }}
-                    title={isLoadingMarkets ? 'Märkte werden noch geladen…' : 'Märkte aus Excel importieren'}
-                    disabled={isLoadingMarkets}
+                    title="Märkte aus Excel importieren"
                   >
                     <UploadSimple size={15} weight="bold" />
                     <span>Import aus Excel</span>
