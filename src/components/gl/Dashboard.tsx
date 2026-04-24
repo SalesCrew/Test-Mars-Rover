@@ -604,10 +604,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           if (dateA !== dateB) return dateA - dateB;
           return String(a.name || '').localeCompare(String(b.name || ''), 'de');
         });
-      
-      if (marketFragebogen.length > 0) {
+
+      let openMarketFragebogen = marketFragebogen;
+      if (marketFragebogen.length > 0 && user?.id) {
+        try {
+          const completedMap = await fragebogenService.responses.getCompletedMap({
+            gebietsleiter_id: user.id,
+            market_id: marketId,
+            fragebogen_ids: marketFragebogen.map((f: any) => f.id)
+          });
+          const completedSet = new Set(completedMap.completed_fragebogen_ids || []);
+          openMarketFragebogen = marketFragebogen.filter((f: any) => !completedSet.has(f.id));
+        } catch (completionError) {
+          console.error('Could not fetch completed fragebogen map:', completionError);
+          alert('Fragebogen-Pruefung fehlgeschlagen. Bitte erneut versuchen.');
+          return;
+        }
+      }
+
+      if (openMarketFragebogen.length > 0) {
         const fullFragebogenList = await Promise.all(
-          marketFragebogen.map((f: any) => fragebogenService.fragebogen.getById(f.id))
+          openMarketFragebogen.map((f: any) => fragebogenService.fragebogen.getById(f.id))
         );
 
         // Flatten all modules across assigned fragebogen while carrying hidden
@@ -619,8 +636,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
             fragebogenId: fullFragebogen.id,
             fragebogenName: fullFragebogen.name,
             moduleInstanceId: `${fullFragebogen.id}:${fm.module?.id || fm.id}:${moduleIndex}`,
+            rules: Array.isArray(fm.module?.rules) ? fm.module.rules : [],
             questions: (fm.module?.questions || []).map((q: any, questionIndex: number) => ({
               id: q.question?.id || q.id,
+              localId: q.local_id || `local-${questionIndex + 1}`,
               type: q.question?.type || 'open_text',
               questionText: q.question?.question_text || '',
               instruction: q.question?.instruction,

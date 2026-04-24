@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS fb_questions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_by UUID REFERENCES users(id),
     archived BOOLEAN DEFAULT false,
+    is_deleted BOOLEAN DEFAULT false,
+    deleted_at TIMESTAMP WITH TIME ZONE,
 
     -- Validation constraints
     CONSTRAINT valid_options CHECK (
@@ -90,6 +92,7 @@ CREATE TABLE IF NOT EXISTS fb_questions (
 
 CREATE INDEX IF NOT EXISTS idx_fb_questions_type ON fb_questions(type);
 CREATE INDEX IF NOT EXISTS idx_fb_questions_archived ON fb_questions(archived);
+CREATE INDEX IF NOT EXISTS idx_fb_questions_is_deleted ON fb_questions(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_fb_questions_is_template ON fb_questions(is_template);
 CREATE INDEX IF NOT EXISTS idx_fb_questions_created_at ON fb_questions(created_at DESC);
 
@@ -101,12 +104,15 @@ CREATE TABLE IF NOT EXISTS fb_modules (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     archived BOOLEAN DEFAULT false,
+    is_deleted BOOLEAN DEFAULT false,
+    deleted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_by UUID REFERENCES users(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_fb_modules_archived ON fb_modules(archived);
+CREATE INDEX IF NOT EXISTS idx_fb_modules_is_deleted ON fb_modules(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_fb_modules_created_at ON fb_modules(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_fb_modules_name ON fb_modules(name);
 
@@ -178,6 +184,8 @@ CREATE TABLE IF NOT EXISTS fb_fragebogen (
         'active', 'scheduled', 'inactive'
     )),
     archived BOOLEAN DEFAULT false,
+    is_deleted BOOLEAN DEFAULT false,
+    deleted_at TIMESTAMP WITH TIME ZONE,
     -- Whether Zeiterfassung is enabled for visits under this Fragebogen
     zeiterfassung_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -189,6 +197,7 @@ CREATE TABLE IF NOT EXISTS fb_fragebogen (
 
 CREATE INDEX IF NOT EXISTS idx_fb_fragebogen_status ON fb_fragebogen(status);
 CREATE INDEX IF NOT EXISTS idx_fb_fragebogen_archived ON fb_fragebogen(archived);
+CREATE INDEX IF NOT EXISTS idx_fb_fragebogen_is_deleted ON fb_fragebogen(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_fb_fragebogen_dates ON fb_fragebogen(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_fb_fragebogen_created_at ON fb_fragebogen(created_at DESC);
 

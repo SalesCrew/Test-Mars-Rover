@@ -44,6 +44,7 @@ type QuestionType =
 
 interface Question {
   id: string;
+  localId?: string;
   questionInstanceId?: string;
   type: QuestionType;
   questionText: string;
@@ -72,12 +73,23 @@ interface Question {
   };
 }
 
+interface ModuleRule {
+  id?: string;
+  trigger_local_id: string;
+  trigger_answer: string;
+  operator?: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'between' | 'contains';
+  trigger_answer_max?: string | number | null;
+  action: 'hide' | 'show';
+  target_local_ids: string[];
+}
+
 interface Module {
   id: string;
   moduleInstanceId?: string;
   fragebogenId?: string;
   fragebogenName?: string;
   name: string;
+  rules?: ModuleRule[];
   questions: Question[];
 }
 
@@ -87,6 +99,7 @@ type QuestionWithContext = Question & {
   moduleInstanceId?: string;
   fragebogenId?: string;
   fragebogenName?: string;
+  localId: string;
   questionKey: string;
 };
 
@@ -124,6 +137,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     () =>
       modules.flatMap((module, moduleIndex) =>
         module.questions.map((q, questionIndex) => {
+          const localId = q.localId || `local-${questionIndex + 1}`;
           const questionKey =
             q.questionInstanceId ||
             `${module.fragebogenId || fragebogenId || fragebogenIds?.[0] || 'fb'}:${module.id}:${q.id}:${moduleIndex}:${questionIndex}`;
@@ -134,6 +148,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
             moduleInstanceId: module.moduleInstanceId,
             fragebogenId: module.fragebogenId || fragebogenId || fragebogenIds?.[0],
             fragebogenName: module.fragebogenName,
+            localId,
             questionKey
           };
         })
@@ -394,16 +409,229 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     }
   }, [fahrzeitElapsed, fahrzeitRunning]);
 
+  const moduleRulesByKey = useMemo(() => {
+    const next = new Map<string, ModuleRule[]>();
+    modules.forEach((module) => {
+      const moduleKey = module.moduleInstanceId || module.id;
+      next.set(moduleKey, Array.isArray(module.rules) ? module.rules : []);
+    });
+    return next;
+  }, [modules]);
+
+  const questionByModuleLocalId = useMemo(() => {
+    const next = new Map<string, QuestionWithContext>();
+    allQuestions.forEach((question) => {
+      const moduleKey = question.moduleInstanceId || question.moduleId;
+      next.set(`${moduleKey}:${question.localId}`, question);
+    });
+    return next;
+  }, [allQuestions]);
+
+  const normalizeBooleanLike = (value: any): string => {
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (raw === '1' || raw === 'ja') return 'true';
+    if (raw === '0' || raw === 'nein') return 'false';
+    return raw;
+  };
+
+  const parseMatrixRuleTarget = (value: string): { rowId: string; colId: string } | null => {
+    const parts = String(value || '').split(':');
+    if (parts.length < 2) return null;
+    const rowId = parts[0].trim();
+    const colId = parts.slice(1).join(':').trim();
+    if (!rowId || !colId) return null;
+    return { rowId, colId };
+  };
+
+  const evaluateCondition = (rule: ModuleRule, triggerQuestion: QuestionWithContext, triggerAnswer: any): boolean => {
+    const operator = rule.operator || 'equals';
+    const ruleValueRaw = String(rule.trigger_answer ?? '');
+    const ruleValueNormalized = ruleValueRaw.toLowerCase();
+    const answerValue =
+      triggerAnswer !== null && triggerAnswer !== undefined ? String(triggerAnswer).toLowerCase() : '';
+
+    switch (operator) {
+      case 'equals': {
+        if (triggerQuestion.type === 'multiple_choice') {
+          const selected = Array.isArray(triggerAnswer) ? triggerAnswer.map((v) => String(v)) : [];
+          return selected.includes(String(rule.trigger_answer));
+        }
+        if (triggerQuestion.type === 'matrix') {
+          const parsed = parseMatrixRuleTarget(String(rule.trigger_answer));
+          if (!parsed || !triggerAnswer || typeof triggerAnswer !== 'object') return false;
+          return String((triggerAnswer as Record<string, any>)[parsed.rowId] ?? '') === parsed.colId;
+        }
+        if (triggerQuestion.type === 'yesno') {
+          return normalizeBooleanLike(triggerAnswer) === normalizeBooleanLike(rule.trigger_answer);
+        }
+        if (triggerQuestion.type === 'open_numeric' || triggerQuestion.type === 'slider' || triggerQuestion.type === 'likert') {
+          return Number(triggerAnswer) === Number(rule.trigger_answer);
+        }
+        return answerValue === ruleValueNormalized;
+      }
+
+      case 'not_equals': {
+        if (triggerQuestion.type === 'multiple_choice') {
+          const selected = Array.isArray(triggerAnswer) ? triggerAnswer.map((v) => String(v)) : [];
+          return !selected.includes(String(rule.trigger_answer));
+        }
+        if (triggerQuestion.type === 'matrix') {
+          const parsed = parseMatrixRuleTarget(String(rule.trigger_answer));
+          if (!parsed || !triggerAnswer || typeof triggerAnswer !== 'object') return false;
+          return String((triggerAnswer as Record<string, any>)[parsed.rowId] ?? '') !== parsed.colId;
+        }
+        if (triggerQuestion.type === 'yesno') {
+          return normalizeBooleanLike(triggerAnswer) !== normalizeBooleanLike(rule.trigger_answer);
+        }
+        if (triggerQuestion.type === 'open_numeric' || triggerQuestion.type === 'slider' || triggerQuestion.type === 'likert') {
+          return Number(triggerAnswer) !== Number(rule.trigger_answer);
+        }
+        return answerValue !== ruleValueNormalized;
+      }
+
+      case 'greater_than':
+        return Number(triggerAnswer) > Number(rule.trigger_answer);
+
+      case 'less_than':
+        return Number(triggerAnswer) < Number(rule.trigger_answer);
+
+      case 'between': {
+        const min = Number(rule.trigger_answer);
+        const max = Number(rule.trigger_answer_max);
+        const answerNum = Number(triggerAnswer);
+        if (Number.isNaN(min) || Number.isNaN(max) || Number.isNaN(answerNum)) return false;
+        return answerNum >= min && answerNum <= max;
+      }
+
+      case 'contains': {
+        if (Array.isArray(triggerAnswer)) {
+          return triggerAnswer.map((v) => String(v)).includes(String(rule.trigger_answer));
+        }
+        return String(triggerAnswer ?? '').toLowerCase().includes(ruleValueNormalized);
+      }
+
+      default:
+        return false;
+    }
+  };
+
+  const isQuestionVisible = useCallback((question: QuestionWithContext, answerState: Record<string, any>): boolean => {
+    const moduleKey = question.moduleInstanceId || question.moduleId;
+    const moduleRules = moduleRulesByKey.get(moduleKey) || [];
+    if (moduleRules.length === 0) return true;
+
+    const targetRules = moduleRules.filter((rule) => (rule.target_local_ids || []).includes(question.localId));
+    if (targetRules.length === 0) return true;
+
+    let hasShowRule = false;
+    let showMatched = false;
+    let hideMatched = false;
+
+    for (const rule of targetRules) {
+      const triggerQuestion = questionByModuleLocalId.get(`${moduleKey}:${rule.trigger_local_id}`);
+      if (!triggerQuestion) continue;
+
+      const triggerAnswer = answerState[triggerQuestion.questionKey];
+      if (triggerAnswer === undefined || triggerAnswer === null || triggerAnswer === '') {
+        if (rule.action === 'show') {
+          hasShowRule = true;
+        }
+        continue;
+      }
+
+      const conditionMet = evaluateCondition(rule, triggerQuestion, triggerAnswer);
+      if (rule.action === 'hide' && conditionMet) {
+        hideMatched = true;
+      } else if (rule.action === 'show') {
+        hasShowRule = true;
+        if (conditionMet) {
+          showMatched = true;
+        }
+      }
+    }
+
+    if (hideMatched) return false;
+    if (hasShowRule && !showMatched) return false;
+    return true;
+  }, [moduleRulesByKey, questionByModuleLocalId]);
+
+  const findNextVisibleIndex = useCallback((fromIndex: number, answerState: Record<string, any>): number => {
+    for (let i = fromIndex + 1; i < allQuestions.length; i += 1) {
+      if (isQuestionVisible(allQuestions[i], answerState)) return i;
+    }
+    return -1;
+  }, [allQuestions, isQuestionVisible]);
+
+  const findPrevVisibleIndex = useCallback((fromIndex: number, answerState: Record<string, any>): number => {
+    for (let i = fromIndex - 1; i >= 0; i -= 1) {
+      if (isQuestionVisible(allQuestions[i], answerState)) return i;
+    }
+    return -1;
+  }, [allQuestions, isQuestionVisible]);
+
   const currentQuestion = allQuestions[currentIndex];
   const totalQuestions = allQuestions.length;
+  const visibleQuestionIndices = useMemo(
+    () => allQuestions.map((question, index) => (isQuestionVisible(question, answers) ? index : -1)).filter((i) => i >= 0),
+    [allQuestions, answers, isQuestionVisible]
+  );
+  const visibleQuestionCount = visibleQuestionIndices.length;
+  const currentVisiblePosition = visibleQuestionIndices.findIndex((i) => i === currentIndex);
 
   // Calculate progress
   const zeitSteps = zeiterfassungActive ? 2 : 0;
-  const totalSteps = totalQuestions + zeitSteps;
-  const currentStep = zeiterfassungStep === 'start' ? 1 
-    : zeiterfassungStep === 'end' ? totalSteps 
-    : currentIndex + 1 + (zeiterfassungActive ? 1 : 0);
+  const totalSteps = Math.max(visibleQuestionCount + zeitSteps, 1);
+  const currentStep = zeiterfassungStep === 'start'
+    ? 1
+    : zeiterfassungStep === 'end'
+      ? totalSteps
+      : Math.max((currentVisiblePosition >= 0 ? currentVisiblePosition + 1 : 1) + (zeiterfassungActive ? 1 : 0), 1);
   const progress = (currentStep / totalSteps) * 100;
+  const hasNextVisibleQuestion =
+    zeiterfassungStep === 'questions' &&
+    !!currentQuestion &&
+    findNextVisibleIndex(currentIndex, answers) >= 0;
+  const hasPrevVisibleQuestion =
+    zeiterfassungStep === 'questions' && findPrevVisibleIndex(currentIndex, answers) >= 0;
+
+  useEffect(() => {
+    if (zeiterfassungStep !== 'questions') return;
+    if (totalQuestions === 0) return;
+
+    if (visibleQuestionCount === 0) {
+      if (zeiterfassungActive) {
+        setZeiterfassungStep('end');
+      } else {
+        setIsCompleted(true);
+      }
+      return;
+    }
+
+    if (currentQuestion && !isQuestionVisible(currentQuestion, answers)) {
+      const nextVisible = findNextVisibleIndex(currentIndex - 1, answers);
+      if (nextVisible >= 0) {
+        setCurrentIndex(nextVisible);
+        return;
+      }
+
+      const prevVisible = findPrevVisibleIndex(currentIndex + 1, answers);
+      if (prevVisible >= 0) {
+        setCurrentIndex(prevVisible);
+      }
+    }
+  }, [
+    zeiterfassungStep,
+    totalQuestions,
+    visibleQuestionCount,
+    zeiterfassungActive,
+    currentQuestion,
+    currentIndex,
+    answers,
+    isQuestionVisible,
+    findNextVisibleIndex,
+    findPrevVisibleIndex
+  ]);
 
   // Time helpers
   const getCurrentTime = (): string => {
@@ -651,9 +879,10 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
       setSaveError(null);
       setSyncError(null);
 
-      if (currentIndex < totalQuestions - 1) {
-        // Advance immediately; flush runs in background
-        setCurrentIndex(prev => prev + 1);
+      const nextVisibleIndex = findNextVisibleIndex(currentIndex, answers);
+      if (nextVisibleIndex >= 0) {
+        // Advance immediately to next visible question; flush runs in background
+        setCurrentIndex(nextVisibleIndex);
         void flushPendingAnswers();
       } else if (zeiterfassungActive) {
         // Move to end step; flush runs in background
@@ -773,15 +1002,21 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     if (zeiterfassungStep === 'end') {
       // Go back to questions (no longer going to 'start' - Fahrzeit is auto-calculated)
       if (totalQuestions > 0) {
-        setZeiterfassungStep('questions');
-        setCurrentIndex(totalQuestions - 1);
+        const lastVisibleIndex = visibleQuestionIndices[visibleQuestionIndices.length - 1];
+        if (lastVisibleIndex !== undefined) {
+          setZeiterfassungStep('questions');
+          setCurrentIndex(lastVisibleIndex);
+        }
       }
       // If no questions, stay on 'end' (can't go back further)
       return;
     }
     
     if (zeiterfassungStep === 'questions' && currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
+      const prevVisibleIndex = findPrevVisibleIndex(currentIndex, answers);
+      if (prevVisibleIndex >= 0) {
+        setCurrentIndex(prevVisibleIndex);
+      }
       return;
     }
     
@@ -804,6 +1039,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
       return true;
     }
     if (!currentQuestion) return false;
+    if (!isQuestionVisible(currentQuestion, answers)) return true;
     if (!currentQuestion.required) return true;
     const answer = answers[currentQuestion.questionKey];
     if (answer === undefined || answer === null || answer === '') return false;
@@ -1559,7 +1795,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
           <button 
             className={styles.navButton}
             onClick={handlePrev}
-            disabled={zeiterfassungStep === 'start' || (!zeiterfassungActive && currentIndex === 0)}
+            disabled={zeiterfassungStep === 'start' || (zeiterfassungStep === 'questions' && !hasPrevVisibleQuestion)}
           >
             <ArrowLeft size={20} />
             <span>Zurück</span>
@@ -1571,11 +1807,11 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
             disabled={!canProceed()}
           >
             <span>
-              {zeiterfassungStep === 'end' || (!zeiterfassungActive && currentIndex === totalQuestions - 1) 
+              {zeiterfassungStep === 'end' || (!zeiterfassungActive && !hasNextVisibleQuestion) 
                 ? 'Abschließen' 
                 : isSavingAnswer ? 'Speichern…' : 'Weiter'}
             </span>
-            {zeiterfassungStep === 'end' || (!zeiterfassungActive && currentIndex === totalQuestions - 1) 
+            {zeiterfassungStep === 'end' || (!zeiterfassungActive && !hasNextVisibleQuestion) 
               ? <Check size={20} />
               : <ArrowRight size={20} />}
           </button>

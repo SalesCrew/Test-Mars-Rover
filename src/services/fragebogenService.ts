@@ -600,6 +600,32 @@ export const responsesApi = {
   },
 
   /**
+   * Get completed fragebogen IDs for a GL+market tuple.
+   */
+  async getCompletedMap(params: {
+    gebietsleiter_id: string;
+    market_id: string;
+    fragebogen_ids?: string[];
+  }): Promise<{ gebietsleiter_id: string; market_id: string; completed_fragebogen_ids: string[] }> {
+    try {
+      const search = new URLSearchParams();
+      search.set('gebietsleiter_id', params.gebietsleiter_id);
+      search.set('market_id', params.market_id);
+      if (params.fragebogen_ids && params.fragebogen_ids.length > 0) {
+        search.set('fragebogen_ids', params.fragebogen_ids.join(','));
+      }
+
+      const response = await fetch(`${FRAGEBOGEN_API}/responses/completed-map?${search.toString()}`);
+      if (!response.ok) {
+        throw new Error('Fragebogen-Pruefung fehlgeschlagen.');
+      }
+      return response.json();
+    } catch {
+      throw new Error('Fragebogen-Pruefung fehlgeschlagen.');
+    }
+  },
+
+  /**
    * Get a single response with all answers
    */
   async getById(id: string): Promise<Response> {

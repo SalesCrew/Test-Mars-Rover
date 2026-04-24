@@ -193,51 +193,119 @@ export const FragebogenPreviewModal: React.FC<FragebogenPreviewModalProps> = ({
     }));
   };
 
+  const normalizeBooleanLike = (value: any): string => {
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (raw === '1' || raw === 'ja') return 'true';
+    if (raw === '0' || raw === 'nein') return 'false';
+    return raw;
+  };
+
+  const parseMatrixRuleTarget = (value: string): { rowId: string; colId: string } | null => {
+    const parts = String(value || '').split(':');
+    if (parts.length < 2) return null;
+    const rowId = parts[0].trim();
+    const colId = parts.slice(1).join(':').trim();
+    if (!rowId || !colId) return null;
+    return { rowId, colId };
+  };
+
+  const evaluateCondition = (condition: QuestionCondition, triggerQuestion: Question, triggerAnswer: any): boolean => {
+    const operator = condition.operator || 'equals';
+    switch (operator) {
+      case 'equals': {
+        if (triggerQuestion.type === 'multiple_choice') {
+          const selected = Array.isArray(triggerAnswer) ? triggerAnswer.map((v) => String(v)) : [];
+          return selected.includes(String(condition.triggerAnswer));
+        }
+        if (triggerQuestion.type === 'matrix') {
+          const parsed = parseMatrixRuleTarget(String(condition.triggerAnswer));
+          if (!parsed || !triggerAnswer || typeof triggerAnswer !== 'object') return false;
+          return String((triggerAnswer as Record<string, any>)[parsed.rowId] ?? '') === parsed.colId;
+        }
+        if (triggerQuestion.type === 'yesno') {
+          return normalizeBooleanLike(triggerAnswer) === normalizeBooleanLike(condition.triggerAnswer);
+        }
+        if (triggerQuestion.type === 'open_numeric' || triggerQuestion.type === 'slider' || triggerQuestion.type === 'likert') {
+          return Number(triggerAnswer) === Number(condition.triggerAnswer);
+        }
+        return String(triggerAnswer) === String(condition.triggerAnswer);
+      }
+
+      case 'not_equals': {
+        if (triggerQuestion.type === 'multiple_choice') {
+          const selected = Array.isArray(triggerAnswer) ? triggerAnswer.map((v) => String(v)) : [];
+          return !selected.includes(String(condition.triggerAnswer));
+        }
+        if (triggerQuestion.type === 'matrix') {
+          const parsed = parseMatrixRuleTarget(String(condition.triggerAnswer));
+          if (!parsed || !triggerAnswer || typeof triggerAnswer !== 'object') return false;
+          return String((triggerAnswer as Record<string, any>)[parsed.rowId] ?? '') !== parsed.colId;
+        }
+        if (triggerQuestion.type === 'yesno') {
+          return normalizeBooleanLike(triggerAnswer) !== normalizeBooleanLike(condition.triggerAnswer);
+        }
+        if (triggerQuestion.type === 'open_numeric' || triggerQuestion.type === 'slider' || triggerQuestion.type === 'likert') {
+          return Number(triggerAnswer) !== Number(condition.triggerAnswer);
+        }
+        return String(triggerAnswer) !== String(condition.triggerAnswer);
+      }
+
+      case 'greater_than':
+        return Number(triggerAnswer) > Number(condition.triggerAnswer);
+
+      case 'less_than':
+        return Number(triggerAnswer) < Number(condition.triggerAnswer);
+
+      case 'between': {
+        const min = Number(condition.triggerAnswer);
+        const max = Number(condition.triggerAnswerMax);
+        const value = Number(triggerAnswer);
+        if (Number.isNaN(min) || Number.isNaN(max) || Number.isNaN(value)) return false;
+        return value >= min && value <= max;
+      }
+
+      case 'contains':
+        if (Array.isArray(triggerAnswer)) {
+          return triggerAnswer.map((v) => String(v)).includes(String(condition.triggerAnswer));
+        }
+        return String(triggerAnswer ?? '').includes(String(condition.triggerAnswer));
+
+      default:
+        return false;
+    }
+  };
+
   // Check if a question should be hidden based on conditions and current answers
   const isQuestionHidden = (questionId: string, currentAnswers: Record<string, any>): boolean => {
-    // Find all conditions that target this question
-    for (const question of allQuestions) {
-      if (question.conditions) {
-        for (const condition of question.conditions) {
-          if (condition.targetQuestionIds.includes(questionId)) {
-            const triggerAnswer = currentAnswers[condition.triggerQuestionId];
-            if (triggerAnswer === undefined) continue;
-            
-            let conditionMet = false;
-            const operator = condition.operator || 'equals';
-            
-            switch (operator) {
-              case 'equals':
-                conditionMet = String(triggerAnswer) === String(condition.triggerAnswer);
-                break;
-              case 'not_equals':
-                conditionMet = String(triggerAnswer) !== String(condition.triggerAnswer);
-                break;
-              case 'greater_than':
-                conditionMet = Number(triggerAnswer) > Number(condition.triggerAnswer);
-                break;
-              case 'less_than':
-                conditionMet = Number(triggerAnswer) < Number(condition.triggerAnswer);
-                break;
-              case 'between':
-                conditionMet = Number(triggerAnswer) >= Number(condition.triggerAnswer) && 
-                               Number(triggerAnswer) <= Number(condition.triggerAnswerMax);
-                break;
-              case 'contains':
-                conditionMet = String(triggerAnswer).includes(String(condition.triggerAnswer));
-                break;
-            }
-            
-            if (conditionMet && condition.action === 'hide') {
-              return true; // Question should be hidden
-            }
-            if (!conditionMet && condition.action === 'show') {
-              return true; // Question should be hidden (show condition not met)
-            }
-          }
+    let hasShowRule = false;
+    let showMatched = false;
+    let hideMatched = false;
+
+    for (const sourceQuestion of allQuestions) {
+      if (!sourceQuestion.conditions) continue;
+      for (const condition of sourceQuestion.conditions) {
+        if (!condition.targetQuestionIds.includes(questionId)) continue;
+        const triggerQuestion = allQuestions.find((q) => q.id === condition.triggerQuestionId);
+        if (!triggerQuestion) continue;
+        const triggerAnswer = currentAnswers[condition.triggerQuestionId];
+        if (triggerAnswer === undefined || triggerAnswer === null || triggerAnswer === '') {
+          if (condition.action === 'show') hasShowRule = true;
+          continue;
+        }
+
+        const conditionMet = evaluateCondition(condition, triggerQuestion, triggerAnswer);
+        if (condition.action === 'hide' && conditionMet) {
+          hideMatched = true;
+        } else if (condition.action === 'show') {
+          hasShowRule = true;
+          if (conditionMet) showMatched = true;
         }
       }
     }
+
+    if (hideMatched) return true;
+    if (hasShowRule && !showMatched) return true;
     return false;
   };
 

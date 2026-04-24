@@ -168,9 +168,9 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       try {
         // Load modules, fragebogen, and questions in parallel
         const [modulesResponse, fragebogenResponse, questionsResponse] = await Promise.all([
-          fragebogenService.modules.getAll(),
-          fragebogenService.fragebogen.getAll(),
-          fragebogenService.questions.getAll()
+          fragebogenService.modules.getAll({ archived: false }),
+          fragebogenService.fragebogen.getAll({ archived: false }),
+          fragebogenService.questions.getAll({ archived: false })
         ]);
 
         // Transform modules from API format to component format
@@ -314,6 +314,150 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
   const activeFragebogen = fragebogenList.filter(f => f.status === 'active');
   const scheduledFragebogen = fragebogenList.filter(f => f.status === 'scheduled');
   const inactiveFragebogen = fragebogenList.filter(f => f.status === 'inactive');
+
+  type OperatorType = 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'between' | 'contains';
+  type ModuleRuleDraft = {
+    trigger_local_id: string;
+    trigger_answer: string;
+    operator: OperatorType;
+    trigger_answer_max?: string;
+    action: 'hide' | 'show';
+    target_local_ids: string[];
+  };
+
+  type NumericDomain =
+    | { kind: 'point'; value: number }
+    | { kind: 'interval'; min?: number; minInclusive: boolean; max?: number; maxInclusive: boolean };
+
+  const toFiniteNumber = (value: any): number | null => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const buildNumericDomain = (rule: ModuleRuleDraft): NumericDomain | null => {
+    const operator = rule.operator || 'equals';
+    const base = toFiniteNumber(rule.trigger_answer);
+    if (base === null) return null;
+
+    if (operator === 'equals') {
+      return { kind: 'point', value: base };
+    }
+    if (operator === 'greater_than') {
+      return { kind: 'interval', min: base, minInclusive: false, max: undefined, maxInclusive: false };
+    }
+    if (operator === 'less_than') {
+      return { kind: 'interval', min: undefined, minInclusive: false, max: base, maxInclusive: false };
+    }
+    if (operator === 'between') {
+      const max = toFiniteNumber(rule.trigger_answer_max);
+      if (max === null) return null;
+      const min = Math.min(base, max);
+      const top = Math.max(base, max);
+      return { kind: 'interval', min, minInclusive: true, max: top, maxInclusive: true };
+    }
+    return null;
+  };
+
+  const pointInInterval = (point: number, interval: Extract<NumericDomain, { kind: 'interval' }>): boolean => {
+    if (interval.min !== undefined) {
+      if (point < interval.min) return false;
+      if (point === interval.min && !interval.minInclusive) return false;
+    }
+    if (interval.max !== undefined) {
+      if (point > interval.max) return false;
+      if (point === interval.max && !interval.maxInclusive) return false;
+    }
+    return true;
+  };
+
+  const intervalsOverlap = (
+    a: Extract<NumericDomain, { kind: 'interval' }>,
+    b: Extract<NumericDomain, { kind: 'interval' }>
+  ): boolean => {
+    if (a.max !== undefined && b.min !== undefined) {
+      if (a.max < b.min) return false;
+      if (a.max === b.min && (!a.maxInclusive || !b.minInclusive)) return false;
+    }
+    if (b.max !== undefined && a.min !== undefined) {
+      if (b.max < a.min) return false;
+      if (b.max === a.min && (!b.maxInclusive || !a.minInclusive)) return false;
+    }
+    return true;
+  };
+
+  const ruleDomainsOverlap = (a: ModuleRuleDraft, b: ModuleRuleDraft): boolean => {
+    const numericOperators = new Set<OperatorType>(['equals', 'greater_than', 'less_than', 'between']);
+    const bothNumericComparable = numericOperators.has(a.operator) && numericOperators.has(b.operator);
+
+    if (bothNumericComparable) {
+      const domainA = buildNumericDomain(a);
+      const domainB = buildNumericDomain(b);
+      if (domainA && domainB) {
+        if (domainA.kind === 'point' && domainB.kind === 'point') {
+          return domainA.value === domainB.value;
+        }
+        if (domainA.kind === 'point' && domainB.kind === 'interval') {
+          return pointInInterval(domainA.value, domainB);
+        }
+        if (domainA.kind === 'interval' && domainB.kind === 'point') {
+          return pointInInterval(domainB.value, domainA);
+        }
+        return intervalsOverlap(domainA, domainB);
+      }
+    }
+
+    // Conservative fallback for non-numeric/unsupported operator combinations.
+    return (
+      a.operator === b.operator &&
+      String(a.trigger_answer) === String(b.trigger_answer) &&
+      String(a.trigger_answer_max || '') === String(b.trigger_answer_max || '')
+    );
+  };
+
+  const hasRuleConflict = (rules: ModuleRuleDraft[]): boolean => {
+    for (let i = 0; i < rules.length; i += 1) {
+      const a = rules[i];
+      for (let j = i + 1; j < rules.length; j += 1) {
+        const b = rules[j];
+        if (a.action === b.action) continue;
+        if (a.trigger_local_id !== b.trigger_local_id) continue;
+        const overlap = a.target_local_ids.filter((targetId) => b.target_local_ids.includes(targetId));
+        if (overlap.length === 0) continue;
+        if (ruleDomainsOverlap(a, b)) return true;
+      }
+    }
+    return false;
+  };
+
+  const buildRulesFromConditions = (
+    moduleQuestions: QuestionInterface[],
+    questionIdToLocalId: Record<string, string>
+  ): ModuleRuleDraft[] => {
+    const rules: ModuleRuleDraft[] = [];
+
+    for (const question of moduleQuestions) {
+      if (!question.conditions || question.conditions.length === 0) continue;
+      for (const condition of question.conditions) {
+        const triggerLocalId = questionIdToLocalId[condition.triggerQuestionId] || '';
+        const targetLocalIds = condition.targetQuestionIds
+          .map((id) => questionIdToLocalId[id] || '')
+          .filter(Boolean);
+
+        if (!triggerLocalId || targetLocalIds.length === 0) continue;
+
+        rules.push({
+          trigger_local_id: triggerLocalId,
+          trigger_answer: String(condition.triggerAnswer),
+          operator: (condition.operator || 'equals') as OperatorType,
+          trigger_answer_max: condition.triggerAnswerMax ? String(condition.triggerAnswerMax) : undefined,
+          action: condition.action,
+          target_local_ids: targetLocalIds
+        });
+      }
+    }
+
+    return rules;
+  };
 
   // Handle market updates for a fragebogen
   const handleUpdateFragebogenMarkets = async (fragebogenId: string, marketIds: string[]) => {
@@ -522,29 +666,10 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       });
       
       // Step 5: Transform rules/conditions
-      type OperatorType = 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'between' | 'contains';
-      const rules: Array<{
-        trigger_local_id: string;
-        trigger_answer: string;
-        operator: OperatorType;
-        trigger_answer_max?: string;
-        action: 'hide' | 'show';
-        target_local_ids: string[];
-      }> = [];
-      
-      for (const question of updatedModule.questions) {
-        if (question.conditions && question.conditions.length > 0) {
-          for (const condition of question.conditions) {
-            rules.push({
-              trigger_local_id: questionIdToLocalId[condition.triggerQuestionId] || '',
-              trigger_answer: String(condition.triggerAnswer),
-              operator: (condition.operator || 'equals') as OperatorType,
-              trigger_answer_max: condition.triggerAnswerMax ? String(condition.triggerAnswerMax) : undefined,
-              action: condition.action,
-              target_local_ids: condition.targetQuestionIds.map(id => questionIdToLocalId[id] || '')
-            });
-          }
-        }
+      const rules = buildRulesFromConditions(updatedModule.questions, questionIdToLocalId);
+      if (hasRuleConflict(rules)) {
+        alert('Widerspruechliche Regeln erkannt. Bitte Konflikte in der bedingten Logik aufloesen.');
+        return;
       }
       
       // Step 6: Update the module
@@ -791,7 +916,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       
       // Also add the duplicated modules to the modules list
       // Reload modules to get the new ones
-      const modulesResponse = await fragebogenService.modules.getAll();
+      const modulesResponse = await fragebogenService.modules.getAll({ archived: false });
       const transformedModules: Module[] = modulesResponse.map((m: any) => ({
         id: m.id,
         name: m.name,
@@ -836,9 +961,9 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
     if (!fragebogenToDelete) return;
     
     try {
-      await fragebogenService.fragebogen.deletePermanent(fragebogenToDelete.id);
+      await fragebogenService.fragebogen.delete(fragebogenToDelete.id);
       setFragebogenList(prev => prev.filter(f => f.id !== fragebogenToDelete.id));
-      console.log('Fragebogen deleted:', fragebogenToDelete.id);
+      console.log('Fragebogen archived:', fragebogenToDelete.id);
       setFragebogenToDelete(null);
     } catch (error) {
       console.error('Failed to delete fragebogen:', error);
@@ -873,7 +998,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
     if (!moduleToDelete) return;
     
     try {
-      await fragebogenService.modules.deletePermanent(moduleToDelete.id, moduleDeleteConfirmStep.deleteQuestions);
+      await fragebogenService.modules.delete(moduleToDelete.id);
       setModules(prev => prev.filter(m => m.id !== moduleToDelete.id));
       
       // Also update fragebogen list to remove this module from their moduleIds
@@ -885,7 +1010,7 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       setModuleToDelete(null);
       setModuleUsageInfo(null);
       setModuleDeleteConfirmStep({ active: false, deleteQuestions: false });
-      console.log('Module deleted:', moduleToDelete.id, moduleDeleteConfirmStep.deleteQuestions ? '(with questions)' : '(questions kept)');
+      console.log('Module archived:', moduleToDelete.id);
     } catch (error) {
       console.error('Failed to delete module:', error);
       alert('Fehler beim Löschen des Moduls. Bitte versuchen Sie es erneut.');
@@ -1067,29 +1192,10 @@ export const FragebogenPage: React.FC<FragebogenPageProps> = ({
       });
       
       // Step 3: Transform rules/conditions from questions
-      type OperatorType = 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'between' | 'contains';
-      const rules: Array<{
-        trigger_local_id: string;
-        trigger_answer: string;
-        operator: OperatorType;
-        trigger_answer_max?: string;
-        action: 'hide' | 'show';
-        target_local_ids: string[];
-      }> = [];
-      
-      for (const question of newModule.questions) {
-        if (question.conditions && question.conditions.length > 0) {
-          for (const condition of question.conditions) {
-            rules.push({
-              trigger_local_id: questionIdToLocalId[condition.triggerQuestionId] || '',
-              trigger_answer: String(condition.triggerAnswer),
-              operator: (condition.operator || 'equals') as OperatorType,
-              trigger_answer_max: condition.triggerAnswerMax ? String(condition.triggerAnswerMax) : undefined,
-              action: condition.action,
-              target_local_ids: condition.targetQuestionIds.map(id => questionIdToLocalId[id] || '')
-            });
-          }
-        }
+      const rules = buildRulesFromConditions(newModule.questions, questionIdToLocalId);
+      if (hasRuleConflict(rules)) {
+        alert('Widerspruechliche Regeln erkannt. Bitte Konflikte in der bedingten Logik aufloesen.');
+        return;
       }
       
       // Step 4: Create the module with the question references and rules
