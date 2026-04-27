@@ -260,6 +260,16 @@
   gap: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(226, 232, 240, 0.5);
+  max-height: 145px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.welleKWDays::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .kwDayItem {
@@ -792,6 +802,57 @@
 }
 
 /* KW Days */
+.kwHelperCard {
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.7), rgba(255, 255, 255, 0.9));
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.kwHelperTitle {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.kwHelperDescription {
+  margin: 0 0 14px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.kwHelperRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kwHelperField {
+  min-width: 180px;
+  flex: 1;
+}
+
+.kwHelperButton {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  border-radius: 10px;
+  background: white;
+  color: #2563EB;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.kwHelperButton:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
 .kwDaysList {
   display: flex;
   flex-direction: column;

@@ -112,6 +112,8 @@ class ExportService {
         { id: 'reason', label: 'Grund', type: 'string', default: true },
         { id: 'status', label: 'Status', type: 'string', default: true },
         { id: 'notes', label: 'Notizen', type: 'string', default: true },
+        { id: 'take_out_value', label: 'Warenwert Entnommen', type: 'currency', default: true },
+        { id: 'replace_value', label: 'Warenwert Ersetzt', type: 'currency', default: true },
         { id: 'products_summary', label: 'Produkte', type: 'string', default: true },
         { id: 'products_json', label: 'Produkte (JSON)', type: 'string', default: false }
       ]

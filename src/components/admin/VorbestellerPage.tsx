@@ -260,6 +260,8 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
   
   // KW + Days
   const [kwDays, setKwDays] = useState<KWDay[]>([]);
+  const [kwRangeFrom, setKwRangeFrom] = useState('');
+  const [kwRangeTo, setKwRangeTo] = useState('');
   
   // Foto Welle
   const [fotoEnabled, setFotoEnabled] = useState(false);
@@ -567,6 +569,90 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
 
   const updateKWDay = (index: number, field: 'kw' | 'days', value: any) => {
     setKwDays(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+
+  const dayOrder: Array<'MO' | 'DI' | 'MI' | 'DO' | 'FR'> = ['MO', 'DI', 'MI', 'DO', 'FR'];
+  const dayIndexToCode: Record<number, 'MO' | 'DI' | 'MI' | 'DO' | 'FR'> = {
+    1: 'MO',
+    2: 'DI',
+    3: 'MI',
+    4: 'DO',
+    5: 'FR',
+  };
+
+  const getIsoWeekInfo = (date: Date): { week: number; year: number } => {
+    const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = target.getUTCDay() || 7;
+    target.setUTCDate(target.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+    const week = Math.ceil((((target.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return { week, year: target.getUTCFullYear() };
+  };
+
+  const generateKWDaysFromRange = () => {
+    if (!kwRangeFrom || !kwRangeTo) {
+      alert('Bitte "Von" und "Bis" auswählen.');
+      return;
+    }
+
+    const start = new Date(`${kwRangeFrom}T00:00:00`);
+    const end = new Date(`${kwRangeTo}T00:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      alert('Ungültige Datumseingabe.');
+      return;
+    }
+    if (start > end) {
+      alert('"Von" darf nicht nach "Bis" liegen.');
+      return;
+    }
+
+    const byWeek = new Map<string, { year: number; week: number; days: Set<string> }>();
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const weekday = cursor.getDay();
+      if (weekday >= 1 && weekday <= 5) {
+        const { week, year } = getIsoWeekInfo(cursor);
+        const key = `${year}-${String(week).padStart(2, '0')}`;
+        if (!byWeek.has(key)) {
+          byWeek.set(key, { year, week, days: new Set<string>() });
+        }
+        const dayCode = dayIndexToCode[weekday];
+        if (dayCode) {
+          byWeek.get(key)!.days.add(dayCode);
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const generated = Array.from(byWeek.values())
+      .sort((a, b) => (a.year - b.year) || (a.week - b.week))
+      .map((entry) => ({
+        kw: `KW${String(entry.week).padStart(2, '0')}`,
+        days: dayOrder.filter((day) => entry.days.has(day)),
+      }));
+
+    if (generated.length === 0) {
+      alert('In dieser Zeitspanne wurden keine Werktage gefunden.');
+      return;
+    }
+
+    setKwDays((prev) => {
+      const merged = new Map<string, Set<string>>();
+      prev.forEach((item) => {
+        const existingDays = new Set<string>((item.days || []).filter(Boolean));
+        merged.set(item.kw.trim(), existingDays);
+      });
+      generated.forEach((item) => {
+        const key = item.kw.trim();
+        const existing = merged.get(key) || new Set<string>();
+        item.days.forEach((day) => existing.add(day));
+        merged.set(key, existing);
+      });
+      return Array.from(merged.entries()).map(([kw, daySet]) => ({
+        kw,
+        days: dayOrder.filter((day) => daySet.has(day)),
+      }));
+    });
   };
 
   const toggleDay = (kwIndex: number, day: string) => {
@@ -2512,6 +2598,34 @@ export const VorbestellerPage: React.FC<VorbestellerPageProps> = ({
                   <p className={styles.modalDescription}>
                     Lege fest, an welchen Tagen die GLs verkaufen können:
                   </p>
+
+                  <div className={styles.kwHelperCard}>
+                    <h4 className={styles.kwHelperTitle}>Zeitspanne-Helper (optional)</h4>
+                    <p className={styles.kwHelperDescription}>
+                      Wähle einen Zeitraum, um Kalenderwochen und Werktage (Mo-Fr) automatisch in die Liste zu übernehmen.
+                    </p>
+                    <div className={styles.kwHelperRow}>
+                      <div className={styles.kwHelperField}>
+                        <label className={styles.label}>Von</label>
+                        <CustomDatePicker
+                          value={kwRangeFrom}
+                          onChange={setKwRangeFrom}
+                          placeholder="Startdatum"
+                        />
+                      </div>
+                      <div className={styles.kwHelperField}>
+                        <label className={styles.label}>Bis</label>
+                        <CustomDatePicker
+                          value={kwRangeTo}
+                          onChange={setKwRangeTo}
+                          placeholder="Enddatum"
+                        />
+                      </div>
+                      <button type="button" className={styles.kwHelperButton} onClick={generateKWDaysFromRange}>
+                        KWs aus Zeitspanne übernehmen
+                      </button>
+                    </div>
+                  </div>
 
                   <div className={styles.kwDaysList}>
                     {kwDays.map((kwDay, index) => (
