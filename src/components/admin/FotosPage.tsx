@@ -111,14 +111,22 @@ export const FotosPage: React.FC = () => {
       if (filterEndDate) params.end_date = filterEndDate;
 
       const result = await wellenService.getPhotos(params);
-      setPhotos(result.photos);
-      setTotal(result.total);
+      const strictPhotos = result.photos.filter((photo) =>
+        filterSource === 'all' ? true : getPhotoSource(photo) === filterSource
+      );
+      setPhotos(strictPhotos);
+      setTotal(filterSource === 'all' ? result.total : strictPhotos.length);
 
       // Extract unique GLs for filter
       const glMap = new Map<string, string>();
-      result.photos.forEach(p => { if (p.glId && p.glName) glMap.set(p.glId, p.glName); });
+      strictPhotos.forEach(p => { if (p.glId && p.glName) glMap.set(p.glId, p.glName); });
       setGls(Array.from(glMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setPhotos([]);
+      setTotal(0);
+      setGls([]);
+    }
     finally { setLoading(false); }
   }, [filterSource, filterWelle, filterGL, filterMarket, filterTags, filterStartDate, filterEndDate]);
 
@@ -193,6 +201,7 @@ export const FotosPage: React.FC = () => {
   // Export state
   const [showExportModal, setShowExportModal] = useState(false);
   const [zipName, setZipName] = useState('');
+  const [exportSource, setExportSource] = useState<PhotoSourceFilter>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportDone, setExportDone] = useState(false);
@@ -200,6 +209,7 @@ export const FotosPage: React.FC = () => {
   const openExportModal = () => {
     const today = new Date().toISOString().split('T')[0];
     setZipName(`Fotos_${today}`);
+    setExportSource(filterSource);
     setExportDone(false);
     setExportProgress(0);
     setShowExportModal(true);
@@ -213,8 +223,8 @@ export const FotosPage: React.FC = () => {
     try {
       setExportProgress(45);
       await wellenService.downloadPhotosZip({
-        source: filterSource,
-        welle_id: filterWelle || undefined,
+        source: exportSource,
+        welle_id: exportSource === 'fotofragen' ? undefined : (filterWelle || undefined),
         gl_id: filterGL || undefined,
         market_id: filterMarket || undefined,
         tags: filterTags.length > 0 ? filterTags.join(',') : undefined,
@@ -525,6 +535,31 @@ export const FotosPage: React.FC = () => {
             </div>
 
             <div className={styles.exportBody}>
+              <label className={styles.exportLabel}>Export-Typ</label>
+              <div className={styles.exportSourceWrap}>
+                <button
+                  className={`${styles.sourceToggleBtn} ${exportSource === 'all' ? styles.sourceToggleBtnActive : ''}`}
+                  onClick={() => setExportSource('all')}
+                  disabled={isExporting}
+                >
+                  Beide
+                </button>
+                <button
+                  className={`${styles.sourceToggleBtn} ${exportSource === 'fotowelle' ? styles.sourceToggleBtnActive : ''}`}
+                  onClick={() => setExportSource('fotowelle')}
+                  disabled={isExporting}
+                >
+                  Fotowelle
+                </button>
+                <button
+                  className={`${styles.sourceToggleBtn} ${exportSource === 'fotofragen' ? styles.sourceToggleBtnActive : ''}`}
+                  onClick={() => setExportSource('fotofragen')}
+                  disabled={isExporting}
+                >
+                  Fotofragen
+                </button>
+              </div>
+
               <label className={styles.exportLabel}>ZIP-Ordnername</label>
               <input
                 type="text"

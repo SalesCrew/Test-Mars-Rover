@@ -57,6 +57,11 @@
   background: rgba(59, 130, 246, 0.07);
 }
 
+.sourceToggleBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .sourceToggleBtnActive {
   color: #1D4ED8;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(37, 99, 235, 0.11));
@@ -456,6 +461,15 @@
 .exportCloseBtn:hover { background: #E2E8F0; }
 
 .exportBody { padding: 20px; }
+.exportSourceWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
 .exportLabel {
   display: block; font-size: 12px; font-weight: 600; color: #475569;
   margin-bottom: 6px;

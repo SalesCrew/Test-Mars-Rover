@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, PencilSimple, Stack, Question, Storefront, Check, MagnifyingGlass, Funnel, Archive, CheckCircle, Eye, DownloadSimple, SpinnerGap } from '@phosphor-icons/react';
-import { adminMarkets } from '../../data/adminMarketsData';
 import { FragebogenPreviewModal } from './FragebogenPreviewModal';
 import fragebogenService from '../../services/fragebogenService';
-// AdminMarket type available if needed from market-types
+import { marketService } from '../../services/marketService';
+import type { AdminMarket } from '../../types/market-types';
 import styles from './FragebogenDetailModal.module.css';
 
 interface Question {
@@ -148,6 +148,9 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
   // Market selection state
   const [isMarketSelectorOpen, setIsMarketSelectorOpen] = useState(false);
   const [selectedMarkets, setSelectedMarkets] = useState<string[]>(fragebogen.marketIds || []);
+  const [markets, setMarkets] = useState<AdminMarket[]>([]);
+  const [isLoadingMarkets, setIsLoadingMarkets] = useState(false);
+  const [marketsError, setMarketsError] = useState<string | null>(null);
   const [marketSearchTerm, setMarketSearchTerm] = useState('');
   const [openFilter, setOpenFilter] = useState<FilterType | null>(null);
   const [searchTerms, setSearchTerms] = useState<Record<FilterType, string>>({
@@ -176,6 +179,36 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
 
   const filterRefs = useRef<{ [key in FilterType]?: HTMLDivElement | null }>({});
   const marketSelectorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isMarketSelectorOpen) return;
+    let isCancelled = false;
+
+    const loadMarkets = async () => {
+      setIsLoadingMarkets(true);
+      setMarketsError(null);
+      try {
+        const fetchedMarkets = await marketService.getAllMarkets();
+        if (isCancelled) return;
+        setMarkets(fetchedMarkets);
+      } catch (error) {
+        console.error('Failed to load markets for fragebogen detail selector:', error);
+        if (isCancelled) return;
+        setMarkets([]);
+        setMarketsError('Märkte konnten nicht geladen werden.');
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingMarkets(false);
+        }
+      }
+    };
+
+    loadMarkets();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isMarketSelectorOpen]);
 
   // Helper functions
   const getChainGradient = (chain: string) => {
@@ -243,38 +276,51 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
     setIsMarketSelectorOpen(false);
   };
 
+  const normalizeMarketValue = (value?: string | null): string => (value || '').trim();
+  const getMarketInternalId = (market: AdminMarket): string => normalizeMarketValue(market.internalId);
+  const getMarketSubgroup = (market: AdminMarket): string => normalizeMarketValue(market.subgroup);
+  const getMarketGlLabel = (market: AdminMarket): string => normalizeMarketValue(market.gebietsleiterName || market.gebietsleiter);
+  const getMarketChainLabel = (market: AdminMarket): string => normalizeMarketValue(market.chain) || 'Unbekannt';
+
   // Filter markets
   const filteredMarkets = useMemo(() => {
-    let result = [...adminMarkets];
+    let result = [...markets];
 
     // Apply search term
     if (marketSearchTerm.trim()) {
       const term = marketSearchTerm.toLowerCase();
       result = result.filter(m =>
-        m.name.toLowerCase().includes(term) ||
-        m.address.toLowerCase().includes(term) ||
-        m.city.toLowerCase().includes(term) ||
-        m.internalId.toLowerCase().includes(term) ||
-        m.chain.toLowerCase().includes(term) ||
-        (m.gebietsleiter && m.gebietsleiter.toLowerCase().includes(term))
+        (m.name || '').toLowerCase().includes(term) ||
+        (m.address || '').toLowerCase().includes(term) ||
+        (m.city || '').toLowerCase().includes(term) ||
+        getMarketInternalId(m).toLowerCase().includes(term) ||
+        getMarketChainLabel(m).toLowerCase().includes(term) ||
+        getMarketGlLabel(m).toLowerCase().includes(term) ||
+        getMarketSubgroup(m).toLowerCase().includes(term)
       );
     }
 
     // Apply filters
     if (selectedFilters.chain.length > 0) {
-      result = result.filter(m => selectedFilters.chain.includes(m.chain));
+      result = result.filter(m => selectedFilters.chain.includes(getMarketChainLabel(m)));
     }
     if (selectedFilters.plz.length > 0) {
-      result = result.filter(m => selectedFilters.plz.includes(m.postalCode));
+      result = result.filter(m => selectedFilters.plz.includes(normalizeMarketValue(m.postalCode)));
     }
     if (selectedFilters.adresse.length > 0) {
-      result = result.filter(m => selectedFilters.adresse.includes(m.city));
+      result = result.filter(m => selectedFilters.adresse.includes(normalizeMarketValue(m.city)));
     }
     if (selectedFilters.gebietsleiter.length > 0) {
-      result = result.filter(m => m.gebietsleiter && selectedFilters.gebietsleiter.includes(m.gebietsleiter));
+      result = result.filter(m => {
+        const gl = getMarketGlLabel(m);
+        return gl ? selectedFilters.gebietsleiter.includes(gl) : false;
+      });
     }
     if (selectedFilters.subgroup.length > 0) {
-      result = result.filter(m => m.subgroup && selectedFilters.subgroup.includes(m.subgroup));
+      result = result.filter(m => {
+        const subgroup = getMarketSubgroup(m);
+        return subgroup ? selectedFilters.subgroup.includes(subgroup) : false;
+      });
     }
     if (selectedFilters.status.length > 0) {
       result = result.filter(m => {
@@ -284,17 +330,17 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
     }
 
     return result;
-  }, [marketSearchTerm, selectedFilters]);
+  }, [marketSearchTerm, markets, selectedFilters]);
 
   // Get unique filter options
   const getUniqueFilterOptions = (filterType: FilterType) => {
-    const allValues = adminMarkets.map(m => {
+    const allValues = markets.map(m => {
       switch (filterType) {
-        case 'chain': return m.chain;
-        case 'plz': return m.postalCode;
-        case 'adresse': return m.city;
-        case 'gebietsleiter': return m.gebietsleiter || '';
-        case 'subgroup': return m.subgroup || '';
+        case 'chain': return getMarketChainLabel(m);
+        case 'plz': return normalizeMarketValue(m.postalCode);
+        case 'adresse': return normalizeMarketValue(m.city);
+        case 'gebietsleiter': return getMarketGlLabel(m);
+        case 'subgroup': return getMarketSubgroup(m);
         case 'status': return m.isActive ? 'Aktiv' : 'Inaktiv';
         default: return '';
       }
@@ -864,10 +910,15 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
 
               {/* Market List */}
               <div className={styles.marketList}>
-                {filteredMarkets.length === 0 ? (
+                {isLoadingMarkets ? (
                   <div className={styles.emptyState}>
                     <Storefront size={48} weight="regular" />
-                    <p>Keine Märkte gefunden</p>
+                    <p>Märkte werden geladen…</p>
+                  </div>
+                ) : filteredMarkets.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <Storefront size={48} weight="regular" />
+                    <p>{marketsError || 'Keine Märkte gefunden'}</p>
                   </div>
                 ) : (
                   filteredMarkets.map((market) => (
@@ -880,11 +931,11 @@ export const FragebogenDetailModal: React.FC<FragebogenDetailModalProps> = ({
                         handleToggleMarket(market.id, e);
                       }}
                     >
-                      <span className={styles.marketChain} style={{ background: getChainGradient(market.chain) }}>{market.chain}</span>
-                      <span className={styles.marketId}>{market.internalId}</span>
+                      <span className={styles.marketChain} style={{ background: getChainGradient(getMarketChainLabel(market)) }}>{getMarketChainLabel(market)}</span>
+                      <span className={styles.marketId}>{getMarketInternalId(market) || '—'}</span>
                       <span className={styles.marketName}>{market.name}</span>
                       <span className={styles.marketGL}>
-                        {market.gebietsleiterName || <span className={styles.noGL}>Kein GL</span>}
+                        {getMarketGlLabel(market) || <span className={styles.noGL}>Kein GL</span>}
                       </span>
                       <span className={styles.marketAddress}>{market.address}, {market.postalCode} {market.city}</span>
                       {selectedMarkets.includes(market.id) && (

@@ -722,6 +722,14 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
     onClose();
   };
 
+  const normalizedItemSearchQuery = itemSearchQuery.trim().toLowerCase();
+  const normalizedProductSearchQuery = productSearchQuery.trim().toLowerCase();
+
+  const matchesUnifiedItemSearch = (value?: string | null): boolean => {
+    if (!normalizedItemSearchQuery) return true;
+    return (value || '').toLowerCase().includes(normalizedItemSearchQuery);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -1323,38 +1331,35 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
             /* Item Selection View */
             <div className={styles.itemSelectionSection}>
               <div className={styles.itemsList}>
-                {/* Search bar — only shown for no-limit wellen */}
-                {selectedVorbesteller?.noLimitWelle && (
-                  <div className={styles.searchBar} style={{ marginBottom: 8 }}>
-                    <MagnifyingGlass size={18} weight="regular" className={styles.searchIcon} />
-                    <input
-                      type="text"
-                      placeholder="Produkt suchen..."
-                      value={itemSearchQuery}
-                      onChange={(e) => setItemSearchQuery(e.target.value)}
-                      className={styles.searchInput}
-                      autoComplete="off"
-                    />
-                    {itemSearchQuery && (
-                      <button
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', display: 'flex', alignItems: 'center', color: 'var(--color-text-tertiary)' }}
-                        onClick={() => setItemSearchQuery('')}
-                        aria-label="Suche löschen"
-                      >
-                        <X size={16} weight="bold" />
-                      </button>
-                    )}
-                  </div>
-                )}
+                <div className={styles.searchBar} style={{ marginBottom: 8 }}>
+                  <MagnifyingGlass size={18} weight="regular" className={styles.searchIcon} />
+                  <input
+                    type="text"
+                    placeholder="Produkt suchen..."
+                    value={itemSearchQuery}
+                    onChange={(e) => setItemSearchQuery(e.target.value)}
+                    className={styles.searchInput}
+                    autoComplete="off"
+                  />
+                  {itemSearchQuery && (
+                    <button
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', display: 'flex', alignItems: 'center', color: 'var(--color-text-tertiary)' }}
+                      onClick={() => setItemSearchQuery('')}
+                      aria-label="Suche löschen"
+                    >
+                      <X size={16} weight="bold" />
+                    </button>
+                  )}
+                </div>
 
                 {/* Displays Section */}
                 {selectedVorbesteller?.displays && selectedVorbesteller.displays.filter(d =>
-                  !selectedVorbesteller.noLimitWelle || !itemSearchQuery || d.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                  matchesUnifiedItemSearch(d.name)
                 ).length > 0 && (
                   <div className={styles.itemsGroup}>
                     <div className={styles.itemsGroupLabel}>Displays</div>
                     {selectedVorbesteller.displays.filter(d =>
-                      !selectedVorbesteller.noLimitWelle || !itemSearchQuery || d.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                      matchesUnifiedItemSearch(d.name)
                     ).map((display) => (
                       <div key={display.id} className={styles.itemCard}>
                         <div className={styles.itemInfo}>
@@ -1394,12 +1399,12 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
 
                 {/* Kartonware Section */}
                 {selectedVorbesteller?.kartonwareItems && selectedVorbesteller.kartonwareItems.filter(k =>
-                  !selectedVorbesteller.noLimitWelle || !itemSearchQuery || k.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                  matchesUnifiedItemSearch(k.name)
                 ).length > 0 && (
                   <div className={styles.itemsGroup}>
                     <div className={styles.itemsGroupLabel}>Kartonware</div>
                     {selectedVorbesteller.kartonwareItems.filter(k =>
-                      !selectedVorbesteller.noLimitWelle || !itemSearchQuery || k.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                      matchesUnifiedItemSearch(k.name)
                     ).map((item) => (
                       <div key={item.id} className={styles.itemCard}>
                         <div className={styles.itemInfo}>
@@ -1439,12 +1444,12 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
 
                 {/* Einzelprodukte Section */}
                 {selectedVorbesteller?.einzelproduktItems && selectedVorbesteller.einzelproduktItems.filter(e =>
-                  !selectedVorbesteller.noLimitWelle || !itemSearchQuery || e.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                  matchesUnifiedItemSearch(e.name)
                 ).length > 0 && (
                   <div className={styles.itemsGroup}>
                     <div className={styles.itemsGroupLabel}>Einzelprodukte</div>
                     {selectedVorbesteller.einzelproduktItems.filter(e =>
-                      !selectedVorbesteller.noLimitWelle || !itemSearchQuery || e.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+                      matchesUnifiedItemSearch(e.name)
                     ).map((item) => (
                       <div key={item.id} className={styles.itemCard}>
                         <div className={styles.itemInfo}>
@@ -1512,7 +1517,8 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                         <div className={styles.allProductsList}>
                           {masterProducts
                             .filter(product => 
-                              product.name.toLowerCase().includes(productSearchQuery.toLowerCase())
+                              matchesUnifiedItemSearch(product.name) &&
+                              product.name.toLowerCase().includes(normalizedProductSearchQuery)
                             )
                             .map((product) => (
                               <div key={`master-${product.id}`} className={styles.productCard}>
@@ -1580,14 +1586,14 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
 
                     {/* Paletten Section */}
                     {selectedVorbesteller?.paletteItems && selectedVorbesteller.paletteItems.filter(p =>
-                      !selectedVorbesteller.noLimitWelle || !itemSearchQuery || p.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
-                      p.products.some(pp => pp.name.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                      matchesUnifiedItemSearch(p.name) ||
+                      p.products.some(pp => matchesUnifiedItemSearch(pp.name))
                     ).length > 0 && (
                       <div className={styles.itemsGroup}>
                         <div className={styles.itemsGroupLabel}>Paletten</div>
                         {selectedVorbesteller.paletteItems.filter(p =>
-                          !selectedVorbesteller.noLimitWelle || !itemSearchQuery || p.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
-                          p.products.some(pp => pp.name.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                          matchesUnifiedItemSearch(p.name) ||
+                          p.products.some(pp => matchesUnifiedItemSearch(pp.name))
                         ).map((palette) => (
                           <div key={palette.id} className={styles.paletteContainer}>
                             <div className={styles.paletteHeader}>
@@ -1595,7 +1601,13 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                               {palette.size && <div className={styles.paletteSize}>{palette.size}</div>}
                             </div>
                             <div className={styles.paletteProducts}>
-                              {palette.products.map((product) => {
+                              {palette.products
+                                .filter((product) => {
+                                  if (!normalizedItemSearchQuery) return true;
+                                  if (matchesUnifiedItemSearch(palette.name)) return true;
+                                  return matchesUnifiedItemSearch(product.name);
+                                })
+                                .map((product) => {
                                 const productKey = `palette-${palette.id}-${product.id}`;
                                 return (
                                   <div key={product.id} className={styles.itemCard}>
@@ -1641,14 +1653,14 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
 
                     {/* Schütten Section */}
                     {selectedVorbesteller?.schutteItems && selectedVorbesteller.schutteItems.filter(s =>
-                      !selectedVorbesteller.noLimitWelle || !itemSearchQuery || s.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
-                      s.products.some(sp => sp.name.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                      matchesUnifiedItemSearch(s.name) ||
+                      s.products.some(sp => matchesUnifiedItemSearch(sp.name))
                     ).length > 0 && (
                       <div className={styles.itemsGroup}>
                         <div className={styles.itemsGroupLabel}>Schütten</div>
                         {selectedVorbesteller.schutteItems.filter(s =>
-                          !selectedVorbesteller.noLimitWelle || !itemSearchQuery || s.name.toLowerCase().includes(itemSearchQuery.toLowerCase()) ||
-                          s.products.some(sp => sp.name.toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                          matchesUnifiedItemSearch(s.name) ||
+                          s.products.some(sp => matchesUnifiedItemSearch(sp.name))
                         ).map((schuette) => (
                           <div key={schuette.id} className={styles.paletteContainer}>
                             <div className={styles.paletteHeader}>
@@ -1656,7 +1668,13 @@ export const VorbestellerModal: React.FC<VorbestellerModalProps> = ({ isOpen, on
                               {schuette.size && <div className={styles.paletteSize}>{schuette.size}</div>}
                             </div>
                             <div className={styles.paletteProducts}>
-                              {schuette.products.map((product) => {
+                              {schuette.products
+                                .filter((product) => {
+                                  if (!normalizedItemSearchQuery) return true;
+                                  if (matchesUnifiedItemSearch(schuette.name)) return true;
+                                  return matchesUnifiedItemSearch(product.name);
+                                })
+                                .map((product) => {
                                 const productKey = `schutte-${schuette.id}-${product.id}`;
                                 return (
                                   <div key={product.id} className={styles.itemCard}>
