@@ -1381,11 +1381,12 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           }
 
           const pFrac = dd.pauseMinutes > 0 ? minutesToFrac(dd.pauseMinutes) : 0;
-          // 6h rule now uses full away-time incl. pause; pause is displayed, not subtracted.
           const durFrac = dd.endFrac - dd.startFrac;
-          const abwH = durFrac * 24;
+          const grossAbwH = durFrac * 24;
+          const calculableAbwH = Math.max(0, grossAbwH - (dd.pauseMinutes / 60));
 
-          const tg = berechneDiaet(abwH);
+          // 6h threshold is checked on total away-time; pause is not paid.
+          const tg = grossAbwH >= 6 ? berechneDiaet(calculableAbwH) : 0;
           const sf = Math.min(tg, 30);
           const sp = Math.max(0, +(tg - 30).toFixed(2));
           sumTaggeld += tg; sumFrei += sf; sumPflichtig += sp;
@@ -1404,7 +1405,7 @@ export const ZeiterfassungPage: React.FC<ZeiterfassungPageProps> = ({ viewMode }
           cell(row, 12, dd.kmEnd != null ? dd.kmEnd : '', { t: dd.kmEnd != null ? 'n' : 's' });
           cell(row, 13, '');
           cell(row, 14, '');
-          cell(row, 15, +abwH.toFixed(2), { t: 'n', z: NUM2_FMT });
+          cell(row, 15, +calculableAbwH.toFixed(2), { t: 'n', z: NUM2_FMT });
         }
 
         // ═══════════════════════════════════════════
