@@ -1374,7 +1374,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
               disabled={photoUploading}
             >
               <Camera size={20} />
-              <span>{photoUploading ? 'Foto wird hochgeladen…' : 'Foto aufnehmen'}</span>
+              <span>{photoUploading ? 'Foto wird hochgeladen…' : 'Foto wählen'}</span>
             </button>
             {photoAnswerUrl && (
               <>
@@ -2022,7 +2022,6 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
         ref={photoInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         style={{ display: 'none' }}
         onChange={handlePhotoFileChange}
       />
