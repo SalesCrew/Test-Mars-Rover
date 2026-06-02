@@ -49,6 +49,19 @@ const extractAnswerValue = (answer: any): any => {
   return null;
 };
 
+const normalizePhotoUrls = (value: any): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry) => typeof entry === 'string')
+      .map((entry) => String(entry).trim())
+      .filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return [value.trim()];
+  }
+  return [];
+};
+
 const buildDraftFromRun = (run: GLHistoryRun): DraftMap => {
   const next: DraftMap = {};
   (run.answers || []).forEach((answer: any) => {
@@ -163,8 +176,11 @@ const buildPayload = (questionContext: HistoryQuestionContext, value: any): Answ
     }
     case 'matrix':
       return { ...base, answer_json: value };
-    case 'photo_upload':
-      return { ...base, answer_file_url: String(value) };
+    case 'photo_upload': {
+      const urls = normalizePhotoUrls(value);
+      if (urls.length === 0) return { ...base, clear: true };
+      return { ...base, answer_json: urls, answer_file_url: urls[0] };
+    }
     default:
       return { ...base, answer_text: String(value) };
   }
@@ -200,7 +216,11 @@ const formatAnswerDisplay = (question: Question, value: any): string => {
       })
       .join(' | ');
   }
-  if (question.type === 'photo_upload') return 'Foto hinterlegt';
+  if (question.type === 'photo_upload') {
+    const urls = normalizePhotoUrls(value);
+    if (urls.length === 0) return '-';
+    return urls.length === 1 ? '1 Foto hinterlegt' : `${urls.length} Fotos hinterlegt`;
+  }
   return String(value);
 };
 
@@ -392,25 +412,34 @@ const FragebogenHistorySection: React.FC = () => {
   };
 
   const handlePhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.currentTarget.value = '';
-    if (!file || !user?.id) return;
+    if (files.length === 0 || !user?.id) return;
     const target = photoTargetRef.current;
     if (!target) return;
 
     try {
       setUploadingQuestionKey(target.questionKey);
-      const image = await readFileAsDataUrl(file);
-      const uploaded = await fragebogenService.responses.uploadPhoto({
-        image,
-        fragebogen_id: target.fragebogenId,
-        market_id: target.marketId,
-        gebietsleiter_id: user.id,
-        response_id: target.runId,
-        question_id: target.questionId,
-        filename: file.name
-      });
-      updateDraftValue(target.runId, target.questionKey, uploaded.url);
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const image = await readFileAsDataUrl(file);
+        const uploaded = await fragebogenService.responses.uploadPhoto({
+          image,
+          fragebogen_id: target.fragebogenId,
+          market_id: target.marketId,
+          gebietsleiter_id: user.id,
+          response_id: target.runId,
+          question_id: target.questionId,
+          filename: file.name
+        });
+        if (uploaded?.url) uploadedUrls.push(uploaded.url);
+      }
+
+      if (uploadedUrls.length > 0) {
+        const currentRunDraft = draftByRun[target.runId] || {};
+        const existingUrls = normalizePhotoUrls(currentRunDraft[target.questionKey]);
+        updateDraftValue(target.runId, target.questionKey, [...existingUrls, ...uploadedUrls]);
+      }
     } catch (err: any) {
       setError(err?.message || 'Foto konnte nicht hochgeladen werden.');
     } finally {
@@ -627,7 +656,7 @@ const FragebogenHistorySection: React.FC = () => {
         );
       }
       case 'photo_upload': {
-        const url = typeof value === 'string' ? value : '';
+        const urls = normalizePhotoUrls(value);
         const uploading = uploadingQuestionKey === questionKey;
         return (
           <div className={styles.fbPhotoWrap}>
@@ -638,9 +667,13 @@ const FragebogenHistorySection: React.FC = () => {
               disabled={uploading}
             >
               <Camera size={16} weight="bold" />
-              {uploading ? 'Wird hochgeladen…' : 'Foto ersetzen'}
+              {uploading ? 'Wird hochgeladen…' : 'Foto(s) hinzufügen'}
             </button>
-            {url ? <img src={url} alt="Antwort Foto" className={styles.fbPhotoPreview} /> : <span className={styles.fbMuted}>Kein Foto</span>}
+            {urls.length > 0
+              ? urls.map((url, index) => (
+                  <img key={`${url}-${index}`} src={url} alt={`Antwort Foto ${index + 1}`} className={styles.fbPhotoPreview} />
+                ))
+              : <span className={styles.fbMuted}>Kein Foto</span>}
           </div>
         );
       }
@@ -779,9 +812,11 @@ const FragebogenHistorySection: React.FC = () => {
                                           <div className={styles.fbEditorWrap}>
                                             {renderEditor(run, questionContext, value)}
                                           </div>
-                                        ) : questionContext.question.type === 'photo_upload' && typeof value === 'string' && value ? (
+                                        ) : questionContext.question.type === 'photo_upload' && normalizePhotoUrls(value).length > 0 ? (
                                           <div className={styles.fbPhotoWrap}>
-                                            <img src={value} alt="Antwort Foto" className={styles.fbPhotoPreview} />
+                                            {normalizePhotoUrls(value).map((url, index) => (
+                                              <img key={`${url}-${index}`} src={url} alt={`Antwort Foto ${index + 1}`} className={styles.fbPhotoPreview} />
+                                            ))}
                                           </div>
                                         ) : (
                                           <div className={styles.fbAnswerText}>{formatAnswerDisplay(questionContext.question, value)}</div>
@@ -808,6 +843,7 @@ const FragebogenHistorySection: React.FC = () => {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         style={{ display: 'none' }}
         onChange={handlePhotoFileChange}
       />

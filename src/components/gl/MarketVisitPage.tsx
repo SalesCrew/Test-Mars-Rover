@@ -775,9 +775,9 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
   };
 
   const handlePhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
+    const selectedFiles = Array.from(event.target.files || []);
     event.currentTarget.value = '';
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     const question = photoQuestionRef.current;
     if (!question) return;
@@ -786,13 +786,36 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
     setSyncError(null);
     setPhotoUploadInProgressKey(question.questionKey);
     try {
-      const uploadedUrl = await uploadPhotoAnswer(question, selectedFile);
-      setAnswers(prev => ({ ...prev, [question.questionKey]: uploadedUrl }));
+      const uploadedUrls: string[] = [];
+      for (const file of selectedFiles) {
+        const uploadedUrl = await uploadPhotoAnswer(question, file);
+        if (uploadedUrl) uploadedUrls.push(uploadedUrl);
+      }
+      setAnswers((prev) => {
+        const existingValue = prev[question.questionKey];
+        const existingUrls = Array.isArray(existingValue)
+          ? existingValue.filter((entry) => typeof entry === 'string' && entry.trim().length > 0)
+          : (typeof existingValue === 'string' && existingValue.trim().length > 0 ? [existingValue] : []);
+        return { ...prev, [question.questionKey]: [...existingUrls, ...uploadedUrls] };
+      });
     } catch (error: any) {
       setSaveError(error?.message || 'Foto konnte nicht hochgeladen werden.');
     } finally {
       setPhotoUploadInProgressKey(null);
     }
+  };
+
+  const normalizePhotoAnswerUrls = (value: any): string[] => {
+    if (Array.isArray(value)) {
+      return value
+        .filter((entry) => typeof entry === 'string')
+        .map((entry) => String(entry).trim())
+        .filter(Boolean);
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return [value.trim()];
+    }
+    return [];
   };
 
   /** Build a typed AnswerPayload from a raw answer value */
@@ -815,8 +838,11 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
         return { ...base, answer_json: Array.isArray(value) ? value : [value] };
       case 'matrix':
         return { ...base, answer_json: value };
-      case 'photo_upload':
-        return { ...base, answer_file_url: String(value) };
+      case 'photo_upload': {
+        const urls = normalizePhotoAnswerUrls(value);
+        if (urls.length === 0) return null;
+        return { ...base, answer_json: urls, answer_file_url: urls[0] };
+      }
       default:
         return { ...base, answer_text: String(value) };
     }
@@ -1362,7 +1388,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
 
       case 'photo_upload':
         const photoUploading = photoUploadInProgressKey === currentQuestion.questionKey;
-        const photoAnswerUrl = typeof answer === 'string' ? answer : '';
+        const photoAnswerUrls = normalizePhotoAnswerUrls(answer);
         return (
           <div className={styles.photoUpload}>
             <Camera size={48} weight="regular" />
@@ -1374,12 +1400,18 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
               disabled={photoUploading}
             >
               <Camera size={20} />
-              <span>{photoUploading ? 'Foto wird hochgeladen…' : 'Foto wählen'}</span>
+              <span>{photoUploading ? 'Foto wird hochgeladen…' : 'Fotos wählen'}</span>
             </button>
-            {photoAnswerUrl && (
+            {photoAnswerUrls.length > 0 && (
               <>
-                <img src={photoAnswerUrl} alt="Hochgeladenes Foto" className={styles.photoPreview} />
-                <span className={styles.photoConfirm}>Foto hochgeladen</span>
+                <div className={styles.photoPreviewGrid}>
+                  {photoAnswerUrls.map((url, index) => (
+                    <img key={`${url}-${index}`} src={url} alt={`Hochgeladenes Foto ${index + 1}`} className={styles.photoPreview} />
+                  ))}
+                </div>
+                <span className={styles.photoConfirm}>
+                  {photoAnswerUrls.length === 1 ? '1 Foto hochgeladen' : `${photoAnswerUrls.length} Fotos hochgeladen`}
+                </span>
               </>
             )}
           </div>
@@ -2022,6 +2054,7 @@ export const MarketVisitPage: React.FC<MarketVisitPageProps> = ({
         ref={photoInputRef}
         type="file"
         accept="image/*"
+        multiple
         style={{ display: 'none' }}
         onChange={handlePhotoFileChange}
       />
